@@ -1,0 +1,2904 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="手術担当">
+<title>手術担当管理</title>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "bf995411-c2b4-4541-a292-955b6682cbb6",
+      notifyButton: { enable: false },
+      allowLocalhostAsSecureOrigin: true,
+    });
+  });
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #151820;
+    --surface2: #1c2030;
+    --border: #252a3a;
+    --accent: #4f8cff;
+    --accent2: #ff6b6b;
+    --accent3: #ffd166;
+    --text: #e8ecf4;
+    --text2: #8892a4;
+    --text3: #5a6478;
+    --green: #43d9a0;
+    --red: #ff5757;
+    --icu: #ff8c42;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(13,15,20,0.92);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .header-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--text);
+  }
+
+  .header-title span {
+    color: var(--accent);
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.15s;
+  }
+
+  .icon-btn:active { transform: scale(0.94); background: var(--surface2); }
+  .icon-btn.primary { border-color: var(--accent); color: var(--accent); }
+
+  /* Tab bar */
+  .tab-bar {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+
+  .tab {
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* Content */
+  .content {
+    padding: 16px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  /* Surgery Card */
+  .surgery-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+    display: flex;
+  }
+  .surgery-card:active { border-color: var(--accent); }
+
+  .card-status-bar {
+    width: 4px;
+    flex-shrink: 0;
+    border-radius: 0;
+    background: var(--border);
+    transition: background 0.2s;
+  }
+  .card-status-bar.pre    { background: var(--border); }
+  .card-status-bar.admitted { background: var(--accent); }
+  .card-status-bar.discharged { background: var(--text3); }
+  .card-status-bar.today  { background: var(--accent2); }
+
+  .card-inner {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .card-header {
+    padding: 14px 16px 12px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+  }
+
+  .op-date-badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .op-date-badge.past { background: var(--text3); }
+  .op-date-badge.today { background: var(--accent2); animation: pulse 2s infinite; }
+  .op-date-badge.soon { background: var(--accent3); color: #111; }
+
+  /* Days-until badge */
+  .days-badge {
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .days-badge.urgent { background: rgba(255,87,87,0.15); color: var(--red); }
+  .days-badge.soon   { background: rgba(255,209,102,0.15); color: var(--accent3); }
+  .days-badge.normal { background: var(--surface2); color: var(--text3); }
+
+  /* Ring progress */
+  .ring-wrap {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--border); stroke-width: 3; }
+  .ring-fill { fill: none; stroke: var(--green); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 0.4s; }
+  .ring-fill.warn { stroke: var(--accent3); }
+  .ring-fill.done { stroke: var(--green); }
+  .ring-text {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; color: var(--text2);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* Header stats */
+  .header-stats {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .stat-chip {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .stat-chip.today-chip { background: rgba(255,107,107,0.15); color: var(--accent2); }
+  .stat-chip.week-chip  { background: rgba(79,140,255,0.12); color: var(--accent); }
+  .stat-chip.pending-chip { background: rgba(255,209,102,0.12); color: var(--accent3); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .card-main {
+    flex: 1;
+  }
+
+  .patient-name {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    line-height: 1.3;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .patient-meta {
+    font-size: 11px;
+    color: var(--text2);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .meta-tag {
+    background: var(--surface2);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+  .meta-tag.icu { border-color: var(--icu); color: var(--icu); }
+  .meta-tag.recon { border-color: var(--green); color: var(--green); }
+
+  .card-expand {
+    font-size: 14px;
+    color: var(--text3);
+    transition: transform 0.2s;
+    padding-top: 2px;
+  }
+  .card-expand.open { transform: rotate(180deg); }
+
+  .card-body {
+    display: none;
+    padding: 0 16px 16px;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+  .card-body.open { display: block; }
+
+  .info-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    align-items: flex-start;
+  }
+
+  .info-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text3);
+    letter-spacing: 0.06em;
+    min-width: 60px;
+    padding-top: 1px;
+    text-transform: uppercase;
+  }
+
+  .info-value {
+    font-size: 13px;
+    color: var(--text);
+    flex: 1;
+    line-height: 1.5;
+  }
+
+  .team-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .team-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    color: var(--text2);
+  }
+  .team-chip.me {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(79,140,255,0.08);
+  }
+
+  /* Checklist */
+  .checklist {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    transition: all 0.12s;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .check-item:active { transform: scale(0.96); }
+
+  .check-item.done {
+    border-color: var(--green);
+    background: rgba(67,217,160,0.08);
+    color: var(--green);
+    text-decoration: line-through;
+    text-decoration-color: rgba(67,217,160,0.5);
+  }
+  .check-item.warn {
+    border-color: var(--accent3);
+    color: var(--accent3);
+    background: rgba(255,209,102,0.06);
+  }
+
+  .check-item .check-icon {
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  /* Notes */
+  .note-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.6;
+    margin-top: 10px;
+    white-space: pre-wrap;
+  }
+
+  /* Progress indicator */
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 12px 0 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  .progress-label {
+    font-size: 10px;
+    color: var(--text3);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* Date separator */
+  .date-separator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 20px 0 10px;
+  }
+  .date-separator-line { flex: 1; height: 1px; background: var(--border); }
+  .date-separator-text {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text3);
+    letter-spacing: 0.08em;
+    font-family: 'IBM Plex Mono', monospace;
+    white-space: nowrap;
+  }
+
+  /* Add button */
+  .fab {
+    position: fixed;
+    bottom: 28px;
+    right: 20px;
+    width: 52px;
+    height: 52px;
+    background: var(--accent);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(79,140,255,0.4);
+    transition: all 0.15s;
+    border: none;
+    z-index: 99;
+  }
+  .fab:active { transform: scale(0.92); }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 200;
+    display: none;
+    align-items: flex-end;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px 40px;
+    width: 100%;
+    max-height: 92vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .modal-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+
+  .modal-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .form-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+
+  .form-input textarea { resize: vertical; min-height: 80px; }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+    font-family: 'Noto Sans JP', sans-serif;
+    transition: opacity 0.15s;
+  }
+  .btn-primary:active { opacity: 0.85; }
+
+  .btn-danger {
+    width: 100%;
+    background: transparent;
+    color: var(--red);
+    border: 1px solid rgba(255,87,87,0.3);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 8px;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+
+  /* Notification badge */
+  .notif-badge {
+    background: var(--accent2);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    position: absolute;
+    top: -4px;
+    right: -4px;
+  }
+
+  .icon-btn-wrap { position: relative; }
+
+  /* Summary view */
+  .summary-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .summary-block pre {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text2);
+    white-space: pre-wrap;
+    line-height: 1.7;
+  }
+
+  .summary-block pre strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .copy-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-family: 'Noto Sans JP', sans-serif;
+    transition: all 0.15s;
+  }
+  .copy-btn:active { background: var(--border); }
+  .copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+  /* Notification settings panel */
+  .notif-panel {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+
+  .notif-panel-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text2);
+    margin-bottom: 8px;
+  }
+
+  .notif-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .notif-row:last-child { border-bottom: none; }
+
+  .toggle {
+    width: 42px;
+    height: 24px;
+    background: var(--border);
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.2s;
+  }
+  .toggle.on::after { transform: translateX(18px); }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text3);
+  }
+  .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state-text { font-size: 13px; line-height: 1.6; }
+
+  /* Swipe to delete hint */
+  .swipe-hint {
+    font-size: 10px;
+    color: var(--text3);
+    text-align: center;
+    padding: 4px 0 8px;
+  }
+
+  select.form-input {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235a6478' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+
+  textarea.form-input {
+    resize: vertical;
+    min-height: 70px;
+  }
+
+  .section-divider {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin: 14px 0 8px;
+  }
+
+  .checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .checkbox-row input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+  /* Upcoming alert */
+  .upcoming-alert {
+    background: rgba(79,140,255,0.08);
+    border: 1px solid rgba(79,140,255,0.25);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .upcoming-alert-icon { font-size: 20px; }
+  .upcoming-alert-text { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .upcoming-alert-text strong { color: var(--accent); font-size: 13px; }
+
+  @media (prefers-color-scheme: light) {
+    /* keep dark for medical context */
+  }
+
+  /* AI Import */
+  .import-area {
+    background: var(--surface);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+    transition: border-color 0.2s;
+  }
+  .import-area:focus-within { border-color: var(--accent); }
+
+  .import-textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    resize: none;
+    min-height: 160px;
+    line-height: 1.7;
+  }
+  .import-textarea::placeholder { color: var(--text3); }
+
+  .import-preview {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .import-preview-header {
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .import-case-row {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .import-case-row:last-child { border-bottom: none; }
+
+  .import-check {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent);
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  .import-case-info { flex: 1; }
+  .import-case-name { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+  .import-case-meta { font-size: 11px; color: var(--text2); line-height: 1.5; }
+
+  .import-status {
+    font-size: 12px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+  .import-status.loading { background: rgba(79,140,255,0.08); color: var(--accent); border: 1px solid rgba(79,140,255,0.2); }
+  .import-status.error { background: rgba(255,87,87,0.08); color: var(--red); border: 1px solid rgba(255,87,87,0.2); }
+  .import-status.success { background: rgba(67,217,160,0.08); color: var(--green); border: 1px solid rgba(67,217,160,0.2); }
+
+  .api-key-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .api-key-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    font-size: 12px;
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    outline: none;
+  }
+  .api-key-input:focus { border-color: var(--accent); }
+
+  .import-hint {
+    font-size: 11px;
+    color: var(--text3);
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .import-hint a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title"><span id="headerDoctorName">山口</span> <span>手術担当</span></div>
+    <div id="todayDisplay" style="font-size:11px;color:var(--text3);margin-top:2px;font-family:'IBM Plex Mono',monospace;"></div>
+    <div class="header-stats" id="headerStats"></div>
+  </div>
+  <div class="header-actions">
+    <div class="icon-btn-wrap">
+      <button class="icon-btn" onclick="showNotifSettings()" title="通知設定">🔔</button>
+      <span class="notif-badge" id="pendingBadge" style="display:none">!</span>
+    </div>
+    <button class="icon-btn" onclick="toggleSearch()" id="searchToggleBtn" title="検索">🔍</button>
+    <button class="icon-btn" onclick="openSettingsModal()" title="設定">⚙️</button>
+    <button class="icon-btn primary" onclick="openAddModal()" title="症例追加">＋</button>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <div class="tab active" onclick="switchTab('list', this)">症例一覧</div>
+  <div class="tab" onclick="switchTab('today', this)">今日のオペ</div>
+  <div class="tab" onclick="switchTab('pending', this)">未完了タスク</div>
+  <div class="tab" onclick="switchTab('summary_incomplete', this)">📋 サマリ未完了</div>
+  <div class="tab" onclick="switchTab('discharge_weekly', this)">🏥 退院一覧</div>
+  <div class="tab" onclick="switchTab('summary', this)">テキスト出力</div>
+  <div class="tab" onclick="switchTab('import', this)">インポート</div>
+</div>
+
+<div id="searchBar" style="padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);display:none;">
+  <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;">
+    <span style="color:var(--text3);font-size:14px;">🔍</span>
+    <input type="text" id="searchInput" placeholder="患者名・疾患名で検索..." oninput="onSearch(this.value)"
+      style="flex:1;background:transparent;border:none;outline:none;font-size:13px;color:var(--text);font-family:inherit;">
+    <button onclick="clearSearch()" id="searchClearBtn" style="display:none;background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:0;line-height:1;">×</button>
+  </div>
+</div>
+
+<div class="content" id="mainContent">
+  <!-- Dynamic content here -->
+</div>
+
+<button class="fab" onclick="openAddModal()">＋</button>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="addModal" onclick="closeModalOnBg(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modalTitle">症例を追加</div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">オペ日 *</label>
+        <input type="date" class="form-input" id="f_opDate">
+      </div>
+      <div class="form-group">
+        <label class="form-label">入院日 *</label>
+        <input type="date" class="form-input" id="f_admDate">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">退院日（退院後に入力）</label>
+      <input type="date" class="form-input" id="f_dischargeDate">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">患者名（ひらがな） *</label>
+      <input type="text" class="form-input" id="f_name" placeholder="やまだ たろう">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">術式 *</label>
+      <input type="text" class="form-input" id="f_surgery" placeholder="右扁桃摘出＋アデノイド切除">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">予定時間</label>
+        <input type="text" class="form-input" id="f_time" placeholder="2時間">
+      </div>
+      <div class="form-group">
+        <label class="form-label">特記</label>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer">
+            <input type="checkbox" id="f_icu" style="accent-color:var(--icu)"> ★ICU
+          </label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer">
+            <input type="checkbox" id="f_recon" style="accent-color:var(--green)"> ★再建
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">担当（・区切り）</label>
+      <input type="text" class="form-input" id="f_team" placeholder="梶川・三谷・山口">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">物品／注意</label>
+      <input type="text" class="form-input" id="f_items" placeholder="人工内耳、NIMなど">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">メモ（フリーコメント）</label>
+      <textarea class="form-input" id="f_memo" placeholder="術後管理、食事再開時期など"></textarea>
+    </div>
+
+    <div class="section-divider">チェックリスト</div>
+    <div class="checkbox-group" id="checklistOptions">
+      <!-- filled by JS -->
+    </div>
+
+    <div class="section-divider" style="margin-top:14px;">フリーチェックリスト</div>
+    <div id="freeChecklistOptions" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <input type="text" class="form-input" id="freeCheckInput" placeholder="確認事項を入力..." onkeydown="if(event.key==='Enter'){event.preventDefault();addFreeCheck();}">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div style="flex:1;">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px;letter-spacing:0.04em;">🔔 リマインド日時（任意）</div>
+          <input type="datetime-local" class="form-input" id="freeCheckDateTime" style="font-size:12px;">
+        </div>
+        <button class="btn-primary" onclick="addFreeCheck()" style="align-self:flex-end;width:auto;padding:10px 18px;margin-top:0;">追加</button>
+      </div>
+    </div>
+
+    <input type="hidden" id="f_editId">
+    <button class="btn-primary" onclick="saveCase()">保存</button>
+    <button class="btn-danger" id="deleteBtn" onclick="deleteCase()" style="display:none">この症例を削除</button>
+    <button class="btn-danger" onclick="closeModal()" style="border-color:transparent;color:var(--text3)">キャンセル</button>
+  </div>
+</div>
+
+<!-- Notification Settings Modal -->
+<div class="modal-overlay" id="notifModal" onclick="closeModalOnBg(event)">
+  <div class="modal" style="max-height:92vh;overflow-y:auto;padding-bottom:32px;">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔔 通知・連携設定</div>
+
+    <!-- 通知状態バナー -->
+    <div id="notifBanner" style="border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:1.6;"></div>
+
+    <!-- iOSの制限説明 -->
+    <div style="background:rgba(255,209,102,0.08);border:1px solid rgba(255,209,102,0.25);border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:var(--accent3);margin-bottom:6px;">📱 iPhoneでの通知について</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.7;">
+        SafariのPWAはバックグラウンド通知が<strong style="color:var(--text)">できません</strong>（iOSの制限）。<br>
+        代わりに以下の方法を使ってください：<br>
+        ① <strong style="color:var(--accent3)">カレンダー登録</strong>（各カードの📅ボタン）→ iPhoneのアラームで通知<br>
+        ② アプリを開いている間だけ通知が届く（下のトグルで設定）
+      </div>
+    </div>
+
+    <!-- 自動リマインダー -->
+    <div class="notif-panel">
+      <div class="notif-panel-title">🔔 アプリ起動中のリマインダー</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5;">アプリを開いている間だけ有効です</div>
+      <div class="notif-row">
+        <div>
+          <div style="font-size:13px;">術前日（20:00）</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">手術前日の夜にリマインド</div>
+        </div>
+        <div class="toggle" id="tog1" onclick="toggleNotif(this,'prev_day')"></div>
+      </div>
+      <div class="notif-row">
+        <div>
+          <div style="font-size:13px;">手術当日朝（7:00）</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">当日朝にチェック状況を通知</div>
+        </div>
+        <div class="toggle" id="tog2" onclick="toggleNotif(this,'op_morning')"></div>
+      </div>
+      <div class="notif-row">
+        <div>
+          <div style="font-size:13px;">未完了タスクあり（8:00）</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">毎朝8時に未完了件数を通知</div>
+        </div>
+        <div class="toggle" id="tog3" onclick="toggleNotif(this,'pending_tasks')"></div>
+      </div>
+    </div>
+
+    <!-- 通知許可ボタン -->
+    <button class="btn-primary" onclick="requestNotifPermission()" style="margin-top:10px;">通知を許可する</button>
+    <div id="notifStatus" style="font-size:12px;color:var(--text3);margin:8px 0 4px;line-height:1.6;"></div>
+
+    <!-- テスト送信 -->
+    <div class="notif-panel" style="margin-top:14px;">
+      <div class="notif-panel-title">🧪 テスト送信</div>
+      <div style="font-size:11px;color:var(--text3);margin:6px 0 10px;line-height:1.6;">通知が届くか確認できます</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="sendTestNotif('now')" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⚡️ 今すぐ</button>
+        <button onclick="sendTestNotif('5sec')" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⏱ 5秒後</button>
+        <button onclick="sendTestNotif('1min')" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🕐 1分後</button>
+      </div>
+      <div id="testNotifStatus" style="font-size:11px;color:var(--green);margin-top:8px;min-height:16px;"></div>
+    </div>
+
+    <!-- GitHub連携 -->
+    <div class="notif-panel" style="margin-top:14px;">
+      <div class="notif-panel-title">🐙 GitHub自動バックアップ</div>
+      <div style="font-size:11px;color:var(--text2);margin:6px 0 12px;line-height:1.7;">
+        データをGitHubリポジトリに自動保存します。<br>
+        <a href="https://github.com/settings/tokens/new?scopes=repo&description=surgery-manager" target="_blank" style="color:var(--accent);">Personal Access Token（repo権限）</a>を発行して入力してください。
+      </div>
+      <div class="form-group">
+        <label class="form-label">GitHubユーザー名</label>
+        <input type="text" class="form-input" id="gh_user" placeholder="username" style="font-size:13px;" oninput="saveGhSettings()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">リポジトリ名</label>
+        <input type="text" class="form-input" id="gh_repo" placeholder="surgery-manager" style="font-size:13px;" oninput="saveGhSettings()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ファイルパス（リポジトリ内）</label>
+        <input type="text" class="form-input" id="gh_path" placeholder="surgery-manager.html" style="font-size:13px;" oninput="saveGhSettings()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Personal Access Token</label>
+        <input type="password" class="form-input" id="gh_token" placeholder="ghp_xxxxxxxxxxxx" style="font-family:'IBM Plex Mono',monospace;font-size:12px;" oninput="saveGhSettings()">
+      </div>
+      <button onclick="pushToGitHub()" id="ghPushBtn"
+        style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;">
+        🚀 GitHubへプッシュ
+      </button>
+      <div id="ghStatus" style="font-size:11px;margin-top:8px;min-height:16px;line-height:1.5;"></div>
+    </div>
+
+    <button class="btn-danger" onclick="closeNotifModal()" style="border-color:transparent;color:var(--text3);margin-top:14px;">閉じる</button>
+  </div>
+</div>
+
+<!-- Setup Modal (初回セットアップ) -->
+<div class="modal-overlay" id="setupModal">
+  <div class="modal" style="max-height:92vh;overflow-y:auto;padding-bottom:32px;">
+    <div class="modal-handle"></div>
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:36px;margin-bottom:8px;">🏥</div>
+      <div style="font-size:18px;font-weight:700;color:var(--text);">初回セットアップ</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px;">iPhoneのホーム画面から使うための設定です</div>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="notif-panel" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="background:var(--accent);color:#fff;font-size:12px;font-weight:700;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);">GitHubアカウントを準備</div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.8;margin-left:34px;">
+        まだアカウントがない場合は <a href="https://github.com/signup" target="_blank" style="color:var(--accent);">github.com/signup</a> から無料で作成してください。
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="notif-panel" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="background:var(--accent);color:#fff;font-size:12px;font-weight:700;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);">リポジトリを作成してファイルをアップロード</div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.8;margin-left:34px;">
+        ① <a href="https://github.com/new" target="_blank" style="color:var(--accent);">github.com/new</a> でリポジトリを作成<br>
+        　 名前例：<code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-family:'IBM Plex Mono',monospace;">surgery-manager</code><br>
+        　 <strong style="color:var(--accent3);">Public</strong> を選択（Pages公開に必要）<br>
+        ② このHTMLファイルをリポジトリにアップロード<br>
+        　（「Add file」→「Upload files」）
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="notif-panel" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="background:var(--accent);color:#fff;font-size:12px;font-weight:700;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);">GitHub Pagesを有効化</div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.8;margin-left:34px;">
+        リポジトリの <strong>Settings</strong> → <strong>Pages</strong><br>
+        Source: <strong>Deploy from a branch</strong><br>
+        Branch: <strong>main</strong> / <strong>root</strong> を選択して <strong>Save</strong><br>
+        数分後に <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;font-family:'IBM Plex Mono',monospace;">https://ユーザー名.github.io/リポジトリ名/</code> で公開されます
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="notif-panel" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="background:var(--accent);color:#fff;font-size:12px;font-weight:700;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);">SarafariでURLを開いてホーム画面に追加</div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.8;margin-left:34px;">
+        iPhoneのSafariで公開URLを開く<br>
+        下のメニュー（共有ボタン）→ <strong>「ホーム画面に追加」</strong><br>
+        これでPWAとして動作し、通知も受け取れます 🎉
+      </div>
+    </div>
+
+    <!-- Step 5: GitHub Token -->
+    <div class="notif-panel" style="margin-bottom:12px;border-color:rgba(79,140,255,0.4);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="background:var(--accent);color:#fff;font-size:12px;font-weight:700;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);">アプリ内から自動更新できるように設定</div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.8;margin-bottom:12px;margin-left:34px;">
+        入力しておくと🔔ボタン内「🚀 GitHubへプッシュ」でアプリを自動更新できます。<br>
+        <a href="https://github.com/settings/tokens/new?scopes=repo&description=surgery-manager" target="_blank" style="color:var(--accent);">ここからToken発行</a>（repo権限にチェック）
+      </div>
+      <div class="form-group">
+        <label class="form-label">GitHubユーザー名</label>
+        <input type="text" class="form-input" id="setup_gh_user" placeholder="username" style="font-size:13px;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">リポジトリ名</label>
+        <input type="text" class="form-input" id="setup_gh_repo" placeholder="surgery-manager" style="font-size:13px;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ファイル名</label>
+        <input type="text" class="form-input" id="setup_gh_path" placeholder="surgery-manager.html" style="font-size:13px;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Personal Access Token（任意）</label>
+        <input type="password" class="form-input" id="setup_gh_token" placeholder="ghp_xxxxxxxxxxxx" style="font-family:'IBM Plex Mono',monospace;font-size:12px;">
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="completeSetup()">✅ セットアップ完了</button>
+    <button class="btn-danger" onclick="skipSetup()" style="border-color:transparent;color:var(--text3);margin-top:4px;">あとで設定する</button>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settingsModal" onclick="closeModalOnBg(event)">
+  <div class="modal" style="max-height:92vh;overflow-y:auto;padding-bottom:32px;">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚙️ 設定</div>
+    <div id="settingsContent"></div>
+    <button class="btn-danger" onclick="closeSettingsModal()" style="border-color:transparent;color:var(--text3);margin-top:12px;">閉じる</button>
+  </div>
+</div>
+
+<script>
+// ========== STATE ==========
+const CHECKLIST_DEFAULTS_BUILTIN = [
+  { key: 'summary_pre', label: '入院前サマリ' },
+  { key: 'cp', label: 'CP入力' },
+  { key: 'plan', label: '入院診療計画書' },
+  { key: 'admission_rx', label: '入院時処方鑑別' },
+  { key: 'dpc', label: 'DPC' },
+  { key: 'consent', label: '手術同意書' },
+  { key: 'blood_consent', label: '輸血同意書', optional: true },
+  { key: 'discharge_summary', label: '退院サマリ' },
+  { key: 'rapid_order', label: '⚠️迅速オーダー', warn: true },
+  { key: 'ope_input', label: 'オペ入力' },
+];
+
+// 3日前18時チェック対象キー
+const DEADLINE_CHECK_KEYS = [
+  'summary_pre', 'cp', 'plan', 'dpc', 'consent', 'blood_consent', 'rapid_order', 'ope_input'
+];
+
+// Settings
+let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || {
+  doctorName: '山口',
+  defaultTeam: '山口',
+  theme: 'dark',
+  accentColor: '#4f8cff',
+  checklistItems: JSON.parse(JSON.stringify(CHECKLIST_DEFAULTS_BUILTIN)),
+  showFields: { time: true, items: true, team: true, memo: true },
+};
+
+function getChecklist() {
+  return appSettings.checklistItems || CHECKLIST_DEFAULTS_BUILTIN;
+}
+
+function CHECKLIST_DEFAULTS_getter() { return getChecklist(); }
+// Alias for backward compat
+Object.defineProperty(window, 'CHECKLIST_DEFAULTS', { get: getChecklist });
+
+let cases = JSON.parse(localStorage.getItem('surgery_cases') || '[]');
+let notifSettings = JSON.parse(localStorage.getItem('notif_settings') || '{"prev_day":false,"op_morning":false,"pending_tasks":false}');
+let currentTab = 'list';
+let editingId = null;
+let freeChecks = []; // [{label, done}] for current editing session
+
+// Show today's date in header
+function updateTodayDisplay() {
+  const el = document.getElementById('todayDisplay');
+  if (!el) return;
+  const now = new Date();
+  const days = ['日','月','火','水','木','金','土'];
+  el.textContent = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}（${days[now.getDay()]}）`;
+}
+updateTodayDisplay();
+
+// ========== HELPERS ==========
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+function toDateStr(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return `${dt.getMonth()+1}/${dt.getDate()}`;
+}
+
+function isToday(dateStr) {
+  const today = new Date();
+  const d = new Date(dateStr + 'T00:00:00');
+  return today.toDateString() === d.toDateString();
+}
+
+function isPast(dateStr) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  return new Date(dateStr + 'T00:00:00') < today;
+}
+
+function isSoon(dateStr) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(dateStr + 'T00:00:00');
+  const diff = (d - today) / 86400000;
+  return diff > 0 && diff <= 2;
+}
+
+function getDateStatus(dateStr) {
+  if (isPast(dateStr)) return 'past';
+  if (isToday(dateStr)) return 'today';
+  if (isSoon(dateStr)) return 'soon';
+  return 'future';
+}
+
+function formatOpDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getCheckProgress(c) {
+  const keys = CHECKLIST_DEFAULTS.map(x=>x.key);
+  const done = keys.filter(k => c.checks && c.checks[k]);
+  return { done: done.length, total: keys.length };
+}
+
+// 入院状態判定: 'discharged' | 'admitted' | 'pre'
+function getAdmissionStatus(c) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (c.dischargeDate) {
+    const dis = new Date(c.dischargeDate + 'T00:00:00');
+    if (dis <= today) return 'discharged'; // 退院済み
+  }
+  if (c.admDate) {
+    const adm = new Date(c.admDate + 'T00:00:00');
+    if (adm <= today) return 'admitted'; // 入院中
+  }
+  return 'pre'; // 未入院
+}
+
+// 入院日3日前18:00を返す
+function getDeadline(c) {
+  const baseDate = c.admDate || c.opDate; // 入院日がなければオペ日で代替
+  const d = new Date(baseDate + 'T18:00:00');
+  d.setDate(d.getDate() - 3);
+  return d;
+}
+
+// デッドラインチェック対象キーが全部チェック済みかどうか
+function getDeadlineStatus(c) {
+  const now = new Date();
+  const deadline = getDeadline(c);
+  const targetKeys = DEADLINE_CHECK_KEYS.filter(k =>
+    CHECKLIST_DEFAULTS.some(item => item.key === k)
+  );
+  const allDone = targetKeys.every(k => c.checks && c.checks[k]);
+
+  if (isPast(c.opDate) && !isToday(c.opDate)) return null;
+  if (allDone) return 'ok';
+  if (now >= deadline) return 'overdue';
+  const hoursLeft = (deadline - now) / 3600000;
+  if (hoursLeft <= 24) return 'soon';
+  return 'pending';
+}
+
+// 退院後5日経過して退院サマリ未記載かチェック
+function getDischargeSummaryWarning(c) {
+  if (!c.dischargeDate) return false;
+  if (c.checks && c.checks['discharge_summary']) return false;
+  const dis = new Date(c.dischargeDate + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const daysSince = (today - dis) / 86400000;
+  return daysSince >= 5;
+}
+
+function save() {
+  localStorage.setItem('surgery_cases', JSON.stringify(cases));
+  localStorage.setItem('notif_settings', JSON.stringify(notifSettings));
+  localStorage.setItem('app_settings', JSON.stringify(appSettings));
+  applyTheme();
+}
+
+function groupByOpDate(arr) {
+  const map = {};
+  arr.forEach(c => {
+    if (!map[c.opDate]) map[c.opDate] = [];
+    map[c.opDate].push(c);
+  });
+  return map;
+}
+
+// ========== RENDER ==========
+function render() {
+  const el = document.getElementById('mainContent');
+  // 検索バーは一覧タブ以外で非表示
+  if (currentTab !== 'list') {
+    document.getElementById('searchBar').style.display = 'none';
+  }
+  if (currentTab === 'list') renderList(el);
+  else if (currentTab === 'today') renderToday(el);
+  else if (currentTab === 'pending') renderPending(el);
+  else if (currentTab === 'summary_incomplete') renderSummaryIncomplete(el);
+  else if (currentTab === 'discharge_weekly') renderDischargeWeekly(el);
+  else if (currentTab === 'summary') renderSummary(el);
+  else if (currentTab === 'import') renderImport(el);
+  updatePendingBadge();
+  updateHeaderStats();
+  const ht = document.getElementById('headerDoctorName');
+  if (ht) ht.textContent = appSettings.doctorName || '山口';
+}
+
+function renderList(el) {
+  // 検索バーは一覧タブのみ表示
+  document.getElementById('searchBar').style.display = 'block';
+
+  let filtered = searchQuery ? cases.filter(c => matchesSearch(c, searchQuery)) : cases;
+
+  if (filtered.length === 0) {
+    el.innerHTML = searchQuery
+      ? `<div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">「${searchQuery}」に一致する患者が見つかりません</div></div>`
+      : `<div class="empty-state"><div class="empty-state-icon">🏥</div><div class="empty-state-text">症例がまだありません<br>右下の＋ボタンから追加してください</div></div>`;
+    return;
+  }
+  const sorted = [...filtered].sort((a,b) => a.opDate.localeCompare(b.opDate));
+  const groups = groupByOpDate(sorted);
+  let html = '';
+  Object.keys(groups).sort().forEach(date => {
+    const label = isToday(date) ? '今日のオペ ▼' : `オペ日 ${formatOpDate(date)}`;
+    html += `<div class="date-separator"><div class="date-separator-line"></div><div class="date-separator-text">${label}</div><div class="date-separator-line"></div></div>`;
+    groups[date].forEach(c => { html += renderCard(c); });
+  });
+  el.innerHTML = html;
+}
+
+function renderToday(el) {
+  const today = cases.filter(c => isToday(c.opDate));
+  if (today.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-text">今日の手術はありません</div></div>`;
+    return;
+  }
+  el.innerHTML = today.map(c => renderCard(c)).join('');
+}
+
+function renderPending(el) {
+  const pending = cases.filter(c => {
+    const prog = getCheckProgress(c);
+    const hasIncompleteFree = c.freeChecks && c.freeChecks.some(f => !f.done);
+    return prog.done < prog.total || hasIncompleteFree;
+  });
+  if (pending.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🎉</div><div class="empty-state-text">未完了タスクはありません</div></div>`;
+    return;
+  }
+  const upcoming = pending.filter(c => !isPast(c.opDate) || isToday(c.opDate));
+  const past = pending.filter(c => isPast(c.opDate) && !isToday(c.opDate));
+
+  let html = '';
+  upcoming.forEach(c => { html += renderCard(c, true); });
+  if (past.length > 0) {
+    html += `<div class="date-separator" style="margin-top:16px;"><div class="date-separator-line"></div><div class="date-separator-text" style="color:var(--text3);">オペ済み・未完了</div><div class="date-separator-line"></div></div>`;
+    past.forEach(c => { html += renderCard(c, true); });
+  }
+  el.innerHTML = html;
+}
+
+function completeAllTasks(id) {
+  const c = cases.find(x => x.id === id);
+  if (!c) return;
+  CHECKLIST_DEFAULTS.forEach(item => {
+    if (!c.checks) c.checks = {};
+    c.checks[item.key] = true;
+  });
+  if (c.freeChecks) c.freeChecks.forEach(f => f.done = true);
+  save();
+  render();
+}
+
+function renderSummaryIncomplete(el) {
+  // 退院サマリ未完了：退院日あり or オペ済みで退院サマリ未チェック
+  const list = cases.filter(c => {
+    if (c.checks && c.checks['discharge_summary']) return false;
+    return c.dischargeDate || (isPast(c.opDate) && !isToday(c.opDate));
+  }).sort((a, b) => {
+    // 退院日あり → 退院日の古い順、なければオペ日順
+    const da = a.dischargeDate || a.opDate;
+    const db = b.dischargeDate || b.opDate;
+    return da.localeCompare(db);
+  });
+
+  if (list.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🎉</div><div class="empty-state-text">退院サマリ未完了の症例はありません</div></div>`;
+    return;
+  }
+
+  const rows = list.map(c => {
+    const dis = c.dischargeDate ? toDateStr(c.dischargeDate) : '—';
+    const today = new Date(); today.setHours(0,0,0,0);
+    const daysSince = c.dischargeDate
+      ? Math.floor((today - new Date(c.dischargeDate + 'T00:00:00')) / 86400000)
+      : null;
+    const overdue = daysSince !== null && daysSince >= 5;
+    const dayLabelText = daysSince !== null
+      ? (overdue ? '⚠️ 退院後' + daysSince + '日' : '退院後' + daysSince + '日')
+      : '退院日未入力';
+    const dayLabelColor = (daysSince !== null && overdue) ? 'var(--red,#ff6b6b)' : 'var(--text3)';
+    const dayLabel = '<span style="font-size:11px;font-weight:700;color:' + dayLabelColor + ';">' + dayLabelText + '</span>';
+
+    return `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px;">${c.name || '名前未設定'}</div>
+        <div style="font-size:11px;color:var(--text2);">${c.surgery || '術式未設定'} ／ オペ:${toDateStr(c.opDate)} ／ 退院:${dis}</div>
+        <div style="margin-top:4px;">${dayLabel}</div>
+      </div>
+      <button onclick="markDischargeSummaryDone('${c.id}')"
+        style="flex-shrink:0;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+        ☑ 完了
+      </button>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px;">退院サマリ未記載の症例 ${list.length}件</div>
+    ${rows}
+  `;
+}
+
+function markDischargeSummaryDone(id) {
+  const c = cases.find(x => x.id === id);
+  if (!c) return;
+  if (!c.checks) c.checks = {};
+  c.checks['discharge_summary'] = true;
+  save();
+  render();
+}
+
+function renderDischargeWeekly(el) {
+  // 退院日が入力されている症例を週ごとにグループ化
+  const discharged = cases.filter(c => c.dischargeDate)
+    .sort((a, b) => b.dischargeDate.localeCompare(a.dischargeDate)); // 新しい順
+
+  if (discharged.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🏥</div><div class="empty-state-text">退院日が入力された症例がありません</div></div>`;
+    return;
+  }
+
+  // 週の月曜日を取得
+  function getWeekMonday(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    const day = d.getDay(); // 0=日
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d.toISOString().slice(0, 10);
+  }
+
+  // 週ごとにグループ化
+  const weeks = {};
+  discharged.forEach(c => {
+    const monday = getWeekMonday(c.dischargeDate);
+    if (!weeks[monday]) weeks[monday] = [];
+    weeks[monday].push(c);
+  });
+
+  let html = '';
+  Object.keys(weeks).sort((a, b) => b.localeCompare(a)).forEach(monday => {
+    const mondayDate = new Date(monday + 'T00:00:00');
+    const sunday = new Date(mondayDate); sunday.setDate(sunday.getDate() + 6);
+    const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+    const weekLabel = `${fmt(mondayDate)}（月）〜 ${fmt(sunday)}（日）`;
+    const group = weeks[monday];
+
+    const rows = group.map(c => {
+      const summaryDone = c.checks && c.checks['discharge_summary'];
+      const summaryBadge = summaryDone
+        ? `<span style="font-size:10px;color:var(--green,#43d9a0);font-weight:700;">📋 完了</span>`
+        : `<button onclick="event.stopPropagation();markDischargeSummaryDone('${c.id}')" style="font-size:10px;color:#fff;background:var(--accent2);border:none;border-radius:4px;padding:2px 8px;font-weight:700;cursor:pointer;font-family:inherit;">📋 未記載→完了</button>`;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);">${c.name || '名前未設定'}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px;">${c.surgery || '—'} ／ 退院:${toDateStr(c.dischargeDate)}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          ${summaryBadge}
+          <button onclick="event.stopPropagation();openEditModal('${c.id}')" style="background:none;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:inherit;">✏️ 編集</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    html += `<div style="margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+      <div style="padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:12px;font-weight:700;color:var(--accent);">${weekLabel}</div>
+        <div style="font-size:11px;color:var(--text3);">${group.length}名退院</div>
+      </div>
+      ${rows}
+    </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+function renderSummary(el) {
+  const sorted = [...cases].sort((a,b) => a.opDate.localeCompare(b.opDate));
+  const groups = groupByOpDate(sorted);
+  let html = '';
+  Object.keys(groups).sort().forEach(date => {
+    groups[date].forEach(c => {
+      const text = buildSummaryText(c);
+      const escaped = escapeBacktick(text);
+      html += '<div class="summary-block"><pre>' + text + '</pre><button class="copy-btn" data-text="' + text.replace(/"/g,'&quot;') + '" onclick="copyTextFromBtn(this)">コピー</button></div>';
+    });
+  });
+  if (!html) html = `<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">症例がありません</div></div>`;
+  el.innerHTML = html;
+}
+
+function escapeBacktick(str) {
+  return str.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+}
+
+function buildSummaryText(c) {
+  const icu = c.icu ? ' ★ICU' : '';
+  const recon = c.recon ? ' ★再建' : '';
+  const admStr = c.admDate ? toDateStr(c.admDate) : '';
+  const lines = [];
+  lines.push(`【手術日】${formatOpDate(c.opDate)}`);
+  lines.push(`${c.name}（${admStr} ${c.surgery}${icu}${recon}）`);
+  lines.push(`予定時間：${c.time || '未設定'}`);
+  lines.push(`物品／注意：${c.items || '特記事項なし'}`);
+  const teamArr = (c.team || '').split(/[・,、]/).map(t=>t.trim()).filter(Boolean);
+  lines.push(`担当：${teamArr.join('・') || '未設定'}`);
+
+  const checkDone = [];
+  const checkPending = [];
+  CHECKLIST_DEFAULTS.forEach(item => {
+    const done = c.checks && c.checks[item.key];
+    if (done) checkDone.push(`☑${item.label}`);
+    else checkPending.push(`□ ${item.label}`);
+  });
+  const allChecks = [...checkDone, ...checkPending];
+  lines.push(allChecks.join(' '));
+  lines.push(`IC：${admStr}`);
+  if (c.memo) lines.push(`---\n${c.memo}`);
+  lines.push('ーーーーーーーー');
+  return lines.join('\n');
+}
+
+function renderCard(c, expandByDefault=false) {
+  const status = getDateStatus(c.opDate);
+  const prog = getCheckProgress(c);
+  const pct = Math.round(prog.done / prog.total * 100);
+  const icu = c.icu ? `<span class="meta-tag icu">★ICU</span>` : '';
+  const recon = c.recon ? `<span class="meta-tag recon">★再建</span>` : '';
+  const admStr = c.admDate ? `IC:${toDateStr(c.admDate)}` : '';
+  const sf = appSettings.showFields;
+
+  const teamArr = (c.team || '').split(/[・,、]/).map(t=>t.trim()).filter(Boolean);
+  const teamChips = teamArr.map(t => `<span class="team-chip${t.includes(appSettings.doctorName||'山口')?' me':''}">${t}</span>`).join('');
+
+  // 入院状態
+  const admStatus = getAdmissionStatus(c);
+  const cardBg = admStatus === 'discharged'
+    ? 'background:var(--surface);opacity:0.5;'
+    : admStatus === 'admitted'
+    ? 'background:var(--surface);box-shadow:0 0 0 2px var(--accent)2a,inset 0 0 0 1000px rgba(79,140,255,0.06);'
+    : 'background:var(--surface);';
+  const admBadge = admStatus === 'discharged'
+    ? `<span style="font-size:10px;font-weight:700;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;margin-left:6px;">退院済</span>`
+    : admStatus === 'admitted'
+    ? `<span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(79,140,255,0.12);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;margin-left:6px;">入院中</span>`
+    : '';
+  const dlStatus = getDeadlineStatus(c);
+  let dlBadge = '';
+  if (dlStatus === 'ok') {
+    dlBadge = `<span style="font-size:22px;line-height:1;margin-left:6px;" title="3日前チェック完了">✅</span>`;
+  } else if (dlStatus === 'overdue') {
+    dlBadge = `<span style="font-size:22px;line-height:1;margin-left:6px;animation:pulse 1s infinite;" title="チェック未完了・デッドライン超過">⚠️</span>`;
+  } else if (dlStatus === 'soon') {
+    dlBadge = `<span style="font-size:22px;line-height:1;margin-left:6px;opacity:0.85;" title="デッドライン24時間以内・未完了">⚠️</span>`;
+  }
+
+  // 退院サマリ警告バッジ
+  const summaryWarn = getDischargeSummaryWarning(c)
+    ? `<span style="font-size:18px;line-height:1;margin-left:4px;animation:pulse 1.5s infinite;" title="退院後5日経過・退院サマリ未記載">📋⚠️</span>`
+    : '';
+
+  // あと何日バッジ
+  let daysBadge = '';
+  if (!isPast(c.opDate) && !isToday(c.opDate)) {
+    const today0 = new Date(); today0.setHours(0,0,0,0);
+    const daysLeft = Math.round((new Date(c.opDate + 'T00:00:00') - today0) / 86400000);
+    if (daysLeft <= 3) {
+      daysBadge = '<span class="days-badge urgent">あと' + daysLeft + '日</span>';
+    } else if (daysLeft <= 7) {
+      daysBadge = '<span class="days-badge soon">あと' + daysLeft + '日</span>';
+    } else {
+      daysBadge = '<span class="days-badge normal">あと' + daysLeft + '日</span>';
+    }
+  }
+
+  // リング進捗SVG
+  const r = 14, circ = 2 * Math.PI * r;
+  const offset = circ - (pct / 100) * circ;
+  const ringClass = pct === 100 ? 'done' : pct >= 50 ? '' : 'warn';
+  const ringHtml = '<div class="ring-wrap">'
+    + '<svg width="36" height="36" viewBox="0 0 36 36">'
+    + '<circle class="ring-bg" cx="18" cy="18" r="' + r + '"/>'
+    + '<circle class="ring-fill ' + ringClass + '" cx="18" cy="18" r="' + r + '" stroke-dasharray="' + circ.toFixed(1) + '" stroke-dashoffset="' + offset.toFixed(1) + '"/>'
+    + '</svg>'
+    + '<div class="ring-text">' + prog.done + '/' + prog.total + '</div>'
+    + '</div>';
+
+  const checks = CHECKLIST_DEFAULTS.map(item => {
+    const done = c.checks && c.checks[item.key];
+    const warn = item.warn;
+    return '<span class="check-item' + (done?' done':'') + (warn&&!done?' warn':'') + '" onclick="toggleCheck(\'' + c.id + '\',\'' + item.key + '\')">'
+      + '<span class="check-icon">' + (done?'☑':'□') + '</span>' + item.label
+      + '</span>';
+  }).join('');
+
+  const freeCheckHtml = (c.freeChecks && c.freeChecks.length > 0) ? `
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;">フリーチェック</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${c.freeChecks.map((fc, i) => {
+          const remindBadge = fc.remindAt && !fc.done
+            ? `<span style="font-size:9px;color:var(--accent3);margin-left:4px;">🔔${fc.remindAt.replace('T',' ').slice(5,16)}</span>`
+            : '';
+          const remindBtn = fc.remindAt && !fc.done
+            ? `<button onclick="event.stopPropagation();addFreeCheckReminder('${c.id}',${i})" style="background:var(--surface);border:1px solid var(--accent3);color:var(--accent3);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">📅 登録</button>`
+            : '';
+          return `<div style="display:flex;align-items:center;gap:6px;">
+            <span class="check-item${fc.done?' done':''}" onclick="toggleFreeCheckCard('${c.id}',${i})" style="flex:1;">
+              <span class="check-icon">${fc.done?'☑':'□'}</span>${fc.label}${remindBadge}
+            </span>
+            ${remindBtn}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+
+  const memoHtml = (sf.memo !== false && c.memo) ? `<div class="note-box">${c.memo}</div>` : '';
+  const isOpen = expandByDefault || isToday(c.opDate);
+  const isPastCase = isPast(c.opDate) && !isToday(c.opDate);
+
+  // カラーバーのクラス
+  const barClass = isToday(c.opDate) ? 'today'
+    : admStatus === 'admitted' ? 'admitted'
+    : admStatus === 'discharged' ? 'discharged'
+    : 'pre';
+
+  // 退院済みはカード全体を薄く
+  const cardStyle = admStatus === 'discharged' ? 'opacity:0.55;' : '';
+
+  return `<div class="surgery-card" id="card_${c.id}" style="${cardStyle}">
+    <div class="card-status-bar ${barClass}"></div>
+    <div class="card-inner">
+    <div class="card-header" onclick="toggleCard('${c.id}')">
+      <div class="card-main">
+        <div class="patient-name">${c.name || '患者名未設定'}${dlBadge}${summaryWarn}</div>
+        <div class="patient-meta" style="margin-top:3px;">
+          <span class="meta-tag">${c.surgery || '術式未設定'}</span>
+          ${admStr ? `<span class="meta-tag">${admStr}</span>` : ''}
+          ${c.dischargeDate ? `<span class="meta-tag" style="color:var(--text3);">退院:${toDateStr(c.dischargeDate)}</span>` : ''}
+          ${admBadge}
+          ${icu}${recon}
+          ${daysBadge}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${ringHtml}
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span class="op-date-badge ${status}">${isToday(c.opDate)?'TODAY':formatOpDate(c.opDate)}</span>
+            <div style="display:flex;gap:4px;align-items:center;">
+              ${isPastCase ? `<button class="icon-btn" style="width:28px;height:28px;font-size:11px;background:var(--green);color:#fff;border-color:transparent;" onclick="event.stopPropagation();completeAllTasks('${c.id}')" title="全完了">✅</button>` : ''}
+              <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('${c.id}')">✏️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body${isOpen?' open':''}" id="body_${c.id}">
+      ${sf.time !== false ? `<div class="info-row"><span class="info-label">予定時間</span><span class="info-value">${c.time || '—'}</span></div>` : ''}
+      ${sf.items !== false ? `<div class="info-row"><span class="info-label">物品／注意</span><span class="info-value">${c.items || '特記事項なし'}</span></div>` : ''}
+      ${sf.team !== false ? `<div class="info-row"><span class="info-label">担当</span><div class="team-chips">${teamChips || '<span style="color:var(--text3);font-size:12px">未設定</span>'}</div></div>` : ''}
+      <div class="checklist" style="margin-top:10px">${checks}</div>
+      ${freeCheckHtml}
+      ${memoHtml}
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">
+        <button onclick="event.stopPropagation();addReminderPrevDay('${c.id}')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          📅 前日リマインダー
+        </button>
+        <button onclick="event.stopPropagation();addReminderOpDay('${c.id}')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🌅 当日朝リマインダー
+        </button>
+      </div>
+    </div>
+    </div>
+  </div>`;
+}
+
+function toggleCard(id) {
+  const body = document.getElementById('body_' + id);
+  if (body) body.classList.toggle('open');
+}
+
+function toggleCheck(id, key) {
+  const c = cases.find(x => x.id === id);
+  if (!c) return;
+  if (!c.checks) c.checks = {};
+  c.checks[key] = !c.checks[key];
+  save();
+  render();
+}
+
+function toggleFreeCheckCard(id, idx) {
+  const c = cases.find(x => x.id === id);
+  if (!c || !c.freeChecks || !c.freeChecks[idx]) return;
+  c.freeChecks[idx].done = !c.freeChecks[idx].done;
+  save();
+  render();
+}
+
+// ========== REMINDERS ==========
+function addFreeCheckReminder(caseId, idx) {
+  const c = cases.find(x => x.id === caseId);
+  if (!c || !c.freeChecks || !c.freeChecks[idx]) return;
+  const fc = c.freeChecks[idx];
+  if (!fc.remindAt) return;
+
+  const dt = new Date(fc.remindAt);
+  const title = encodeURIComponent(`【チェック】${c.name} - ${fc.label}`);
+  const notes = encodeURIComponent(`症例: ${c.name}（${c.surgery}）\nオペ日: ${formatOpDate(c.opDate)}`);
+  openReminderOrCalendar(title, notes, dt, c);
+}
+function addReminderPrevDay(id) {
+  const c = cases.find(x => x.id === id);
+  if (!c || !c.opDate) return;
+  // 前日の20:00
+  const dt = new Date(c.opDate + 'T20:00:00');
+  dt.setDate(dt.getDate() - 1);
+  const title = encodeURIComponent(`【手術前日】${c.name} ${c.surgery}`);
+  const notes = encodeURIComponent(`オペ日: ${formatOpDate(c.opDate)}\n担当: ${c.team || ''}\n物品: ${c.items || ''}`);
+  openReminderOrCalendar(title, notes, dt, c);
+}
+
+function addReminderOpDay(id) {
+  const c = cases.find(x => x.id === id);
+  if (!c || !c.opDate) return;
+  // 当日の07:00
+  const dt = new Date(c.opDate + 'T07:00:00');
+  const title = encodeURIComponent(`【手術当日】${c.name} ${c.surgery}`);
+  const notes = encodeURIComponent(`担当: ${c.team || ''}\n予定時間: ${c.time || ''}\n物品: ${c.items || ''}`);
+  openReminderOrCalendar(title, notes, dt, c);
+}
+
+function openReminderOrCalendar(title, notes, dt, c) {
+  const fmt = (d) => d.toISOString().replace(/[-:]/g,'').split('.')[0] + 'Z';
+  const end = new Date(dt.getTime() + 30 * 60000);
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//手術担当管理//JP',
+    'BEGIN:VEVENT',
+    `UID:${uid()}@surgery-manager`,
+    `DTSTAMP:${fmt(new Date())}`,
+    `DTSTART:${fmt(dt)}`,
+    `DTEND:${fmt(end)}`,
+    `SUMMARY:${decodeURIComponent(title)}`,
+    `DESCRIPTION:${decodeURIComponent(notes)}`,
+    'BEGIN:VALARM',
+    'TRIGGER:-PT0M',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:${decodeURIComponent(title)}`,
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'reminder.ics';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ========== MODAL ==========
+function openAddModal() {
+  editingId = null;
+  freeChecks = [];
+  document.getElementById('modalTitle').textContent = '症例を追加';
+  document.getElementById('deleteBtn').style.display = 'none';
+  clearForm();
+  // デフォルト担当者を自動入力
+  if (appSettings.defaultTeam) {
+    document.getElementById('f_team').value = appSettings.defaultTeam;
+  }
+  buildChecklistForm({});
+  renderFreeChecklistForm();
+  document.getElementById('addModal').classList.add('open');
+}
+
+function openEditModal(id) {
+  editingId = id;
+  const c = cases.find(x => x.id === id);
+  if (!c) return;
+  freeChecks = c.freeChecks ? JSON.parse(JSON.stringify(c.freeChecks)) : [];
+  document.getElementById('modalTitle').textContent = '症例を編集';
+  document.getElementById('deleteBtn').style.display = 'block';
+  document.getElementById('f_opDate').value = c.opDate || '';
+  document.getElementById('f_admDate').value = c.admDate || '';
+  document.getElementById('f_dischargeDate').value = c.dischargeDate || '';
+  document.getElementById('f_name').value = c.name || '';
+  document.getElementById('f_surgery').value = c.surgery || '';
+  document.getElementById('f_time').value = c.time || '';
+  document.getElementById('f_team').value = c.team || '';
+  document.getElementById('f_items').value = c.items || '';
+  document.getElementById('f_memo').value = c.memo || '';
+  document.getElementById('f_icu').checked = !!c.icu;
+  document.getElementById('f_recon').checked = !!c.recon;
+  buildChecklistForm(c.checks || {});
+  renderFreeChecklistForm();
+  document.getElementById('addModal').classList.add('open');
+}
+
+function clearForm() {
+  ['f_opDate','f_admDate','f_dischargeDate','f_name','f_surgery','f_time','f_team','f_items','f_memo'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f_icu').checked = false;
+  document.getElementById('f_recon').checked = false;
+}
+
+function addFreeCheck() {
+  const input = document.getElementById('freeCheckInput');
+  const dtInput = document.getElementById('freeCheckDateTime');
+  const val = input.value.trim();
+  if (!val) return;
+  freeChecks.push({
+    label: val,
+    done: false,
+    remindAt: dtInput ? dtInput.value : '' // YYYY-MM-DDTHH:mm
+  });
+  input.value = '';
+  if (dtInput) dtInput.value = '';
+  renderFreeChecklistForm();
+}
+
+function toggleFreeCheckDone(i) {
+  freeChecks[i].done = !freeChecks[i].done;
+  renderFreeChecklistForm();
+}
+
+function removeFreeCheck(i) {
+  freeChecks.splice(i, 1);
+  renderFreeChecklistForm();
+}
+
+function renderFreeChecklistForm() {
+  const el = document.getElementById('freeChecklistOptions');
+  if (!el) return;
+  if (freeChecks.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = freeChecks.map((fc, i) => {
+    const remindLabel = fc.remindAt
+      ? `<span style="font-size:10px;color:var(--accent3);margin-left:6px;">🔔 ${fc.remindAt.replace('T',' ')}</span>`
+      : '';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surface2);border-radius:6px;border:1px solid var(--border);">
+      <input type="checkbox" ${fc.done?'checked':''} onchange="toggleFreeCheckDone(${i})" style="accent-color:var(--accent);width:16px;height:16px;flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;${fc.done?'text-decoration:line-through;color:var(--text3)':''}">${fc.label}${remindLabel}</div>
+      </div>
+      <button onclick="removeFreeCheck(${i})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:0;line-height:1;flex-shrink:0;">×</button>
+    </div>`;
+  }).join('');
+}
+
+function buildChecklistForm(checks) {
+  const el = document.getElementById('checklistOptions');
+  el.innerHTML = CHECKLIST_DEFAULTS.map(item => `
+    <label class="checkbox-row">
+      <input type="checkbox" id="chk_${item.key}" ${checks[item.key]?'checked':''}>
+      ${item.label}${item.optional?' (必要時)':''}${item.warn?' ⚠️':''}
+    </label>
+  `).join('');
+}
+
+function saveCase() {
+  const opDate = document.getElementById('f_opDate').value;
+  const name = document.getElementById('f_name').value.trim();
+  if (!opDate || !name) {
+    alert('オペ日と患者名は必須です');
+    return;
+  }
+  const checks = {};
+  CHECKLIST_DEFAULTS.forEach(item => {
+    checks[item.key] = document.getElementById('chk_' + item.key)?.checked || false;
+  });
+
+  const data = {
+    opDate,
+    admDate: document.getElementById('f_admDate').value,
+    dischargeDate: document.getElementById('f_dischargeDate').value,
+    name,
+    surgery: document.getElementById('f_surgery').value.trim(),
+    time: document.getElementById('f_time').value.trim(),
+    team: document.getElementById('f_team').value.trim(),
+    items: document.getElementById('f_items').value.trim(),
+    memo: document.getElementById('f_memo').value.trim(),
+    icu: document.getElementById('f_icu').checked,
+    recon: document.getElementById('f_recon').checked,
+    checks,
+    freeChecks: JSON.parse(JSON.stringify(freeChecks)),
+  };
+
+  if (editingId) {
+    const idx = cases.findIndex(x => x.id === editingId);
+    if (idx >= 0) { cases[idx] = { ...cases[idx], ...data }; }
+  } else {
+    cases.push({ id: uid(), ...data });
+  }
+
+  save();
+  closeModal();
+  render();
+  scheduleNotifications();
+}
+
+function deleteCase() {
+  if (!editingId) return;
+  if (!confirm('この症例を削除しますか？')) return;
+  cases = cases.filter(x => x.id !== editingId);
+  save();
+  closeModal();
+  render();
+}
+
+function closeModal() {
+  document.getElementById('addModal').classList.remove('open');
+  editingId = null;
+}
+
+function closeModalOnBg(e) {
+  if (e.target.classList.contains('modal-overlay')) {
+    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+  }
+}
+
+// ========== NOTIFICATIONS ==========
+function requestNotifPermission() {
+  if (window.OneSignal) {
+    OneSignal.push(async function() {
+      await OneSignal.Notifications.requestPermission();
+      const granted = OneSignal.Notifications.permission;
+      const el = document.getElementById('notifStatus');
+      if (granted) {
+        el.textContent = '✅ OneSignal通知が許可されました！';
+        el.style.color = 'var(--green)';
+        scheduleNotifications();
+      } else {
+        el.textContent = '⚠️ 通知が拒否されています。設定アプリ > Safari > 通知 から許可してください。';
+        el.style.color = 'var(--red)';
+      }
+    });
+  } else if ('Notification' in window) {
+    Notification.requestPermission().then(perm => {
+      const el = document.getElementById('notifStatus');
+      if (perm === 'granted') {
+        el.textContent = '✅ 通知が許可されました。';
+        el.style.color = 'var(--green)';
+        scheduleNotifications();
+      } else {
+        el.textContent = '⚠️ 通知が拒否されています。';
+        el.style.color = 'var(--red)';
+      }
+    });
+  } else {
+    document.getElementById('notifStatus').textContent = '⚠️ このブラウザは通知に対応していません。';
+  }
+}
+
+function showNotifSettings() {
+  document.getElementById('notifModal').classList.add('open');
+  updateToggleUI();
+
+  // GitHub設定を復元
+  const gh = JSON.parse(localStorage.getItem('gh_settings') || '{}');
+  if (document.getElementById('gh_user')) document.getElementById('gh_user').value = gh.user || '';
+  if (document.getElementById('gh_repo')) document.getElementById('gh_repo').value = gh.repo || '';
+  if (document.getElementById('gh_path')) document.getElementById('gh_path').value = gh.path || 'surgery-manager.html';
+  if (document.getElementById('gh_token')) document.getElementById('gh_token').value = gh.token || '';
+
+  // 通知バナー
+  const banner = document.getElementById('notifBanner');
+  const statusEl = document.getElementById('notifStatus');
+  let perm = 'unsupported';
+  if (window.OneSignal) {
+    OneSignal.push(function() {
+      const granted = OneSignal.Notifications.permission;
+      if (banner) {
+        if (granted) {
+          banner.style.cssText = 'background:rgba(67,217,160,0.1);border:1px solid rgba(67,217,160,0.3);';
+          banner.innerHTML = '<span style="color:var(--green);font-weight:700;">✅ 通知は許可済みです（OneSignal）</span><br><span style="font-size:11px;color:var(--text2);">バックグラウンド通知が届きます。</span>';
+        } else {
+          banner.style.cssText = 'background:rgba(255,87,87,0.08);border:1px solid rgba(255,87,87,0.2);';
+          banner.innerHTML = '<span style="color:var(--red);font-weight:700;">⚠️ 通知が許可されていません</span><br><span style="font-size:11px;color:var(--text2);">下の「通知を許可する」ボタンを押してください。</span>';
+        }
+      }
+    });
+  } else if ('Notification' in window) {
+    perm = Notification.permission;
+    if (banner) {
+      if (perm === 'granted') {
+        banner.style.cssText = 'background:rgba(67,217,160,0.1);border:1px solid rgba(67,217,160,0.3);';
+        banner.innerHTML = '<span style="color:var(--green);font-weight:700;">✅ 通知は許可済みです</span><br><span style="font-size:11px;color:var(--text2);">アプリ起動中のみ有効です（iOSの仕様）。</span>';
+      } else if (perm === 'denied') {
+        banner.style.cssText = 'background:rgba(255,87,87,0.08);border:1px solid rgba(255,87,87,0.2);';
+        banner.innerHTML = '<span style="color:var(--red);font-weight:700;">🚫 通知が拒否されています</span><br><span style="font-size:11px;color:var(--text2);">設定アプリ → Safari → 通知 から許可してください。</span>';
+      } else {
+        banner.style.cssText = 'background:rgba(79,140,255,0.08);border:1px solid rgba(79,140,255,0.2);';
+        banner.innerHTML = '<span style="color:var(--accent);font-weight:700;">🔔 通知が未設定です</span><br><span style="font-size:11px;color:var(--text2);">下のボタンを押して通知を有効にしてください。</span>';
+      }
+    }
+  } else {
+    if (banner) {
+      banner.style.cssText = 'background:rgba(90,100,120,0.1);border:1px solid var(--border);';
+      banner.innerHTML = '<span style="color:var(--text3);font-weight:700;">⚠️ このブラウザは通知未対応です</span>';
+    }
+  }
+}
+
+function saveGhSettings() {
+  const gh = {
+    user:  document.getElementById('gh_user')?.value.trim() || '',
+    repo:  document.getElementById('gh_repo')?.value.trim() || '',
+    path:  document.getElementById('gh_path')?.value.trim() || 'surgery-manager.html',
+    token: document.getElementById('gh_token')?.value.trim() || '',
+  };
+  localStorage.setItem('gh_settings', JSON.stringify(gh));
+}
+
+async function pushToGitHub() {
+  const gh = JSON.parse(localStorage.getItem('gh_settings') || '{}');
+  const { user, repo, path, token } = gh;
+  const statusEl = document.getElementById('ghStatus');
+  const btn = document.getElementById('ghPushBtn');
+
+  if (!user || !repo || !token) {
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = '⚠️ ユーザー名・リポジトリ名・Tokenを入力してください';
+    return;
+  }
+
+  btn.textContent = '⏳ プッシュ中...';
+  btn.disabled = true;
+  statusEl.style.color = 'var(--text3)';
+  statusEl.textContent = 'GitHubに接続しています...';
+
+  try {
+    const apiBase = 'https://api.github.com/repos/' + user + '/' + repo + '/contents/' + path;
+    const headers = {
+      'Authorization': 'token ' + token,
+      'Content-Type': 'application/json',
+      'Accept': 'application/vnd.github.v3+json',
+    };
+
+    // 現在のファイルのSHAを取得（更新に必要）
+    let sha = null;
+    try {
+      const getRes = await fetch(apiBase, { headers });
+      if (getRes.ok) {
+        const data = await getRes.json();
+        sha = data.sha;
+      }
+    } catch(e) {}
+
+    // 現在のHTMLファイル全体をBase64エンコード
+    const htmlContent = document.documentElement.outerHTML;
+    const encoded = btoa(unescape(encodeURIComponent(htmlContent)));
+
+    const body = {
+      message: '📱 surgery-manager update ' + new Date().toISOString().slice(0,16).replace('T',' '),
+      content: encoded,
+      ...(sha ? { sha } : {})
+    };
+
+    const putRes = await fetch(apiBase, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    if (putRes.ok) {
+      statusEl.style.color = 'var(--green)';
+      statusEl.textContent = '✅ GitHubへのプッシュ完了！' + new Date().toLocaleTimeString('ja-JP');
+    } else {
+      const err = await putRes.json();
+      statusEl.style.color = 'var(--red)';
+      statusEl.textContent = '❌ エラー: ' + (err.message || putRes.status);
+    }
+  } catch(e) {
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = '❌ 接続エラー: ' + e.message;
+  } finally {
+    btn.textContent = '🚀 GitHubへプッシュ';
+    btn.disabled = false;
+  }
+}
+
+function closeNotifModal() {
+  document.getElementById('notifModal').classList.remove('open');
+}
+
+function toggleNotif(el, key) {
+  notifSettings[key] = !notifSettings[key];
+  el.classList.toggle('on', notifSettings[key]);
+  save();
+  scheduleNotifications();
+}
+
+function updateToggleUI() {
+  document.getElementById('tog1').classList.toggle('on', notifSettings.prev_day);
+  document.getElementById('tog2').classList.toggle('on', notifSettings.op_morning);
+  document.getElementById('tog3').classList.toggle('on', notifSettings.pending_tasks);
+}
+
+// ========== TEST NOTIFICATION ==========
+function sendTestNotif(timing) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') {
+    document.getElementById('testNotifStatus').textContent = '⚠️ 先に通知を許可してください';
+    document.getElementById('testNotifStatus').style.color = 'var(--red)';
+    return;
+  }
+  const statusEl = document.getElementById('testNotifStatus');
+  const delayMap = { now: 0, '5sec': 5000, '1min': 60000 };
+  const labelMap = { now: '今すぐ', '5sec': '5秒後', '1min': '1分後' };
+  const delay = delayMap[timing];
+
+  if (delay === 0) {
+    new Notification('🧪 テスト通知', { body: '通知は正常に届いています！手術担当アプリより' });
+    statusEl.style.color = 'var(--green)';
+    statusEl.textContent = '✅ 送信しました！通知を確認してください';
+  } else {
+    setTimeout(() => {
+      new Notification('🧪 テスト通知', { body: `${labelMap[timing]}の通知です。正常に届いています！` });
+    }, delay);
+    statusEl.style.color = 'var(--accent)';
+    statusEl.textContent = `⏱ ${labelMap[timing]}に送信予約しました`;
+    setTimeout(() => { statusEl.textContent = '✅ 送信済み！通知を確認してください'; statusEl.style.color = 'var(--green)'; }, delay + 500);
+  }
+}
+
+function scheduleNotifications() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  // Clear existing scheduled (use serviceWorker if available, else simple setTimeout)
+  const now = new Date();
+  cases.forEach(c => {
+    if (isPast(c.opDate)) return;
+
+    // Previous day 20:00
+    if (notifSettings.prev_day) {
+      const prev = new Date(c.opDate + 'T20:00:00');
+      prev.setDate(prev.getDate() - 1);
+      const ms = prev - now;
+      if (ms > 0 && ms < 86400000 * 3) {
+        setTimeout(() => {
+          new Notification('手術前日リマインダー', {
+            body: `明日のオペ: ${c.name}（${c.surgery}）`,
+            icon: '/favicon.ico'
+          });
+        }, ms);
+      }
+    }
+
+    // Day of 7:00
+    if (notifSettings.op_morning) {
+      const morning = new Date(c.opDate + 'T07:00:00');
+      const ms = morning - now;
+      if (ms > 0 && ms < 86400000 * 2) {
+        setTimeout(() => {
+          const prog = getCheckProgress(c);
+          new Notification('手術当日', {
+            body: `${c.name}（${c.surgery}）\nチェック${prog.done}/${prog.total}`,
+            icon: '/favicon.ico'
+          });
+        }, ms);
+      }
+    }
+  });
+
+  // Pending tasks notification at 8am
+  if (notifSettings.pending_tasks) {
+    const morning8 = new Date();
+    morning8.setHours(8, 0, 0, 0);
+    if (morning8 < now) morning8.setDate(morning8.getDate() + 1);
+    const ms = morning8 - now;
+    const pendingCount = cases.filter(c => {
+      if (isPast(c.opDate)) return false;
+      const prog = getCheckProgress(c);
+      return prog.done < prog.total;
+    }).length;
+    if (pendingCount > 0 && ms < 86400000) {
+      setTimeout(() => {
+        new Notification('未完了タスクあり', {
+          body: `${pendingCount}件の症例にチェック未完了項目があります`,
+          icon: '/favicon.ico'
+        });
+      }, ms);
+    }
+  }
+
+  // フリーチェックリストのリマインダー
+  cases.forEach(c => {
+    if (!c.freeChecks) return;
+    c.freeChecks.forEach(fc => {
+      if (fc.done || !fc.remindAt) return;
+      const remindTime = new Date(fc.remindAt);
+      const ms = remindTime - now;
+      if (ms > 0 && ms < 86400000 * 30) { // 30日以内のものだけ登録
+        setTimeout(() => {
+          new Notification(`🔔 ${c.name} チェックリスト`, {
+            body: fc.label,
+          });
+        }, ms);
+      }
+    });
+  });
+}
+
+function updatePendingBadge() {
+  const count = cases.filter(c => {
+    const prog = getCheckProgress(c);
+    const hasIncompleteFree = c.freeChecks && c.freeChecks.some(f => !f.done);
+    return prog.done < prog.total || hasIncompleteFree;
+  }).length;
+  const badge = document.getElementById('pendingBadge');
+  badge.style.display = count > 0 ? 'block' : 'none';
+  badge.textContent = count;
+}
+
+function updateHeaderStats() {
+  const el = document.getElementById('headerStats');
+  if (!el) return;
+  const today0 = new Date(); today0.setHours(0,0,0,0);
+  const weekEnd = new Date(today0); weekEnd.setDate(weekEnd.getDate() + 7);
+
+  const todayCount = cases.filter(c => isToday(c.opDate)).length;
+  const weekCount = cases.filter(c => {
+    const d = new Date(c.opDate + 'T00:00:00');
+    return d > today0 && d <= weekEnd;
+  }).length;
+  const pendingCount = cases.filter(c => {
+    if (isPast(c.opDate) && !isToday(c.opDate)) return false;
+    const prog = getCheckProgress(c);
+    return prog.done < prog.total;
+  }).length;
+
+  const chips = [];
+  if (todayCount > 0) chips.push('<span class="stat-chip today-chip">本日 ' + todayCount + '件</span>');
+  if (weekCount > 0)  chips.push('<span class="stat-chip week-chip">今週 ' + weekCount + '件</span>');
+  if (pendingCount > 0) chips.push('<span class="stat-chip pending-chip">未完了 ' + pendingCount + '件</span>');
+  el.innerHTML = chips.join('');
+}
+
+// ========== SEARCH ==========
+let searchQuery = '';
+
+function toggleSearch() {
+  const bar = document.getElementById('searchBar');
+  const isVisible = bar.style.display !== 'none';
+  bar.style.display = isVisible ? 'none' : 'block';
+  if (!isVisible) {
+    document.getElementById('searchInput').focus();
+  } else {
+    clearSearch();
+  }
+}
+
+function onSearch(val) {
+  searchQuery = val.trim();
+  document.getElementById('searchClearBtn').style.display = searchQuery ? 'inline' : 'none';
+  render();
+}
+
+function clearSearch() {
+  searchQuery = '';
+  const input = document.getElementById('searchInput');
+  if (input) input.value = '';
+  const btn = document.getElementById('searchClearBtn');
+  if (btn) btn.style.display = 'none';
+  render();
+}
+
+// ひらがな⇔カタカナ変換＋正規化
+function normalizeText(str) {
+  return (str || '').toLowerCase()
+    .replace(/[\u30a1-\u30f6]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60)) // カタカナ→ひらがな
+    .replace(/\s/g, '');
+}
+
+function matchesSearch(c, q) {
+  if (!q) return true;
+  const nq = normalizeText(q);
+  const targets = [c.name, c.surgery, c.memo, c.items, c.team].map(normalizeText);
+  return targets.some(t => t.includes(nq));
+}
+
+// ========== TABS ==========
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  render();
+}
+
+// ========== COPY ==========
+function copyTextFromBtn(btn) {
+  const text = btn.getAttribute('data-text');
+  copyText(btn, text);
+}
+
+function copyText(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'コピー完了 ✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ========== IMPORT ==========
+let importParsed = [];
+
+function renderImport(el) {
+  const promptText = buildChatGPTPrompt();
+  const escaped = promptText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  el.innerHTML = `
+    <div class="notif-panel" style="margin-bottom:16px">
+      <div class="notif-panel-title" style="font-size:13px;margin-bottom:10px">📖 使い方</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</span>
+          <span style="font-size:12px;color:var(--text2);line-height:1.5">「プロンプトをコピー」を押す</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</span>
+          <span style="font-size:12px;color:var(--text2);line-height:1.5">ChatGPTを開き、<strong style="color:var(--text)">プロンプト＋手術スケジュール画像</strong>を送る</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</span>
+          <span style="font-size:12px;color:var(--text2);line-height:1.5">ChatGPTが出力したJSONをコピーして下に貼り付ける</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</span>
+          <span style="font-size:12px;color:var(--text2);line-height:1.5">「読み込む」を押して症例を登録</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text2)">📤 ChatGPTへ送るプロンプト</div>
+    <div class="note-box" style="font-size:11px;max-height:140px;overflow-y:auto;margin-bottom:8px;white-space:pre-wrap;">${escaped}</div>
+    <button class="copy-btn" id="copyPromptBtn" onclick="copyPromptText()" style="width:100%;text-align:center;margin-bottom:20px;padding:11px;font-size:12px;">📋 プロンプトをコピー</button>
+
+    <div style="font-size:12px;font-weight:700;margin-bottom:6px;color:var(--text2)">📋 ChatGPTの出力（JSON）を貼り付け</div>
+    <div class="import-area">
+      <textarea class="import-textarea" id="importText" placeholder='ChatGPTが出力したJSONをそのまま貼り付けてください
+
+[
+  {
+    "name": "すどう はるき",
+    "opDate": "2026-03-10",
+    "admDate": "2026-03-09",
+    "surgery": "右鼓膜穿孔閉鎖",
+    "time": "2時間",
+    "team": "羽藤・西原・木原・山口",
+    "items": "",
+    "memo": "",
+    "icu": false,
+    "recon": false
+  }
+]'></textarea>
+    </div>
+    <button class="btn-primary" onclick="runJSONParse()">✅ 症例を読み込む</button>
+    <div id="importStatus" style="margin-top:10px"></div>
+    <div id="importPreview"></div>
+  `;
+}
+
+function buildChatGPTPrompt() {
+  const year = new Date().getFullYear();
+  return `添付の手術スケジュール画像を読み取り、山口が担当する症例をすべて抽出して以下のJSON配列形式のみで出力してください。説明文・マークダウン・バッククォートは不要です。JSONのみ出力してください。
+
+現在年: ${year}
+
+[
+  {
+    "name": "患者名（ひらがな）",
+    "opDate": "YYYY-MM-DD（手術日）",
+    "admDate": "YYYY-MM-DD（入院日）",
+    "surgery": "術式",
+    "time": "予定時間（例: 2時間）",
+    "team": "担当者を・区切り（例: 梶川・三谷・山口）",
+    "items": "必要物品・注意事項（なければ空文字）",
+    "memo": "フリーコメント・術後指示（なければ空文字）",
+    "icu": false,
+    "recon": false
+  }
+]
+
+抽出ルール:
+- 担当者に「山口」が含まれる症例のみ抽出する
+- 月/日形式の日付は${year}年として補完しYYYY-MM-DD形式にする
+- 入院日(IC)が不明な場合はオペ日の前日をadmDateとする
+- ★ICU の記載があれば "icu": true にする
+- ★再建 の記載があれば "recon": true にする
+- 不明なフィールドは空文字 "" にする（nullにしない）
+- JSONのみ出力。他の文章は一切含めない`;
+}
+
+function copyPromptText() {
+  navigator.clipboard.writeText(buildChatGPTPrompt()).then(() => {
+    const btn = document.getElementById('copyPromptBtn');
+    btn.textContent = '✅ コピーしました！';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 プロンプトをコピー'; btn.classList.remove('copied'); }, 2500);
+  });
+}
+
+function showImportStatus(type, msg) {
+  const el = document.getElementById('importStatus');
+  if (el) el.innerHTML = `<div class="import-status ${type}">${msg}</div>`;
+}
+
+function runJSONParse() {
+  const text = document.getElementById('importText')?.value?.trim();
+  if (!text) { showImportStatus('error', '⚠️ JSONを貼り付けてください'); return; }
+
+  let parsed;
+  try {
+    // 全角・スマートクォートを半角に正規化
+    let clean = text
+      .replace(/[""]/g, '"')   // 全角・スマートダブルクォート
+      .replace(/['']/g, "'")   // 全角・スマートシングルクォート
+      .replace(/　/g, ' ')      // 全角スペース
+      .replace(/：/g, ':')      // 全角コロン（まれに混入）
+      .replace(/^```[a-z]*\n?/m, '')
+      .replace(/\n?```$/m, '')
+      .trim();
+
+    try {
+      parsed = JSON.parse(clean);
+    } catch(e) {
+      // JSON配列部分だけ抽出して再試行
+      const match = clean.match(/\[[\s\S]*\]/);
+      if (!match) throw new Error('JSON配列が見つかりません。ChatGPTの出力をそのまま貼り付けてください。');
+      parsed = JSON.parse(match[0]);
+    }
+
+    if (!Array.isArray(parsed)) {
+      if (typeof parsed === 'object' && parsed !== null) parsed = [parsed];
+      else throw new Error('配列形式ではありません');
+    }
+  } catch(e) {
+    showImportStatus('error', `❌ 形式エラー: ${e.message}<br><small style="opacity:0.7">ChatGPTに「JSONのみ・コードブロックなしで出力して」と再送してみてください。</small>`);
+    return;
+  }
+
+  if (parsed.length === 0) {
+    showImportStatus('error', '⚠️ 症例が見つかりませんでした。担当者に「山口」が含まれているか確認してください。');
+    return;
+  }
+  importParsed = parsed;
+  showImportStatus('success', `✅ ${parsed.length}件を検出しました。内容を確認して「登録する」を押してください。`);
+  renderImportPreview(parsed);
+}
+
+function renderImportPreview(parsed) {
+  const el = document.getElementById('importPreview');
+  const rows = parsed.map((c, i) => {
+    const existing = cases.find(x => x.name === c.name && x.opDate === c.opDate);
+    const dupLabel = existing ? `<span style="color:var(--accent3);font-size:10px;margin-left:6px">⚠️既存あり</span>` : '';
+    return `<div class="import-case-row">
+      <input type="checkbox" class="import-check" id="imp_${i}" checked>
+      <div class="import-case-info">
+        <div class="import-case-name">${c.name || '名前不明'}${dupLabel}</div>
+        <div class="import-case-meta">
+          オペ: ${c.opDate || '?'} ／ 入院: ${c.admDate || '?'}<br>
+          ${c.surgery || '術式不明'} ／ ${c.time || '時間不明'}<br>
+          担当: ${c.team || '?'}
+          ${c.items ? `<br>物品: ${c.items}` : ''}
+          ${c.memo ? `<br>メモ: ${c.memo}` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="import-preview">
+      <div class="import-preview-header">
+        <span>解析結果（登録する症例を選択）</span>
+        <button class="copy-btn" onclick="toggleAllImport()">全選択/解除</button>
+      </div>
+      ${rows}
+    </div>
+    <button class="btn-primary" onclick="confirmImport()">✅ 選択した症例を登録する</button>
+  `;
+}
+
+function toggleAllImport() {
+  const checks = document.querySelectorAll('.import-check');
+  const allChecked = Array.from(checks).every(c => c.checked);
+  checks.forEach(c => c.checked = !allChecked);
+}
+
+function confirmImport() {
+  const checks = document.querySelectorAll('.import-check');
+  let added = 0, updated = 0;
+  importParsed.forEach((c, i) => {
+    if (!checks[i]?.checked) return;
+    const existing = cases.findIndex(x => x.name === c.name && x.opDate === c.opDate);
+    const entry = {
+      opDate: c.opDate || '',
+      admDate: c.admDate || '',
+      name: c.name || '',
+      surgery: c.surgery || '',
+      time: c.time || '',
+      team: c.team || '',
+      items: c.items || '',
+      memo: c.memo || '',
+      icu: !!c.icu,
+      recon: !!c.recon,
+      checks: {},
+    };
+    if (existing >= 0) {
+      cases[existing] = { ...cases[existing], ...entry };
+      updated++;
+    } else {
+      cases.push({ id: uid(), ...entry });
+      added++;
+    }
+  });
+  save();
+  importParsed = [];
+  showImportStatus('success', `✅ ${added}件追加・${updated}件更新しました`);
+  document.getElementById('importPreview').innerHTML = '';
+  document.getElementById('importText').value = '';
+  updatePendingBadge();
+  scheduleNotifications();
+}
+
+const THEMES = {
+  dark:  { '--bg':'#0d0f14','--surface':'#151820','--surface2':'#1c2030','--border':'#252a3a','--text':'#e8ecf4','--text2':'#8892a4','--text3':'#5a6478' },
+  light: { '--bg':'#f4f6fb','--surface':'#ffffff','--surface2':'#f0f2f8','--border':'#dde2ee','--text':'#1a1d2e','--text2':'#5a6478','--text3':'#9aa3b8' },
+  warm:  { '--bg':'#12100e','--surface':'#1c1917','--surface2':'#262220','--border':'#333028','--text':'#f0ead8','--text2':'#a09070','--text3':'#60503a' },
+};
+
+function applyTheme() {
+  const t = THEMES[appSettings.theme] || THEMES.dark;
+  const root = document.documentElement;
+  Object.entries(t).forEach(([k,v]) => root.style.setProperty(k, v));
+  root.style.setProperty('--accent', appSettings.accentColor || '#4f8cff');
+}
+
+// ========== SETTINGS ==========
+function openSettingsModal() {
+  renderSettings();
+  document.getElementById('settingsModal').classList.add('open');
+}
+
+function closeSettingsModal() {
+  document.getElementById('settingsModal').classList.remove('open');
+}
+
+function renderSettings() {
+  const el = document.getElementById('settingsContent');
+  if (!el) return;
+  const cl = appSettings.checklistItems;
+  const checklistRows = cl.map((item, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);margin-bottom:6px;">
+      <span style="font-size:18px;cursor:grab;color:var(--text3);" ondragstart="dragStart(${i})" ondragover="event.preventDefault()" ondrop="dragDrop(event,${i})" draggable="true">☰</span>
+      <input type="text" value="${item.label}" onchange="updateChecklistLabel(${i}, this.value)"
+        style="flex:1;background:transparent;border:none;outline:none;font-size:13px;color:var(--text);font-family:inherit;">
+      <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
+        <input type="checkbox" ${item.warn?'checked':''} onchange="updateChecklistWarn(${i},this.checked)" style="accent-color:var(--accent3);">⚠️
+      </label>
+      <button onclick="removeChecklistItem(${i})" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:0;line-height:1;">×</button>
+    </div>
+  `).join('');
+
+  el.innerHTML = `
+    <!-- テーマ -->
+    <div class="summary-block" style="margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:14px;color:var(--text);">🎨 テーマ・カラー</div>
+      <div class="form-group">
+        <label class="form-label">テーマ</label>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          ${[['dark','🌙 ダーク'],['light','☀️ ライト'],['warm','🔥 ウォーム']].map(([val,label])=>`
+            <button onclick="setTheme('${val}')" style="flex:1;padding:10px 4px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;
+              background:${appSettings.theme===val?'var(--accent)':'var(--surface2)'};
+              border:1px solid ${appSettings.theme===val?'var(--accent)':'var(--border)'};
+              color:${appSettings.theme===val?'#fff':'var(--text2)'};">
+              ${label}
+            </button>`).join('')}
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:12px;">
+        <label class="form-label">アクセントカラー</label>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+          ${['#4f8cff','#ff6b6b','#43d9a0','#ffd166','#c77dff','#ff8c42'].map(c=>`
+            <div onclick="setAccentColor('${c}')" style="width:34px;height:34px;border-radius:50%;background:${c};cursor:pointer;border:3px solid ${appSettings.accentColor===c?'var(--text)':'transparent'};transition:all 0.15s;box-shadow:${appSettings.accentColor===c?'0 0 0 2px var(--accent)':'none'};"></div>
+          `).join('')}
+          <input type="color" value="${appSettings.accentColor}" onchange="setAccentColor(this.value)"
+            style="width:34px;height:34px;border-radius:50%;border:2px solid var(--border);cursor:pointer;padding:2px;background:var(--surface2);">
+        </div>
+      </div>
+    </div>
+
+    <!-- チェックリスト -->
+    <div class="summary-block" style="margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px;color:var(--text);">☑️ デフォルトチェックリスト</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">ラベル編集・☰ドラッグで並び替え・×で削除。新規症例に反映されます。</div>
+      <div id="checklistEditor">${checklistRows}</div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <input type="text" class="form-input" id="newCheckItem" placeholder="新しい項目名..." style="flex:1;">
+        <button class="btn-primary" onclick="addChecklistItem()" style="width:auto;padding:10px 16px;margin:0;">追加</button>
+      </div>
+      <button class="btn-danger" onclick="resetChecklist()" style="margin-top:8px;font-size:11px;">デフォルトに戻す</button>
+    </div>
+
+    <!-- 表示項目 -->
+    <div class="summary-block" style="margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text);">👁 カード表示項目</div>
+      ${[['time','予定時間'],['items','物品・注意'],['team','担当者'],['memo','メモ']].map(([key,label])=>`
+        <div class="notif-row">
+          <span style="font-size:13px;">${label}</span>
+          <div class="toggle${appSettings.showFields[key]?' on':''}" onclick="toggleShowField('${key}', this)"></div>
+        </div>
+      `).join('')}
+    </div>
+
+    <!-- 基本設定 -->
+    <div class="summary-block" style="margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:14px;color:var(--text);">👤 基本設定</div>
+      <div class="form-group">
+        <label class="form-label">担当医名（ヘッダーに表示）</label>
+        <input type="text" class="form-input" id="s_doctorName" value="${appSettings.doctorName}" placeholder="山口">
+      </div>
+      <div class="form-group">
+        <label class="form-label">デフォルト担当者（新規症例に自動入力）</label>
+        <input type="text" class="form-input" id="s_defaultTeam" value="${appSettings.defaultTeam}" placeholder="梶川・三谷・山口">
+      </div>
+      <button class="btn-primary" onclick="saveBasicSettings()" style="margin-top:4px;">保存</button>
+    </div>
+
+    <!-- データ管理 -->
+    <div class="summary-block">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text);">🗄 データ管理</div>
+      <button class="copy-btn" onclick="exportData()" style="width:100%;text-align:center;padding:11px;margin-bottom:8px;">📤 バックアップ（JSONエクスポート）</button>
+      <div>
+        <button class="copy-btn" onclick="document.getElementById('importDataFile').click()" style="width:100%;text-align:center;padding:11px;">📥 データを復元（JSONインポート）</button>
+        <input type="file" id="importDataFile" accept=".json" onchange="importData(this)" style="display:none;">
+      </div>
+      <button class="copy-btn" onclick="localStorage.removeItem('setup_done');document.getElementById('settingsModal').classList.remove('open');document.getElementById('setupModal').classList.add('open');" style="width:100%;text-align:center;padding:11px;margin-top:8px;">🔧 セットアップガイドを再表示</button>
+      <button class="btn-danger" onclick="confirmClearAll()" style="margin-top:8px;font-size:12px;">⚠️ 全データを削除</button>
+    </div>
+  `;
+}
+
+let dragSrcIdx = null;
+function dragStart(i) { dragSrcIdx = i; }
+function dragDrop(e, i) {
+  e.preventDefault();
+  if (dragSrcIdx === null || dragSrcIdx === i) return;
+  const items = appSettings.checklistItems;
+  const moved = items.splice(dragSrcIdx, 1)[0];
+  items.splice(i, 0, moved);
+  dragSrcIdx = null;
+  save();
+  renderSettings();
+}
+
+function updateChecklistLabel(i, val) {
+  appSettings.checklistItems[i].label = val;
+  save();
+}
+
+function updateChecklistWarn(i, val) {
+  appSettings.checklistItems[i].warn = val;
+  save();
+}
+
+function removeChecklistItem(i) {
+  appSettings.checklistItems.splice(i, 1);
+  save();
+  renderSettings();
+}
+
+function addChecklistItem() {
+  const input = document.getElementById('newCheckItem');
+  const val = input.value.trim();
+  if (!val) return;
+  appSettings.checklistItems.push({ key: 'custom_' + uid(), label: val, warn: false });
+  input.value = '';
+  save();
+  renderSettings();
+}
+
+function resetChecklist() {
+  if (!confirm('チェックリストをデフォルトに戻しますか？')) return;
+  appSettings.checklistItems = JSON.parse(JSON.stringify(CHECKLIST_DEFAULTS_BUILTIN));
+  save();
+  renderSettings();
+}
+
+function saveBasicSettings() {
+  appSettings.doctorName = document.getElementById('s_doctorName').value.trim() || '山口';
+  appSettings.defaultTeam = document.getElementById('s_defaultTeam').value.trim();
+  save();
+  render();
+  // Flash feedback
+  const btn = event.target;
+  btn.textContent = '✅ 保存しました';
+  setTimeout(() => btn.textContent = '保存', 1500);
+}
+
+function setTheme(t) {
+  appSettings.theme = t;
+  save();
+  renderSettings();
+}
+
+function setAccentColor(c) {
+  appSettings.accentColor = c;
+  save();
+  renderSettings();
+}
+
+function toggleShowField(key, el) {
+  appSettings.showFields[key] = !appSettings.showFields[key];
+  el.classList.toggle('on', appSettings.showFields[key]);
+  save();
+}
+
+function exportData() {
+  const data = JSON.stringify({ cases, appSettings, notifSettings }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `surgery-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.cases) cases = data.cases;
+      if (data.appSettings) appSettings = data.appSettings;
+      if (data.notifSettings) notifSettings = data.notifSettings;
+      save();
+      render();
+      alert('✅ インポートしました');
+    } catch(err) {
+      alert('❌ ファイルの読み込みに失敗しました');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function confirmClearAll() {
+  if (!confirm('全データを削除します。この操作は取り消せません。本当によろしいですか？')) return;
+  cases = [];
+  save();
+  render();
+}
+
+// ========== SEED DATA ==========
+function seedIfEmpty() {
+  if (cases.length > 0) return;
+  const today = new Date();
+  const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const d1 = new Date(today); d1.setDate(d1.getDate() + 7);
+  const d1prev = new Date(d1); d1prev.setDate(d1prev.getDate() - 1);
+  cases.push({
+    id: uid(),
+    opDate: fmt(d1),
+    admDate: fmt(d1prev),
+    name: 'すどう はるき',
+    surgery: '右鼓膜穿孔閉鎖',
+    time: '2時間',
+    team: '羽藤・西原・木原・山口',
+    items: '特記事項なし',
+    memo: '',
+    icu: false, recon: false,
+    checks: { summary_pre: true, cp: true, plan: true, dpc: true, consent: true }
+  });
+  const d2 = new Date(today); d2.setDate(d2.getDate() + 7);
+  cases.push({
+    id: uid(),
+    opDate: fmt(d1),
+    admDate: fmt(d1prev),
+    name: 'いば ひとこ',
+    surgery: '左CI',
+    time: '4時間',
+    team: '羽藤・岩田・花岡・山口',
+    items: '人工内耳',
+    memo: '',
+    icu: false, recon: false,
+    checks: { summary_pre: true, cp: true, plan: true, consent: true }
+  });
+  save();
+}
+
+// ========== SETUP ==========
+function showSetupIfNeeded() {
+  const done = localStorage.getItem('setup_done');
+  if (!done) {
+    document.getElementById('setupModal').classList.add('open');
+  }
+}
+
+function completeSetup() {
+  const user  = document.getElementById('setup_gh_user')?.value.trim() || '';
+  const repo  = document.getElementById('setup_gh_repo')?.value.trim() || '';
+  const path  = document.getElementById('setup_gh_path')?.value.trim() || 'surgery-manager.html';
+  const token = document.getElementById('setup_gh_token')?.value.trim() || '';
+  if (user || repo || token) {
+    localStorage.setItem('gh_settings', JSON.stringify({ user, repo, path, token }));
+  }
+  localStorage.setItem('setup_done', '1');
+  document.getElementById('setupModal').classList.remove('open');
+}
+
+function skipSetup() {
+  localStorage.setItem('setup_done', '1');
+  document.getElementById('setupModal').classList.remove('open');
+}
+
+// ========== INIT ==========
+seedIfEmpty();
+updateToggleUI();
+applyTheme();
+render();
+scheduleNotifications();
+showSetupIfNeeded();
+</script>
+</body>
+</html>
