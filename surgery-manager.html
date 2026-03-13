@@ -1,13 +1,11 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
+<html lang="ja" style="--bg: #f4f6fb; --surface: #ffffff; --surface2: #f0f2f8; --border: #dde2ee; --text: #1a1d2e; --text2: #5a6478; --text3: #9aa3b8; --accent: #43d9a0;"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="手術担当">
 <title>手術担当管理</title>
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer=""></script>
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function(OneSignal) {
@@ -19,7 +17,7 @@
   });
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&amp;family=IBM+Plex+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0d0f14;
@@ -843,13 +841,13 @@
 <div class="header">
   <div>
     <div class="header-title"><span id="headerDoctorName">山口</span> <span>手術担当</span></div>
-    <div id="todayDisplay" style="font-size:11px;color:var(--text3);margin-top:2px;font-family:'IBM Plex Mono',monospace;"></div>
-    <div class="header-stats" id="headerStats"></div>
+    <div id="todayDisplay" style="font-size:11px;color:var(--text3);margin-top:2px;font-family:'IBM Plex Mono',monospace;">2026/03/13（金）</div>
+    <div class="header-stats" id="headerStats"><span class="stat-chip today-chip">本日 3件</span><span class="stat-chip week-chip">今週 2件</span><span class="stat-chip pending-chip">未完了 5件</span></div>
   </div>
   <div class="header-actions">
     <div class="icon-btn-wrap">
       <button class="icon-btn" onclick="showNotifSettings()" title="通知設定">🔔</button>
-      <span class="notif-badge" id="pendingBadge" style="display:none">!</span>
+      <span class="notif-badge" id="pendingBadge" style="display: block;">10</span>
     </div>
     <button class="icon-btn" onclick="toggleSearch()" id="searchToggleBtn" title="検索">🔍</button>
     <button class="icon-btn" onclick="openSettingsModal()" title="設定">⚙️</button>
@@ -867,18 +865,580 @@
   <div class="tab" onclick="switchTab('import', this)">インポート</div>
 </div>
 
-<div id="searchBar" style="padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);display:none;">
+<div id="searchBar" style="padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: block;">
   <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;">
     <span style="color:var(--text3);font-size:14px;">🔍</span>
-    <input type="text" id="searchInput" placeholder="患者名・疾患名で検索..." oninput="onSearch(this.value)"
-      style="flex:1;background:transparent;border:none;outline:none;font-size:13px;color:var(--text);font-family:inherit;">
+    <input type="text" id="searchInput" placeholder="患者名・疾患名で検索..." oninput="onSearch(this.value)" style="flex:1;background:transparent;border:none;outline:none;font-size:13px;color:var(--text);font-family:inherit;">
     <button onclick="clearSearch()" id="searchClearBtn" style="display:none;background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:0;line-height:1;">×</button>
   </div>
 </div>
 
-<div class="content" id="mainContent">
-  <!-- Dynamic content here -->
-</div>
+<div class="content" id="mainContent"><div class="date-separator"><div class="date-separator-line"></div><div class="date-separator-text">オペ日 2026/02/27</div><div class="date-separator-line"></div></div><div class="surgery-card" id="card_mmiq8eqhrppo2c8ps2" style="opacity:0.55;">
+    <div class="card-status-bar discharged"></div>
+    <div class="card-inner">
+    <div class="card-header" onclick="toggleCard('mmiq8eqhrppo2c8ps2')">
+      <div class="card-main">
+        <div class="patient-name">ヤマガミ ヨシヒサ</div>
+        <div class="patient-meta" style="margin-top:3px;">
+          <span class="meta-tag">右舌癌部分切除  術後出血</span>
+          <span class="meta-tag">IC:3/9</span>
+          <span class="meta-tag" style="color:var(--text3);">退院:3/12</span>
+          <span style="font-size:10px;font-weight:700;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;margin-left:6px;">退院済</span>
+          
+          
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="ring-wrap"><svg width="36" height="36" viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="14"></circle><circle class="ring-fill " cx="18" cy="18" r="14" stroke-dasharray="88.0" stroke-dashoffset="7.0"></circle></svg><div class="ring-text">11/12</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span class="op-date-badge past">2026/02/27</span>
+            <div style="display:flex;gap:4px;align-items:center;">
+              <button class="icon-btn" style="width:28px;height:28px;font-size:11px;background:var(--green);color:#fff;border-color:transparent;" onclick="event.stopPropagation();completeAllTasks('mmiq8eqhrppo2c8ps2')" title="全完了">✅</button>
+              <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('mmiq8eqhrppo2c8ps2')">✏️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body" id="body_mmiq8eqhrppo2c8ps2">
+      <div class="info-row"><span class="info-label">予定時間</span><span class="info-value">—</span></div>
+      <div class="info-row"><span class="info-label">物品／注意</span><span class="info-value">特記事項なし</span></div>
+      <div class="info-row"><span class="info-label">担当</span><div class="team-chips"><span class="team-chip me">山口</span><span class="team-chip">高山</span><span class="team-chip">入船</span><span class="team-chip">宮地</span></div></div>
+      <div class="checklist" style="margin-top:10px"><span class="check-item done" onclick="toggleCheck('mmiq8eqhrppo2c8ps2','summary_pre')"><span class="check-icon">☑</span>入院前サマリ</span><span class="check-item done" onclick="toggleCheck('mmiq8eqhrppo2c8ps2','cp')"><span class="check-icon">☑</span>CP入力</span><span class="check-item done" onclick="toggleCheck('mmiq8eqhrppo2c8ps2','plan')"><span class="check-icon">☑</span>入院診療計画書</span><span class="check-item done" onclick="toggleCheck('mmiq8eqhrppo2c8ps2','admission_rx')"><span class="check-icon">☑</span>入院時処方鑑別</span><span class="check-item done" onclick="toggleCheck('mmiq8eqhrppo2c8ps2','dpc')"><span class="check-icon">☑</span>DPC</span><span class="check-item done" onclick="toggleCheck('mmiq8eqhrppo2c8ps2','consent')"><span class="check-icon">☑</span>手術同意書</span><span class="check-item done" onclick="toggleCheck('mmiq8eqhrppo2c8ps2','blood_consent')"><span class="check-icon">☑</span>輸血同意書</span><span class="check-item done" onclick="toggleCheck('mmiq8eqhrppo2c8ps2','discharge_summary')"><span class="check-icon">☑</span>退院サマリ</span><span class="check-item done" onclick="toggleCheck('mmiq8eqhrppo2c8ps2','rapid_order')"><span class="check-icon">☑</span>⚠️迅速オーダー</span><span class="check-item done" onclick="toggleCheck('mmiq8eqhrppo2c8ps2','custom_mmiq56rrkfav1ju6zi')"><span class="check-icon">☑</span>食止め・抗生剤同意書</span><span class="check-item done" onclick="toggleCheck('mmiq8eqhrppo2c8ps2','custom_mmiz8s2v5mz93tzkeye')"><span class="check-icon">☑</span>オペ入力</span><span class="check-item warn" onclick="toggleCheck('mmiq8eqhrppo2c8ps2','custom_mmjamtduoe1fgpt5up')"><span class="check-icon">□</span>🏥退院済み🏥</span></div>
+      
+      
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">
+        <button onclick="event.stopPropagation();addReminderPrevDay('mmiq8eqhrppo2c8ps2')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          📅 前日リマインダー
+        </button>
+        <button onclick="event.stopPropagation();addReminderOpDay('mmiq8eqhrppo2c8ps2')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🌅 当日朝リマインダー
+        </button>
+      </div>
+    </div>
+    </div>
+  </div><div class="date-separator"><div class="date-separator-line"></div><div class="date-separator-text">オペ日 2026/03/05</div><div class="date-separator-line"></div></div><div class="surgery-card" id="card_mmjtjogfcbxk7dk0gpk" style="">
+    <div class="card-status-bar admitted"></div>
+    <div class="card-inner">
+    <div class="card-header" onclick="toggleCard('mmjtjogfcbxk7dk0gpk')">
+      <div class="card-main">
+        <div class="patient-name">たかた</div>
+        <div class="patient-meta" style="margin-top:3px;">
+          <span class="meta-tag">顔面神経麻痺</span>
+          <span class="meta-tag">IC:3/5</span>
+          
+          <span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(79,140,255,0.12);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;margin-left:6px;">入院中</span>
+          
+          
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="ring-wrap"><svg width="36" height="36" viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="14"></circle><circle class="ring-fill done" cx="18" cy="18" r="14" stroke-dasharray="88.0" stroke-dashoffset="0.0"></circle></svg><div class="ring-text">12/12</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span class="op-date-badge past">2026/03/05</span>
+            <div style="display:flex;gap:4px;align-items:center;">
+              <button class="icon-btn" style="width:28px;height:28px;font-size:11px;background:var(--green);color:#fff;border-color:transparent;" onclick="event.stopPropagation();completeAllTasks('mmjtjogfcbxk7dk0gpk')" title="全完了">✅</button>
+              <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('mmjtjogfcbxk7dk0gpk')">✏️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body" id="body_mmjtjogfcbxk7dk0gpk">
+      <div class="info-row"><span class="info-label">予定時間</span><span class="info-value">—</span></div>
+      <div class="info-row"><span class="info-label">物品／注意</span><span class="info-value">特記事項なし</span></div>
+      <div class="info-row"><span class="info-label">担当</span><div class="team-chips"><span class="team-chip me">山口</span></div></div>
+      <div class="checklist" style="margin-top:10px"><span class="check-item done" onclick="toggleCheck('mmjtjogfcbxk7dk0gpk','summary_pre')"><span class="check-icon">☑</span>入院前サマリ</span><span class="check-item done" onclick="toggleCheck('mmjtjogfcbxk7dk0gpk','cp')"><span class="check-icon">☑</span>CP入力</span><span class="check-item done" onclick="toggleCheck('mmjtjogfcbxk7dk0gpk','plan')"><span class="check-icon">☑</span>入院診療計画書</span><span class="check-item done" onclick="toggleCheck('mmjtjogfcbxk7dk0gpk','admission_rx')"><span class="check-icon">☑</span>入院時処方鑑別</span><span class="check-item done" onclick="toggleCheck('mmjtjogfcbxk7dk0gpk','dpc')"><span class="check-icon">☑</span>DPC</span><span class="check-item done" onclick="toggleCheck('mmjtjogfcbxk7dk0gpk','consent')"><span class="check-icon">☑</span>手術同意書</span><span class="check-item done" onclick="toggleCheck('mmjtjogfcbxk7dk0gpk','blood_consent')"><span class="check-icon">☑</span>輸血同意書</span><span class="check-item done" onclick="toggleCheck('mmjtjogfcbxk7dk0gpk','discharge_summary')"><span class="check-icon">☑</span>退院サマリ</span><span class="check-item done" onclick="toggleCheck('mmjtjogfcbxk7dk0gpk','rapid_order')"><span class="check-icon">☑</span>⚠️迅速オーダー</span><span class="check-item done" onclick="toggleCheck('mmjtjogfcbxk7dk0gpk','custom_mmiq56rrkfav1ju6zi')"><span class="check-icon">☑</span>食止め・抗生剤同意書</span><span class="check-item done" onclick="toggleCheck('mmjtjogfcbxk7dk0gpk','custom_mmiz8s2v5mz93tzkeye')"><span class="check-icon">☑</span>オペ入力</span><span class="check-item done" onclick="toggleCheck('mmjtjogfcbxk7dk0gpk','custom_mmjamtduoe1fgpt5up')"><span class="check-icon">☑</span>🏥退院済み🏥</span></div>
+      
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;">フリーチェック</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+            <span class="check-item done" onclick="toggleFreeCheckCard('mmjtjogfcbxk7dk0gpk',0)" style="flex:1;">
+              <span class="check-icon">☑</span>ENOG 予後予測
+            </span>
+            
+          </div>
+      </div>
+    </div>
+      
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">
+        <button onclick="event.stopPropagation();addReminderPrevDay('mmjtjogfcbxk7dk0gpk')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          📅 前日リマインダー
+        </button>
+        <button onclick="event.stopPropagation();addReminderOpDay('mmjtjogfcbxk7dk0gpk')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🌅 当日朝リマインダー
+        </button>
+      </div>
+    </div>
+    </div>
+  </div><div class="date-separator"><div class="date-separator-line"></div><div class="date-separator-text">オペ日 2026/03/06</div><div class="date-separator-line"></div></div><div class="surgery-card" id="card_mmidfy2fov6bdemnex" style="">
+    <div class="card-status-bar admitted"></div>
+    <div class="card-inner">
+    <div class="card-header" onclick="toggleCard('mmidfy2fov6bdemnex')">
+      <div class="card-main">
+        <div class="patient-name">ナガイ ユキミチ</div>
+        <div class="patient-meta" style="margin-top:3px;">
+          <span class="meta-tag">甲状腺MALTリンパ腫疑い</span>
+          <span class="meta-tag">IC:3/5</span>
+          
+          <span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(79,140,255,0.12);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;margin-left:6px;">入院中</span>
+          
+          
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="ring-wrap"><svg width="36" height="36" viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="14"></circle><circle class="ring-fill " cx="18" cy="18" r="14" stroke-dasharray="88.0" stroke-dashoffset="7.0"></circle></svg><div class="ring-text">11/12</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span class="op-date-badge past">2026/03/06</span>
+            <div style="display:flex;gap:4px;align-items:center;">
+              <button class="icon-btn" style="width:28px;height:28px;font-size:11px;background:var(--green);color:#fff;border-color:transparent;" onclick="event.stopPropagation();completeAllTasks('mmidfy2fov6bdemnex')" title="全完了">✅</button>
+              <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('mmidfy2fov6bdemnex')">✏️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body" id="body_mmidfy2fov6bdemnex">
+      <div class="info-row"><span class="info-label">予定時間</span><span class="info-value">—</span></div>
+      <div class="info-row"><span class="info-label">物品／注意</span><span class="info-value">特記事項なし</span></div>
+      <div class="info-row"><span class="info-label">担当</span><div class="team-chips"><span class="team-chip me">山口</span><span class="team-chip">細川</span><span class="team-chip">入船</span></div></div>
+      <div class="checklist" style="margin-top:10px"><span class="check-item done" onclick="toggleCheck('mmidfy2fov6bdemnex','summary_pre')"><span class="check-icon">☑</span>入院前サマリ</span><span class="check-item done" onclick="toggleCheck('mmidfy2fov6bdemnex','cp')"><span class="check-icon">☑</span>CP入力</span><span class="check-item done" onclick="toggleCheck('mmidfy2fov6bdemnex','plan')"><span class="check-icon">☑</span>入院診療計画書</span><span class="check-item done" onclick="toggleCheck('mmidfy2fov6bdemnex','admission_rx')"><span class="check-icon">☑</span>入院時処方鑑別</span><span class="check-item done" onclick="toggleCheck('mmidfy2fov6bdemnex','dpc')"><span class="check-icon">☑</span>DPC</span><span class="check-item done" onclick="toggleCheck('mmidfy2fov6bdemnex','consent')"><span class="check-icon">☑</span>手術同意書</span><span class="check-item done" onclick="toggleCheck('mmidfy2fov6bdemnex','blood_consent')"><span class="check-icon">☑</span>輸血同意書</span><span class="check-item" onclick="toggleCheck('mmidfy2fov6bdemnex','discharge_summary')"><span class="check-icon">□</span>退院サマリ</span><span class="check-item done" onclick="toggleCheck('mmidfy2fov6bdemnex','rapid_order')"><span class="check-icon">☑</span>⚠️迅速オーダー</span><span class="check-item done" onclick="toggleCheck('mmidfy2fov6bdemnex','custom_mmiq56rrkfav1ju6zi')"><span class="check-icon">☑</span>食止め・抗生剤同意書</span><span class="check-item done" onclick="toggleCheck('mmidfy2fov6bdemnex','custom_mmiz8s2v5mz93tzkeye')"><span class="check-icon">☑</span>オペ入力</span><span class="check-item done" onclick="toggleCheck('mmidfy2fov6bdemnex','custom_mmjamtduoe1fgpt5up')"><span class="check-icon">☑</span>🏥退院済み🏥</span></div>
+      
+      
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">
+        <button onclick="event.stopPropagation();addReminderPrevDay('mmidfy2fov6bdemnex')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          📅 前日リマインダー
+        </button>
+        <button onclick="event.stopPropagation();addReminderOpDay('mmidfy2fov6bdemnex')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🌅 当日朝リマインダー
+        </button>
+      </div>
+    </div>
+    </div>
+  </div><div class="surgery-card" id="card_mmiqee1pes3pf7oifjv" style="">
+    <div class="card-status-bar admitted"></div>
+    <div class="card-inner">
+    <div class="card-header" onclick="toggleCard('mmiqee1pes3pf7oifjv')">
+      <div class="card-main">
+        <div class="patient-name">スズキ シンゴ</div>
+        <div class="patient-meta" style="margin-top:3px;">
+          <span class="meta-tag">右梨状陥凹癌 TOVS</span>
+          <span class="meta-tag">IC:3/5</span>
+          
+          <span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(79,140,255,0.12);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;margin-left:6px;">入院中</span>
+          
+          
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="ring-wrap"><svg width="36" height="36" viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="14"></circle><circle class="ring-fill " cx="18" cy="18" r="14" stroke-dasharray="88.0" stroke-dashoffset="22.0"></circle></svg><div class="ring-text">9/12</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span class="op-date-badge past">2026/03/06</span>
+            <div style="display:flex;gap:4px;align-items:center;">
+              <button class="icon-btn" style="width:28px;height:28px;font-size:11px;background:var(--green);color:#fff;border-color:transparent;" onclick="event.stopPropagation();completeAllTasks('mmiqee1pes3pf7oifjv')" title="全完了">✅</button>
+              <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('mmiqee1pes3pf7oifjv')">✏️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body" id="body_mmiqee1pes3pf7oifjv">
+      <div class="info-row"><span class="info-label">予定時間</span><span class="info-value">—</span></div>
+      <div class="info-row"><span class="info-label">物品／注意</span><span class="info-value">特記事項なし</span></div>
+      <div class="info-row"><span class="info-label">担当</span><div class="team-chips"><span class="team-chip me">山口</span></div></div>
+      <div class="checklist" style="margin-top:10px"><span class="check-item done" onclick="toggleCheck('mmiqee1pes3pf7oifjv','summary_pre')"><span class="check-icon">☑</span>入院前サマリ</span><span class="check-item done" onclick="toggleCheck('mmiqee1pes3pf7oifjv','cp')"><span class="check-icon">☑</span>CP入力</span><span class="check-item done" onclick="toggleCheck('mmiqee1pes3pf7oifjv','plan')"><span class="check-icon">☑</span>入院診療計画書</span><span class="check-item done" onclick="toggleCheck('mmiqee1pes3pf7oifjv','admission_rx')"><span class="check-icon">☑</span>入院時処方鑑別</span><span class="check-item done" onclick="toggleCheck('mmiqee1pes3pf7oifjv','dpc')"><span class="check-icon">☑</span>DPC</span><span class="check-item done" onclick="toggleCheck('mmiqee1pes3pf7oifjv','consent')"><span class="check-icon">☑</span>手術同意書</span><span class="check-item done" onclick="toggleCheck('mmiqee1pes3pf7oifjv','blood_consent')"><span class="check-icon">☑</span>輸血同意書</span><span class="check-item" onclick="toggleCheck('mmiqee1pes3pf7oifjv','discharge_summary')"><span class="check-icon">□</span>退院サマリ</span><span class="check-item done" onclick="toggleCheck('mmiqee1pes3pf7oifjv','rapid_order')"><span class="check-icon">☑</span>⚠️迅速オーダー</span><span class="check-item done" onclick="toggleCheck('mmiqee1pes3pf7oifjv','custom_mmiq56rrkfav1ju6zi')"><span class="check-icon">☑</span>食止め・抗生剤同意書</span><span class="check-item" onclick="toggleCheck('mmiqee1pes3pf7oifjv','custom_mmiz8s2v5mz93tzkeye')"><span class="check-icon">□</span>オペ入力</span><span class="check-item warn" onclick="toggleCheck('mmiqee1pes3pf7oifjv','custom_mmjamtduoe1fgpt5up')"><span class="check-icon">□</span>🏥退院済み🏥</span></div>
+      
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;">フリーチェック</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+            <span class="check-item done" onclick="toggleFreeCheckCard('mmiqee1pes3pf7oifjv',0)" style="flex:1;">
+              <span class="check-icon">☑</span>退院決定
+            </span>
+            
+          </div><div style="display:flex;align-items:center;gap:6px;">
+            <span class="check-item done" onclick="toggleFreeCheckCard('mmiqee1pes3pf7oifjv',1)" style="flex:1;">
+              <span class="check-icon">☑</span>サマリ
+            </span>
+            
+          </div>
+      </div>
+    </div>
+      
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">
+        <button onclick="event.stopPropagation();addReminderPrevDay('mmiqee1pes3pf7oifjv')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          📅 前日リマインダー
+        </button>
+        <button onclick="event.stopPropagation();addReminderOpDay('mmiqee1pes3pf7oifjv')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🌅 当日朝リマインダー
+        </button>
+      </div>
+    </div>
+    </div>
+  </div><div class="date-separator"><div class="date-separator-line"></div><div class="date-separator-text">オペ日 2026/03/10</div><div class="date-separator-line"></div></div><div class="surgery-card" id="card_mmhwsc6zzfbhp2f555l" style="">
+    <div class="card-status-bar admitted"></div>
+    <div class="card-inner">
+    <div class="card-header" onclick="toggleCard('mmhwsc6zzfbhp2f555l')">
+      <div class="card-main">
+        <div class="patient-name">すどう はるき</div>
+        <div class="patient-meta" style="margin-top:3px;">
+          <span class="meta-tag">右鼓膜穿孔閉鎖</span>
+          <span class="meta-tag">IC:3/9</span>
+          
+          <span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(79,140,255,0.12);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;margin-left:6px;">入院中</span>
+          
+          
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="ring-wrap"><svg width="36" height="36" viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="14"></circle><circle class="ring-fill " cx="18" cy="18" r="14" stroke-dasharray="88.0" stroke-dashoffset="15.0"></circle></svg><div class="ring-text">10/12</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span class="op-date-badge past">2026/03/10</span>
+            <div style="display:flex;gap:4px;align-items:center;">
+              <button class="icon-btn" style="width:28px;height:28px;font-size:11px;background:var(--green);color:#fff;border-color:transparent;" onclick="event.stopPropagation();completeAllTasks('mmhwsc6zzfbhp2f555l')" title="全完了">✅</button>
+              <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('mmhwsc6zzfbhp2f555l')">✏️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body" id="body_mmhwsc6zzfbhp2f555l">
+      <div class="info-row"><span class="info-label">予定時間</span><span class="info-value">2時間</span></div>
+      <div class="info-row"><span class="info-label">物品／注意</span><span class="info-value">特記事項なし</span></div>
+      <div class="info-row"><span class="info-label">担当</span><div class="team-chips"><span class="team-chip">羽藤</span><span class="team-chip">西原</span><span class="team-chip">木原</span><span class="team-chip me">山口</span></div></div>
+      <div class="checklist" style="margin-top:10px"><span class="check-item done" onclick="toggleCheck('mmhwsc6zzfbhp2f555l','summary_pre')"><span class="check-icon">☑</span>入院前サマリ</span><span class="check-item done" onclick="toggleCheck('mmhwsc6zzfbhp2f555l','cp')"><span class="check-icon">☑</span>CP入力</span><span class="check-item done" onclick="toggleCheck('mmhwsc6zzfbhp2f555l','plan')"><span class="check-icon">☑</span>入院診療計画書</span><span class="check-item done" onclick="toggleCheck('mmhwsc6zzfbhp2f555l','admission_rx')"><span class="check-icon">☑</span>入院時処方鑑別</span><span class="check-item done" onclick="toggleCheck('mmhwsc6zzfbhp2f555l','dpc')"><span class="check-icon">☑</span>DPC</span><span class="check-item done" onclick="toggleCheck('mmhwsc6zzfbhp2f555l','consent')"><span class="check-icon">☑</span>手術同意書</span><span class="check-item done" onclick="toggleCheck('mmhwsc6zzfbhp2f555l','blood_consent')"><span class="check-icon">☑</span>輸血同意書</span><span class="check-item" onclick="toggleCheck('mmhwsc6zzfbhp2f555l','discharge_summary')"><span class="check-icon">□</span>退院サマリ</span><span class="check-item done" onclick="toggleCheck('mmhwsc6zzfbhp2f555l','rapid_order')"><span class="check-icon">☑</span>⚠️迅速オーダー</span><span class="check-item done" onclick="toggleCheck('mmhwsc6zzfbhp2f555l','custom_mmiq56rrkfav1ju6zi')"><span class="check-icon">☑</span>食止め・抗生剤同意書</span><span class="check-item done" onclick="toggleCheck('mmhwsc6zzfbhp2f555l','custom_mmiz8s2v5mz93tzkeye')"><span class="check-icon">☑</span>オペ入力</span><span class="check-item warn" onclick="toggleCheck('mmhwsc6zzfbhp2f555l','custom_mmjamtduoe1fgpt5up')"><span class="check-icon">□</span>🏥退院済み🏥</span></div>
+      
+      
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">
+        <button onclick="event.stopPropagation();addReminderPrevDay('mmhwsc6zzfbhp2f555l')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          📅 前日リマインダー
+        </button>
+        <button onclick="event.stopPropagation();addReminderOpDay('mmhwsc6zzfbhp2f555l')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🌅 当日朝リマインダー
+        </button>
+      </div>
+    </div>
+    </div>
+  </div><div class="surgery-card" id="card_mmhwsc6z5bj41053mxu" style="">
+    <div class="card-status-bar admitted"></div>
+    <div class="card-inner">
+    <div class="card-header" onclick="toggleCard('mmhwsc6z5bj41053mxu')">
+      <div class="card-main">
+        <div class="patient-name">いば ひとこ</div>
+        <div class="patient-meta" style="margin-top:3px;">
+          <span class="meta-tag">左CI</span>
+          <span class="meta-tag">IC:3/9</span>
+          
+          <span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(79,140,255,0.12);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;margin-left:6px;">入院中</span>
+          
+          
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="ring-wrap"><svg width="36" height="36" viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="14"></circle><circle class="ring-fill " cx="18" cy="18" r="14" stroke-dasharray="88.0" stroke-dashoffset="15.0"></circle></svg><div class="ring-text">10/12</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span class="op-date-badge past">2026/03/10</span>
+            <div style="display:flex;gap:4px;align-items:center;">
+              <button class="icon-btn" style="width:28px;height:28px;font-size:11px;background:var(--green);color:#fff;border-color:transparent;" onclick="event.stopPropagation();completeAllTasks('mmhwsc6z5bj41053mxu')" title="全完了">✅</button>
+              <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('mmhwsc6z5bj41053mxu')">✏️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body" id="body_mmhwsc6z5bj41053mxu">
+      <div class="info-row"><span class="info-label">予定時間</span><span class="info-value">4時間</span></div>
+      <div class="info-row"><span class="info-label">物品／注意</span><span class="info-value">人工内耳</span></div>
+      <div class="info-row"><span class="info-label">担当</span><div class="team-chips"><span class="team-chip">羽藤</span><span class="team-chip">岩田</span><span class="team-chip">花岡</span><span class="team-chip me">山口</span></div></div>
+      <div class="checklist" style="margin-top:10px"><span class="check-item done" onclick="toggleCheck('mmhwsc6z5bj41053mxu','summary_pre')"><span class="check-icon">☑</span>入院前サマリ</span><span class="check-item done" onclick="toggleCheck('mmhwsc6z5bj41053mxu','cp')"><span class="check-icon">☑</span>CP入力</span><span class="check-item done" onclick="toggleCheck('mmhwsc6z5bj41053mxu','plan')"><span class="check-icon">☑</span>入院診療計画書</span><span class="check-item done" onclick="toggleCheck('mmhwsc6z5bj41053mxu','admission_rx')"><span class="check-icon">☑</span>入院時処方鑑別</span><span class="check-item done" onclick="toggleCheck('mmhwsc6z5bj41053mxu','dpc')"><span class="check-icon">☑</span>DPC</span><span class="check-item done" onclick="toggleCheck('mmhwsc6z5bj41053mxu','consent')"><span class="check-icon">☑</span>手術同意書</span><span class="check-item done" onclick="toggleCheck('mmhwsc6z5bj41053mxu','blood_consent')"><span class="check-icon">☑</span>輸血同意書</span><span class="check-item" onclick="toggleCheck('mmhwsc6z5bj41053mxu','discharge_summary')"><span class="check-icon">□</span>退院サマリ</span><span class="check-item done" onclick="toggleCheck('mmhwsc6z5bj41053mxu','rapid_order')"><span class="check-icon">☑</span>⚠️迅速オーダー</span><span class="check-item done" onclick="toggleCheck('mmhwsc6z5bj41053mxu','custom_mmiq56rrkfav1ju6zi')"><span class="check-icon">☑</span>食止め・抗生剤同意書</span><span class="check-item done" onclick="toggleCheck('mmhwsc6z5bj41053mxu','custom_mmiz8s2v5mz93tzkeye')"><span class="check-icon">☑</span>オペ入力</span><span class="check-item warn" onclick="toggleCheck('mmhwsc6z5bj41053mxu','custom_mmjamtduoe1fgpt5up')"><span class="check-icon">□</span>🏥退院済み🏥</span></div>
+      
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;">フリーチェック</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+            <span class="check-item done" onclick="toggleFreeCheckCard('mmhwsc6z5bj41053mxu',0)" style="flex:1;">
+              <span class="check-icon">☑</span>食止め
+            </span>
+            
+          </div><div style="display:flex;align-items:center;gap:6px;">
+            <span class="check-item done" onclick="toggleFreeCheckCard('mmhwsc6z5bj41053mxu',1)" style="flex:1;">
+              <span class="check-icon">☑</span>IC 同意書印刷
+            </span>
+            
+          </div>
+      </div>
+    </div>
+      
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">
+        <button onclick="event.stopPropagation();addReminderPrevDay('mmhwsc6z5bj41053mxu')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          📅 前日リマインダー
+        </button>
+        <button onclick="event.stopPropagation();addReminderOpDay('mmhwsc6z5bj41053mxu')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🌅 当日朝リマインダー
+        </button>
+      </div>
+    </div>
+    </div>
+  </div><div class="date-separator"><div class="date-separator-line"></div><div class="date-separator-text">今日のオペ ▼</div><div class="date-separator-line"></div></div><div class="surgery-card" id="card_mmk71quuljycr1unx1c" style="">
+    <div class="card-status-bar today"></div>
+    <div class="card-inner">
+    <div class="card-header" onclick="toggleCard('mmk71quuljycr1unx1c')">
+      <div class="card-main">
+        <div class="patient-name">キクチ エイジ<span style="font-size:22px;line-height:1;margin-left:6px;" title="3日前チェック完了">✅</span></div>
+        <div class="patient-meta" style="margin-top:3px;">
+          <span class="meta-tag">Devi 両PNN</span>
+          <span class="meta-tag">IC:3/12</span>
+          
+          <span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(79,140,255,0.12);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;margin-left:6px;">入院中</span>
+          
+          
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="ring-wrap"><svg width="36" height="36" viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="14"></circle><circle class="ring-fill " cx="18" cy="18" r="14" stroke-dasharray="88.0" stroke-dashoffset="29.0"></circle></svg><div class="ring-text">8/12</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span class="op-date-badge today">TODAY</span>
+            <div style="display:flex;gap:4px;align-items:center;">
+              
+              <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('mmk71quuljycr1unx1c')">✏️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body open" id="body_mmk71quuljycr1unx1c">
+      <div class="info-row"><span class="info-label">予定時間</span><span class="info-value">3.5</span></div>
+      <div class="info-row"><span class="info-label">物品／注意</span><span class="info-value">特記事項なし</span></div>
+      <div class="info-row"><span class="info-label">担当</span><div class="team-chips"><span class="team-chip me">山口</span><span class="team-chip">青石</span><span class="team-chip">高山</span></div></div>
+      <div class="checklist" style="margin-top:10px"><span class="check-item done" onclick="toggleCheck('mmk71quuljycr1unx1c','summary_pre')"><span class="check-icon">☑</span>入院前サマリ</span><span class="check-item done" onclick="toggleCheck('mmk71quuljycr1unx1c','cp')"><span class="check-icon">☑</span>CP入力</span><span class="check-item done" onclick="toggleCheck('mmk71quuljycr1unx1c','plan')"><span class="check-icon">☑</span>入院診療計画書</span><span class="check-item" onclick="toggleCheck('mmk71quuljycr1unx1c','admission_rx')"><span class="check-icon">□</span>入院時処方鑑別</span><span class="check-item done" onclick="toggleCheck('mmk71quuljycr1unx1c','dpc')"><span class="check-icon">☑</span>DPC</span><span class="check-item done" onclick="toggleCheck('mmk71quuljycr1unx1c','consent')"><span class="check-icon">☑</span>手術同意書</span><span class="check-item done" onclick="toggleCheck('mmk71quuljycr1unx1c','blood_consent')"><span class="check-icon">☑</span>輸血同意書</span><span class="check-item" onclick="toggleCheck('mmk71quuljycr1unx1c','discharge_summary')"><span class="check-icon">□</span>退院サマリ</span><span class="check-item done" onclick="toggleCheck('mmk71quuljycr1unx1c','rapid_order')"><span class="check-icon">☑</span>⚠️迅速オーダー</span><span class="check-item" onclick="toggleCheck('mmk71quuljycr1unx1c','custom_mmiq56rrkfav1ju6zi')"><span class="check-icon">□</span>食止め・抗生剤同意書</span><span class="check-item done" onclick="toggleCheck('mmk71quuljycr1unx1c','custom_mmiz8s2v5mz93tzkeye')"><span class="check-icon">☑</span>オペ入力</span><span class="check-item warn" onclick="toggleCheck('mmk71quuljycr1unx1c','custom_mmjamtduoe1fgpt5up')"><span class="check-icon">□</span>🏥退院済み🏥</span></div>
+      
+      
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">
+        <button onclick="event.stopPropagation();addReminderPrevDay('mmk71quuljycr1unx1c')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          📅 前日リマインダー
+        </button>
+        <button onclick="event.stopPropagation();addReminderOpDay('mmk71quuljycr1unx1c')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🌅 当日朝リマインダー
+        </button>
+      </div>
+    </div>
+    </div>
+  </div><div class="surgery-card" id="card_mmk7d8vnk6y98k5a0o" style="">
+    <div class="card-status-bar today"></div>
+    <div class="card-inner">
+    <div class="card-header" onclick="toggleCard('mmk7d8vnk6y98k5a0o')">
+      <div class="card-main">
+        <div class="patient-name">イナダ ノリコ 稻田法子<span style="font-size:22px;line-height:1;margin-left:6px;animation:pulse 1s infinite;" title="チェック未完了・デッドライン超過">⚠️</span></div>
+        <div class="patient-meta" style="margin-top:3px;">
+          <span class="meta-tag">気管切開術</span>
+          <span class="meta-tag">IC:3/1</span>
+          
+          <span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(79,140,255,0.12);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;margin-left:6px;">入院中</span>
+          
+          
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="ring-wrap"><svg width="36" height="36" viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="14"></circle><circle class="ring-fill warn" cx="18" cy="18" r="14" stroke-dasharray="88.0" stroke-dashoffset="80.9"></circle></svg><div class="ring-text">1/12</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span class="op-date-badge today">TODAY</span>
+            <div style="display:flex;gap:4px;align-items:center;">
+              
+              <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('mmk7d8vnk6y98k5a0o')">✏️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body open" id="body_mmk7d8vnk6y98k5a0o">
+      <div class="info-row"><span class="info-label">予定時間</span><span class="info-value">—</span></div>
+      <div class="info-row"><span class="info-label">物品／注意</span><span class="info-value">特記事項なし</span></div>
+      <div class="info-row"><span class="info-label">担当</span><div class="team-chips"><span class="team-chip me">山口</span><span class="team-chip">浅山</span><span class="team-chip">細川</span></div></div>
+      <div class="checklist" style="margin-top:10px"><span class="check-item done" onclick="toggleCheck('mmk7d8vnk6y98k5a0o','summary_pre')"><span class="check-icon">☑</span>入院前サマリ</span><span class="check-item" onclick="toggleCheck('mmk7d8vnk6y98k5a0o','cp')"><span class="check-icon">□</span>CP入力</span><span class="check-item" onclick="toggleCheck('mmk7d8vnk6y98k5a0o','plan')"><span class="check-icon">□</span>入院診療計画書</span><span class="check-item" onclick="toggleCheck('mmk7d8vnk6y98k5a0o','admission_rx')"><span class="check-icon">□</span>入院時処方鑑別</span><span class="check-item" onclick="toggleCheck('mmk7d8vnk6y98k5a0o','dpc')"><span class="check-icon">□</span>DPC</span><span class="check-item" onclick="toggleCheck('mmk7d8vnk6y98k5a0o','consent')"><span class="check-icon">□</span>手術同意書</span><span class="check-item" onclick="toggleCheck('mmk7d8vnk6y98k5a0o','blood_consent')"><span class="check-icon">□</span>輸血同意書</span><span class="check-item" onclick="toggleCheck('mmk7d8vnk6y98k5a0o','discharge_summary')"><span class="check-icon">□</span>退院サマリ</span><span class="check-item warn" onclick="toggleCheck('mmk7d8vnk6y98k5a0o','rapid_order')"><span class="check-icon">□</span>⚠️迅速オーダー</span><span class="check-item" onclick="toggleCheck('mmk7d8vnk6y98k5a0o','custom_mmiq56rrkfav1ju6zi')"><span class="check-icon">□</span>食止め・抗生剤同意書</span><span class="check-item" onclick="toggleCheck('mmk7d8vnk6y98k5a0o','custom_mmiz8s2v5mz93tzkeye')"><span class="check-icon">□</span>オペ入力</span><span class="check-item warn" onclick="toggleCheck('mmk7d8vnk6y98k5a0o','custom_mmjamtduoe1fgpt5up')"><span class="check-icon">□</span>🏥退院済み🏥</span></div>
+      
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;">フリーチェック</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+            <span class="check-item done" onclick="toggleFreeCheckCard('mmk7d8vnk6y98k5a0o',0)" style="flex:1;">
+              <span class="check-icon">☑</span>サマリ
+            </span>
+            
+          </div><div style="display:flex;align-items:center;gap:6px;">
+            <span class="check-item" onclick="toggleFreeCheckCard('mmk7d8vnk6y98k5a0o',1)" style="flex:1;">
+              <span class="check-icon">□</span>発表<span style="font-size:9px;color:var(--accent3);margin-left:4px;">🔔03-11 15:01</span>
+            </span>
+            <button onclick="event.stopPropagation();addFreeCheckReminder('mmk7d8vnk6y98k5a0o',1)" style="background:var(--surface);border:1px solid var(--accent3);color:var(--accent3);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">📅 登録</button>
+          </div>
+      </div>
+    </div>
+      
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">
+        <button onclick="event.stopPropagation();addReminderPrevDay('mmk7d8vnk6y98k5a0o')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          📅 前日リマインダー
+        </button>
+        <button onclick="event.stopPropagation();addReminderOpDay('mmk7d8vnk6y98k5a0o')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🌅 当日朝リマインダー
+        </button>
+      </div>
+    </div>
+    </div>
+  </div><div class="surgery-card" id="card_mmk7jq8ca6u1xyqheb" style="">
+    <div class="card-status-bar today"></div>
+    <div class="card-inner">
+    <div class="card-header" onclick="toggleCard('mmk7jq8ca6u1xyqheb')">
+      <div class="card-main">
+        <div class="patient-name">ヤウチ マヤ<span style="font-size:22px;line-height:1;margin-left:6px;" title="3日前チェック完了">✅</span></div>
+        <div class="patient-meta" style="margin-top:3px;">
+          <span class="meta-tag">HTF Subcon</span>
+          <span class="meta-tag">IC:3/12</span>
+          
+          <span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(79,140,255,0.12);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;margin-left:6px;">入院中</span>
+          
+          
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="ring-wrap"><svg width="36" height="36" viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="14"></circle><circle class="ring-fill " cx="18" cy="18" r="14" stroke-dasharray="88.0" stroke-dashoffset="29.0"></circle></svg><div class="ring-text">8/12</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span class="op-date-badge today">TODAY</span>
+            <div style="display:flex;gap:4px;align-items:center;">
+              
+              <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('mmk7jq8ca6u1xyqheb')">✏️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body open" id="body_mmk7jq8ca6u1xyqheb">
+      <div class="info-row"><span class="info-label">予定時間</span><span class="info-value">—</span></div>
+      <div class="info-row"><span class="info-label">物品／注意</span><span class="info-value">特記事項なし</span></div>
+      <div class="info-row"><span class="info-label">担当</span><div class="team-chips"><span class="team-chip me">山口</span><span class="team-chip">青石</span><span class="team-chip">木原</span></div></div>
+      <div class="checklist" style="margin-top:10px"><span class="check-item done" onclick="toggleCheck('mmk7jq8ca6u1xyqheb','summary_pre')"><span class="check-icon">☑</span>入院前サマリ</span><span class="check-item done" onclick="toggleCheck('mmk7jq8ca6u1xyqheb','cp')"><span class="check-icon">☑</span>CP入力</span><span class="check-item done" onclick="toggleCheck('mmk7jq8ca6u1xyqheb','plan')"><span class="check-icon">☑</span>入院診療計画書</span><span class="check-item" onclick="toggleCheck('mmk7jq8ca6u1xyqheb','admission_rx')"><span class="check-icon">□</span>入院時処方鑑別</span><span class="check-item done" onclick="toggleCheck('mmk7jq8ca6u1xyqheb','dpc')"><span class="check-icon">☑</span>DPC</span><span class="check-item done" onclick="toggleCheck('mmk7jq8ca6u1xyqheb','consent')"><span class="check-icon">☑</span>手術同意書</span><span class="check-item done" onclick="toggleCheck('mmk7jq8ca6u1xyqheb','blood_consent')"><span class="check-icon">☑</span>輸血同意書</span><span class="check-item" onclick="toggleCheck('mmk7jq8ca6u1xyqheb','discharge_summary')"><span class="check-icon">□</span>退院サマリ</span><span class="check-item done" onclick="toggleCheck('mmk7jq8ca6u1xyqheb','rapid_order')"><span class="check-icon">☑</span>⚠️迅速オーダー</span><span class="check-item" onclick="toggleCheck('mmk7jq8ca6u1xyqheb','custom_mmiq56rrkfav1ju6zi')"><span class="check-icon">□</span>食止め・抗生剤同意書</span><span class="check-item done" onclick="toggleCheck('mmk7jq8ca6u1xyqheb','custom_mmiz8s2v5mz93tzkeye')"><span class="check-icon">☑</span>オペ入力</span><span class="check-item warn" onclick="toggleCheck('mmk7jq8ca6u1xyqheb','custom_mmjamtduoe1fgpt5up')"><span class="check-icon">□</span>🏥退院済み🏥</span></div>
+      
+      
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">
+        <button onclick="event.stopPropagation();addReminderPrevDay('mmk7jq8ca6u1xyqheb')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          📅 前日リマインダー
+        </button>
+        <button onclick="event.stopPropagation();addReminderOpDay('mmk7jq8ca6u1xyqheb')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🌅 当日朝リマインダー
+        </button>
+      </div>
+    </div>
+    </div>
+  </div><div class="date-separator"><div class="date-separator-line"></div><div class="date-separator-text">オペ日 2026/03/17</div><div class="date-separator-line"></div></div><div class="surgery-card" id="card_mmiwuvvhibht30ihneo" style="">
+    <div class="card-status-bar pre"></div>
+    <div class="card-inner">
+    <div class="card-header" onclick="toggleCard('mmiwuvvhibht30ihneo')">
+      <div class="card-main">
+        <div class="patient-name">オオタキ シュリ<span style="font-size:22px;line-height:1;margin-left:6px;" title="3日前チェック完了">✅</span></div>
+        <div class="patient-meta" style="margin-top:3px;">
+          <span class="meta-tag">VANS 右葉切除 PAC</span>
+          <span class="meta-tag">IC:3/16</span>
+          
+          
+          
+          <span class="days-badge soon">あと4日</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="ring-wrap"><svg width="36" height="36" viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="14"></circle><circle class="ring-fill " cx="18" cy="18" r="14" stroke-dasharray="88.0" stroke-dashoffset="29.0"></circle></svg><div class="ring-text">8/12</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span class="op-date-badge future">2026/03/17</span>
+            <div style="display:flex;gap:4px;align-items:center;">
+              
+              <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('mmiwuvvhibht30ihneo')">✏️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body" id="body_mmiwuvvhibht30ihneo">
+      <div class="info-row"><span class="info-label">予定時間</span><span class="info-value">3.5</span></div>
+      <div class="info-row"><span class="info-label">物品／注意</span><span class="info-value">NIM</span></div>
+      <div class="info-row"><span class="info-label">担当</span><div class="team-chips"><span class="team-chip me">山口</span><span class="team-chip">三谷</span><span class="team-chip">木原</span></div></div>
+      <div class="checklist" style="margin-top:10px"><span class="check-item done" onclick="toggleCheck('mmiwuvvhibht30ihneo','summary_pre')"><span class="check-icon">☑</span>入院前サマリ</span><span class="check-item done" onclick="toggleCheck('mmiwuvvhibht30ihneo','cp')"><span class="check-icon">☑</span>CP入力</span><span class="check-item done" onclick="toggleCheck('mmiwuvvhibht30ihneo','plan')"><span class="check-icon">☑</span>入院診療計画書</span><span class="check-item" onclick="toggleCheck('mmiwuvvhibht30ihneo','admission_rx')"><span class="check-icon">□</span>入院時処方鑑別</span><span class="check-item done" onclick="toggleCheck('mmiwuvvhibht30ihneo','dpc')"><span class="check-icon">☑</span>DPC</span><span class="check-item done" onclick="toggleCheck('mmiwuvvhibht30ihneo','consent')"><span class="check-icon">☑</span>手術同意書</span><span class="check-item done" onclick="toggleCheck('mmiwuvvhibht30ihneo','blood_consent')"><span class="check-icon">☑</span>輸血同意書</span><span class="check-item" onclick="toggleCheck('mmiwuvvhibht30ihneo','discharge_summary')"><span class="check-icon">□</span>退院サマリ</span><span class="check-item done" onclick="toggleCheck('mmiwuvvhibht30ihneo','rapid_order')"><span class="check-icon">☑</span>⚠️迅速オーダー</span><span class="check-item" onclick="toggleCheck('mmiwuvvhibht30ihneo','custom_mmiq56rrkfav1ju6zi')"><span class="check-icon">□</span>食止め・抗生剤同意書</span><span class="check-item done" onclick="toggleCheck('mmiwuvvhibht30ihneo','custom_mmiz8s2v5mz93tzkeye')"><span class="check-icon">☑</span>オペ入力</span><span class="check-item warn" onclick="toggleCheck('mmiwuvvhibht30ihneo','custom_mmjamtduoe1fgpt5up')"><span class="check-icon">□</span>🏥退院済み🏥</span></div>
+      
+      <div class="note-box">A枠</div>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">
+        <button onclick="event.stopPropagation();addReminderPrevDay('mmiwuvvhibht30ihneo')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          📅 前日リマインダー
+        </button>
+        <button onclick="event.stopPropagation();addReminderOpDay('mmiwuvvhibht30ihneo')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🌅 当日朝リマインダー
+        </button>
+      </div>
+    </div>
+    </div>
+  </div><div class="surgery-card" id="card_mmk7y8emxs97m58oe0o" style="">
+    <div class="card-status-bar admitted"></div>
+    <div class="card-inner">
+    <div class="card-header" onclick="toggleCard('mmk7y8emxs97m58oe0o')">
+      <div class="card-main">
+        <div class="patient-name">キヨオカ シュンスケ<span style="font-size:22px;line-height:1;margin-left:6px;" title="3日前チェック完了">✅</span></div>
+        <div class="patient-meta" style="margin-top:3px;">
+          <span class="meta-tag">Ess devi Subcon</span>
+          <span class="meta-tag">IC:3/13</span>
+          
+          <span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(79,140,255,0.12);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;margin-left:6px;">入院中</span>
+          
+          <span class="days-badge soon">あと4日</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="ring-wrap"><svg width="36" height="36" viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="14"></circle><circle class="ring-fill " cx="18" cy="18" r="14" stroke-dasharray="88.0" stroke-dashoffset="29.0"></circle></svg><div class="ring-text">8/12</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            <span class="op-date-badge future">2026/03/17</span>
+            <div style="display:flex;gap:4px;align-items:center;">
+              
+              <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('mmk7y8emxs97m58oe0o')">✏️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body" id="body_mmk7y8emxs97m58oe0o">
+      <div class="info-row"><span class="info-label">予定時間</span><span class="info-value">3.5</span></div>
+      <div class="info-row"><span class="info-label">物品／注意</span><span class="info-value">特記事項なし</span></div>
+      <div class="info-row"><span class="info-label">担当</span><div class="team-chips"><span class="team-chip me">山口</span><span class="team-chip">本岡</span><span class="team-chip">高木亮太</span></div></div>
+      <div class="checklist" style="margin-top:10px"><span class="check-item done" onclick="toggleCheck('mmk7y8emxs97m58oe0o','summary_pre')"><span class="check-icon">☑</span>入院前サマリ</span><span class="check-item done" onclick="toggleCheck('mmk7y8emxs97m58oe0o','cp')"><span class="check-icon">☑</span>CP入力</span><span class="check-item done" onclick="toggleCheck('mmk7y8emxs97m58oe0o','plan')"><span class="check-icon">☑</span>入院診療計画書</span><span class="check-item" onclick="toggleCheck('mmk7y8emxs97m58oe0o','admission_rx')"><span class="check-icon">□</span>入院時処方鑑別</span><span class="check-item done" onclick="toggleCheck('mmk7y8emxs97m58oe0o','dpc')"><span class="check-icon">☑</span>DPC</span><span class="check-item done" onclick="toggleCheck('mmk7y8emxs97m58oe0o','consent')"><span class="check-icon">☑</span>手術同意書</span><span class="check-item done" onclick="toggleCheck('mmk7y8emxs97m58oe0o','blood_consent')"><span class="check-icon">☑</span>輸血同意書</span><span class="check-item" onclick="toggleCheck('mmk7y8emxs97m58oe0o','discharge_summary')"><span class="check-icon">□</span>退院サマリ</span><span class="check-item done" onclick="toggleCheck('mmk7y8emxs97m58oe0o','rapid_order')"><span class="check-icon">☑</span>⚠️迅速オーダー</span><span class="check-item" onclick="toggleCheck('mmk7y8emxs97m58oe0o','custom_mmiq56rrkfav1ju6zi')"><span class="check-icon">□</span>食止め・抗生剤同意書</span><span class="check-item done" onclick="toggleCheck('mmk7y8emxs97m58oe0o','custom_mmiz8s2v5mz93tzkeye')"><span class="check-icon">☑</span>オペ入力</span><span class="check-item warn" onclick="toggleCheck('mmk7y8emxs97m58oe0o','custom_mmjamtduoe1fgpt5up')"><span class="check-icon">□</span>🏥退院済み🏥</span></div>
+      
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;">フリーチェック</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+            <span class="check-item" onclick="toggleFreeCheckCard('mmk7y8emxs97m58oe0o',0)" style="flex:1;">
+              <span class="check-icon">□</span>持参薬時 休薬分注意！<span style="font-size:9px;color:var(--accent3);margin-left:4px;">🔔03-13 12:42</span>
+            </span>
+            <button onclick="event.stopPropagation();addFreeCheckReminder('mmk7y8emxs97m58oe0o',0)" style="background:var(--surface);border:1px solid var(--accent3);color:var(--accent3);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">📅 登録</button>
+          </div>
+      </div>
+    </div>
+      
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">
+        <button onclick="event.stopPropagation();addReminderPrevDay('mmk7y8emxs97m58oe0o')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          📅 前日リマインダー
+        </button>
+        <button onclick="event.stopPropagation();addReminderOpDay('mmk7y8emxs97m58oe0o')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🌅 当日朝リマインダー
+        </button>
+      </div>
+    </div>
+    </div>
+  </div></div>
 
 <button class="fab" onclick="openAddModal()">＋</button>
 
@@ -973,13 +1533,13 @@
 </div>
 
 <!-- Notification Settings Modal -->
-<div class="modal-overlay" id="notifModal" onclick="closeModalOnBg(event)">
+<div class="modal-overlay open" id="notifModal" onclick="closeModalOnBg(event)">
   <div class="modal" style="max-height:92vh;overflow-y:auto;padding-bottom:32px;">
     <div class="modal-handle"></div>
     <div class="modal-title">🔔 通知・連携設定</div>
 
     <!-- 通知状態バナー -->
-    <div id="notifBanner" style="border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:1.6;"></div>
+    <div id="notifBanner" style="background: rgba(90, 100, 120, 0.1); border: 1px solid var(--border);"><span style="color:var(--text3);font-weight:700;">⚠️ このブラウザは通知未対応です</span></div>
 
     <!-- iOSの制限説明 -->
     <div style="background:rgba(255,209,102,0.08);border:1px solid rgba(255,209,102,0.25);border-radius:10px;padding:12px 14px;margin-bottom:14px;">
@@ -1001,27 +1561,27 @@
           <div style="font-size:13px;">術前日（20:00）</div>
           <div style="font-size:10px;color:var(--text3);margin-top:2px;">手術前日の夜にリマインド</div>
         </div>
-        <div class="toggle" id="tog1" onclick="toggleNotif(this,'prev_day')"></div>
+        <div class="toggle on" id="tog1" onclick="toggleNotif(this,'prev_day')"></div>
       </div>
       <div class="notif-row">
         <div>
           <div style="font-size:13px;">手術当日朝（7:00）</div>
           <div style="font-size:10px;color:var(--text3);margin-top:2px;">当日朝にチェック状況を通知</div>
         </div>
-        <div class="toggle" id="tog2" onclick="toggleNotif(this,'op_morning')"></div>
+        <div class="toggle on" id="tog2" onclick="toggleNotif(this,'op_morning')"></div>
       </div>
       <div class="notif-row">
         <div>
           <div style="font-size:13px;">未完了タスクあり（8:00）</div>
           <div style="font-size:10px;color:var(--text3);margin-top:2px;">毎朝8時に未完了件数を通知</div>
         </div>
-        <div class="toggle" id="tog3" onclick="toggleNotif(this,'pending_tasks')"></div>
+        <div class="toggle on" id="tog3" onclick="toggleNotif(this,'pending_tasks')"></div>
       </div>
     </div>
 
     <!-- 通知許可ボタン -->
     <button class="btn-primary" onclick="requestNotifPermission()" style="margin-top:10px;">通知を許可する</button>
-    <div id="notifStatus" style="font-size:12px;color:var(--text3);margin:8px 0 4px;line-height:1.6;"></div>
+    <div id="notifStatus" style="font-size:12px;color:var(--text3);margin:8px 0 4px;line-height:1.6;">⚠️ このブラウザは通知に対応していません。</div>
 
     <!-- テスト送信 -->
     <div class="notif-panel" style="margin-top:14px;">
@@ -1040,7 +1600,7 @@
       <div class="notif-panel-title">🐙 GitHub自動バックアップ</div>
       <div style="font-size:11px;color:var(--text2);margin:6px 0 12px;line-height:1.7;">
         データをGitHubリポジトリに自動保存します。<br>
-        <a href="https://github.com/settings/tokens/new?scopes=repo&description=surgery-manager" target="_blank" style="color:var(--accent);">Personal Access Token（repo権限）</a>を発行して入力してください。
+        <a href="https://github.com/settings/tokens/new?scopes=repo&amp;description=surgery-manager" target="_blank" style="color:var(--accent);">Personal Access Token（repo権限）</a>を発行して入力してください。
       </div>
       <div class="form-group">
         <label class="form-label">GitHubユーザー名</label>
@@ -1058,11 +1618,8 @@
         <label class="form-label">Personal Access Token</label>
         <input type="password" class="form-input" id="gh_token" placeholder="ghp_xxxxxxxxxxxx" style="font-family:'IBM Plex Mono',monospace;font-size:12px;" oninput="saveGhSettings()">
       </div>
-      <button onclick="pushToGitHub()" id="ghPushBtn"
-        style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;">
-        🚀 GitHubへプッシュ
-      </button>
-      <div id="ghStatus" style="font-size:11px;margin-top:8px;min-height:16px;line-height:1.5;"></div>
+      <button onclick="pushToGitHub()" id="ghPushBtn" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;" disabled="">⏳ プッシュ中...</button>
+      <div id="ghStatus" style="font-size: 11px; margin-top: 8px; min-height: 16px; line-height: 1.5; color: var(--text3);">GitHubに接続しています...</div>
     </div>
 
     <button class="btn-danger" onclick="closeNotifModal()" style="border-color:transparent;color:var(--text3);margin-top:14px;">閉じる</button>
@@ -1140,7 +1697,7 @@
       </div>
       <div style="font-size:11px;color:var(--text2);line-height:1.8;margin-bottom:12px;margin-left:34px;">
         入力しておくと🔔ボタン内「🚀 GitHubへプッシュ」でアプリを自動更新できます。<br>
-        <a href="https://github.com/settings/tokens/new?scopes=repo&description=surgery-manager" target="_blank" style="color:var(--accent);">ここからToken発行</a>（repo権限にチェック）
+        <a href="https://github.com/settings/tokens/new?scopes=repo&amp;description=surgery-manager" target="_blank" style="color:var(--accent);">ここからToken発行</a>（repo権限にチェック）
       </div>
       <div class="form-group">
         <label class="form-label">GitHubユーザー名</label>
@@ -2900,5 +3457,6 @@ render();
 scheduleNotifications();
 showSetupIfNeeded();
 </script>
-</body>
-</html>
+
+
+</body></html>
