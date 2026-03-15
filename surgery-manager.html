@@ -237,11 +237,6 @@ GH_CONFIG_END -->
   .stat-chip.week-chip  { background: rgba(79,140,255,0.12); color: var(--accent); }
   .stat-chip.pending-chip { background: rgba(255,209,102,0.12); color: var(--accent3); }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
-
   .card-main {
     flex: 1;
   }
@@ -839,6 +834,49 @@ GH_CONFIG_END -->
     margin-bottom: 14px;
   }
   .import-hint a { color: var(--accent); text-decoration: none; }
+
+  /* 術前準備 自動提案パネル */
+  .prep-cat-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(79,140,255,0.15);
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .prep-suggest-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    transition: border-color 0.12s;
+  }
+  .prep-suggest-row:has(input:checked) { border-color: rgba(79,140,255,0.4); }
+  .prep-note {
+    font-size: 11px;
+    color: var(--accent3);
+    margin-top: 6px;
+  }
+  .prep-apply-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+    margin-top: 10px;
+    transition: opacity 0.15s;
+  }
+  .prep-apply-btn:active { opacity: 0.85; }
 </style>
 </head>
 <body>
@@ -914,8 +952,11 @@ GH_CONFIG_END -->
 
     <div class="form-group">
       <label class="form-label">術式 *</label>
-      <input type="text" class="form-input" id="f_surgery" placeholder="右扁桃摘出＋アデノイド切除">
+      <input type="text" class="form-input" id="f_surgery" placeholder="右扁桃摘出＋アデノイド切除" oninput="onSurgeryChange()">
     </div>
+
+    <!-- 術前準備 自動提案パネル -->
+    <div id="prepSuggestPanel" style="display:none;background:rgba(79,140,255,0.06);border:1px solid rgba(79,140,255,0.25);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;"></div>
 
     <div class="form-row">
       <div class="form-group">
@@ -926,10 +967,10 @@ GH_CONFIG_END -->
         <label class="form-label">特記</label>
         <div style="display:flex;gap:8px;margin-top:6px">
           <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer">
-            <input type="checkbox" id="f_icu" style="accent-color:var(--icu)"> ★ICU
+            <input type="checkbox" id="f_icu" style="accent-color:var(--icu)" onchange="onSurgeryChange()"> ★ICU
           </label>
           <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer">
-            <input type="checkbox" id="f_recon" style="accent-color:var(--green)"> ★再建
+            <input type="checkbox" id="f_recon" style="accent-color:var(--green)" onchange="onSurgeryChange()"> ★再建
           </label>
         </div>
       </div>
@@ -1193,6 +1234,106 @@ const CHECKLIST_DEFAULTS_BUILTIN = [
   { key: 'ope_input', label: 'オペ入力' },
 ];
 
+// ========== 術前準備ルール ==========
+const SURGERY_PREP_RULES = [
+  {
+    id: 'pharynx_esophagus',
+    label: '① 咽喉食道系手術',
+    patterns: [/TOVS/i, /ELPS/i, /TORS/i, /下咽頭/, /表在癌/, /咽喉/, /咽頭表在/, /食道/],
+    icuTrigger: false, reconTrigger: false,
+    items: [
+      { label: 'ルゴール持参', warn: true },
+      { label: '胃管10Fr持参', warn: false },
+      { label: '術前レントゲン', warn: false },
+      { label: '輸血同意書', warn: false },
+    ],
+    note: '⚠️ ルゴール忘れ最多注意！',
+  },
+  {
+    id: 'reconstruction',
+    label: '② 頭頸部再建手術',
+    patterns: [/遊離皮弁/, /遊離空腸/, /皮弁/, /空腸移植/],
+    icuTrigger: false, reconTrigger: true,
+    items: [
+      { label: 'ICU申込み（1週間前）', warn: true },
+      { label: 'PICC依頼', warn: false },
+      { label: '輸血同意書', warn: false },
+      { label: '抑制同意書', warn: false },
+      { label: '胃管サイズ指示', warn: false },
+      { label: 'ルゴール持参', warn: false },
+      { label: 'ポータブル腹部Xp（当日）', warn: false },
+    ],
+  },
+  {
+    id: 'basedow',
+    label: '③ バセドウ病手術',
+    patterns: [/バセドウ/, /甲状腺/],
+    icuTrigger: false, reconTrigger: false,
+    items: [
+      { label: '血液型2回採血', warn: false },
+      { label: '不規則抗体', warn: false },
+      { label: '輸血同意書', warn: false },
+      { label: 'ファイバー持参', warn: false },
+      { label: 'エリートⅠ依頼', warn: false },
+    ],
+  },
+  {
+    id: 'tovs_tors_elps',
+    label: '④ TOVS/TORS/ELPS',
+    patterns: [/TOVS/i, /TORS/i, /ELPS/i],
+    icuTrigger: false, reconTrigger: false,
+    items: [
+      { label: 'マウスピース準備', warn: true },
+    ],
+    note: '歯科コンサルト：月水金',
+  },
+  {
+    id: 'emergency_trach',
+    label: '⑤ 緊急気管切開',
+    patterns: [/緊急気管切開/, /気管切開/],
+    icuTrigger: false, reconTrigger: false,
+    items: [
+      { label: '麻酔科連絡', warn: true },
+      { label: 'ファイバー持参', warn: false },
+      { label: 'エリートⅠ依頼', warn: false },
+      { label: 'カニューレサイズ記載', warn: false },
+      { label: 'カフ圧25-30cmH₂O継続指示', warn: false },
+    ],
+  },
+  {
+    id: 'ear',
+    label: '⑥ 耳手術',
+    patterns: [/鼓膜/, /鼓室/, /乳突/, /外耳/, /アブミ骨/, /耳硬化/, /ラジカル/, /鼓索/, /中耳/, /内耳/, /人工内耳/],
+    icuTrigger: false, reconTrigger: false,
+    items: [
+      { label: 'フィブリン糊', warn: false },
+      { label: '輸血同意書', warn: false },
+    ],
+  },
+  {
+    id: 'nasal',
+    label: '⑦ 鼻副鼻腔手術',
+    patterns: [/副鼻腔/, /ESS/, /鼻中隔/, /ECRS/i, /鼻ポリープ/, /蝶形骨洞/, /篩骨洞/, /上顎洞/, /前頭洞/, /内視鏡下鼻/],
+    icuTrigger: false, reconTrigger: false,
+    items: [
+      { label: '術後ステロイド指示（ECRS疑い）', warn: false },
+    ],
+    note: 'ECRS疑いはステロイド指示を忘れずに',
+  },
+  {
+    id: 'icu_case',
+    label: '⑧ ICU予定症例',
+    patterns: [],
+    icuTrigger: true, reconTrigger: false,
+    items: [
+      { label: 'ICU申込み', warn: true },
+      { label: 'PICC', warn: false },
+      { label: '輸血同意書', warn: false },
+      { label: 'ICU入室継続指示', warn: false },
+    ],
+  },
+];
+
 // 3日前18時チェック対象キー
 const DEADLINE_CHECK_KEYS = [
   'summary_pre', 'cp', 'plan', 'dpc', 'consent', 'blood_consent', 'rapid_order', 'ope_input'
@@ -1207,6 +1348,103 @@ let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || 
   checklistItems: JSON.parse(JSON.stringify(CHECKLIST_DEFAULTS_BUILTIN)),
   showFields: { time: true, items: true, team: true, memo: true },
 };
+
+// ========== 術前準備 自動提案 ==========
+function detectPrepRules(surgeryName, isIcu, isRecon) {
+  const text = surgeryName || '';
+  const matched = [];
+  for (const rule of SURGERY_PREP_RULES) {
+    const byPattern = rule.patterns.some(p => p.test(text));
+    const byIcu   = rule.icuTrigger && isIcu;
+    const byRecon = rule.reconTrigger && isRecon;
+    if (byPattern || byIcu || byRecon) matched.push(rule);
+  }
+  return matched;
+}
+
+function onSurgeryChange() {
+  const surgery = document.getElementById('f_surgery')?.value || '';
+  const isIcu   = document.getElementById('f_icu')?.checked || false;
+  const isRecon = document.getElementById('f_recon')?.checked || false;
+  const rules = detectPrepRules(surgery, isIcu, isRecon);
+  renderPrepSuggestions(rules);
+}
+
+function renderPrepSuggestions(rules) {
+  const panel = document.getElementById('prepSuggestPanel');
+  if (!panel) return;
+  if (rules.length === 0) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+
+  // カテゴリラベル
+  const catHtml = rules.map(r =>
+    `<span class="prep-cat-badge">${r.label}</span>`
+  ).join('');
+
+  // アイテムを重複排除して列挙
+  const seen = new Set();
+  const allItems = [];
+  rules.forEach(rule => {
+    rule.items.forEach(item => {
+      if (!seen.has(item.label)) {
+        seen.add(item.label);
+        allItems.push(item);
+      }
+    });
+  });
+
+  const itemsHtml = allItems.map(item =>
+    `<label class="prep-suggest-row">
+      <input type="checkbox" class="prep-suggest-chk" data-label="${item.label.replace(/"/g,'&quot;')}" checked style="accent-color:var(--accent);width:15px;height:15px;flex-shrink:0;">
+      <span style="font-size:12px;">${item.warn ? '⚠️ ' : ''}${item.label}</span>
+    </label>`
+  ).join('');
+
+  const notes = rules.filter(r => r.note).map(r =>
+    `<div class="prep-note">${r.note}</div>`
+  ).join('');
+
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+      <span style="font-size:11px;font-weight:700;color:var(--text2);">🔍 検出：</span>
+      ${catHtml}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;" id="prepSuggestItems">${itemsHtml}</div>
+    ${notes}
+    <button onclick="applyPrepSuggestions()" class="prep-apply-btn">✅ フリーチェックに追加</button>
+  `;
+}
+
+function applyPrepSuggestions() {
+  const checkboxes = document.querySelectorAll('.prep-suggest-chk');
+  const toAdd = [];
+  checkboxes.forEach(chk => {
+    if (chk.checked) {
+      const label = chk.getAttribute('data-label');
+      if (!freeChecks.some(fc => fc.label === label)) {
+        toAdd.push({ label, done: false, remindAt: '' });
+      }
+    }
+  });
+
+  if (toAdd.length === 0) {
+    showPrepFeedback('すでにすべて追加済みです', 'var(--text3)');
+    return;
+  }
+  freeChecks.push(...toAdd);
+  renderFreeChecklistForm();
+  showPrepFeedback(`✅ ${toAdd.length}件追加しました`, 'var(--green)');
+}
+
+function showPrepFeedback(msg, color) {
+  const panel = document.getElementById('prepSuggestPanel');
+  if (!panel) return;
+  const el = document.createElement('div');
+  el.style.cssText = `font-size:11px;color:${color};text-align:center;padding:6px;font-weight:700;`;
+  el.textContent = msg;
+  panel.appendChild(el);
+  setTimeout(() => el.remove(), 2000);
+}
 
 function getChecklist() {
   return appSettings.checklistItems || CHECKLIST_DEFAULTS_BUILTIN;
@@ -1344,6 +1582,10 @@ function groupByOpDate(arr) {
 }
 
 // ========== RENDER ==========
+function emptyState(icon, text) {
+  return `<div class="empty-state"><div class="empty-state-icon">${icon}</div><div class="empty-state-text">${text}</div></div>`;
+}
+
 function render() {
   const el = document.getElementById('mainContent');
   // 検索バーは一覧タブ以外で非表示
@@ -1371,8 +1613,8 @@ function renderList(el) {
 
   if (filtered.length === 0) {
     el.innerHTML = searchQuery
-      ? `<div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">「${searchQuery}」に一致する患者が見つかりません</div></div>`
-      : `<div class="empty-state"><div class="empty-state-icon">🏥</div><div class="empty-state-text">症例がまだありません<br>右下の＋ボタンから追加してください</div></div>`;
+      ? emptyState('🔍', `「${searchQuery}」に一致する患者が見つかりません`)
+      : emptyState('🏥', '症例がまだありません<br>右下の＋ボタンから追加してください');
     return;
   }
   const sorted = [...filtered].sort((a,b) => a.opDate.localeCompare(b.opDate));
@@ -1389,7 +1631,7 @@ function renderList(el) {
 function renderToday(el) {
   const today = cases.filter(c => isToday(c.opDate));
   if (today.length === 0) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-text">今日の手術はありません</div></div>`;
+    el.innerHTML = emptyState('✅', '今日の手術はありません');
     return;
   }
   el.innerHTML = today.map(c => renderCard(c)).join('');
@@ -1402,7 +1644,7 @@ function renderPending(el) {
     return prog.done < prog.total || hasIncompleteFree;
   });
   if (pending.length === 0) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🎉</div><div class="empty-state-text">未完了タスクはありません</div></div>`;
+    el.innerHTML = emptyState('🎉', '未完了タスクはありません');
     return;
   }
   const upcoming = pending.filter(c => !isPast(c.opDate) || isToday(c.opDate));
@@ -1440,7 +1682,7 @@ function renderSummaryIncomplete(el) {
   });
 
   if (list.length === 0) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🎉</div><div class="empty-state-text">退院サマリ未完了の症例はありません</div></div>`;
+    el.innerHTML = emptyState('🎉', '退院サマリ未完了の症例はありません');
     return;
   }
 
@@ -1542,7 +1784,7 @@ function renderDischargeWeekly(el) {
     .sort((a, b) => b.dischargeDate.localeCompare(a.dischargeDate)); // 新しい順
 
   if (discharged.length === 0) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🏥</div><div class="empty-state-text">退院日が入力された症例がありません</div></div>`;
+    el.innerHTML = emptyState('🏥', '退院日が入力された症例がありません');
     return;
   }
 
@@ -1607,11 +1849,10 @@ function renderSummary(el) {
   Object.keys(groups).sort().forEach(date => {
     groups[date].forEach(c => {
       const text = buildSummaryText(c);
-      const escaped = escapeBacktick(text);
       html += '<div class="summary-block"><pre>' + text + '</pre><button class="copy-btn" data-text="' + text.replace(/"/g,'&quot;') + '" onclick="copyTextFromBtn(this)">コピー</button></div>';
     });
   });
-  if (!html) html = `<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">症例がありません</div></div>`;
+  if (!html) html = emptyState('📋', '症例がありません');
   el.innerHTML = html;
 }
 
@@ -1625,7 +1866,7 @@ function buildSummaryText(c) {
   const admStr = c.admDate ? toDateStr(c.admDate) : '';
   const lines = [];
   lines.push(`【手術日】${formatOpDate(c.opDate)}`);
-  lines.push(`${c.name}（${admStr} ${c.surgery}${icu}${recon}）`);
+  lines.push(`${c.name}（${admStr ? admStr + ' ' : ''}${c.surgery}${icu}${recon}）`);
   lines.push(`予定時間：${c.time || '未設定'}`);
   lines.push(`物品／注意：${c.items || '特記事項なし'}`);
   const teamArr = (c.team || '').split(/[・,、]/).map(t=>t.trim()).filter(Boolean);
@@ -1663,7 +1904,7 @@ function renderCard(c, expandByDefault=false) {
   const cardBg = admStatus === 'discharged'
     ? 'background:var(--surface);opacity:0.5;'
     : admStatus === 'admitted'
-    ? 'background:var(--surface);box-shadow:0 0 0 2px var(--accent)2a,inset 0 0 0 1000px rgba(79,140,255,0.06);'
+    ? 'background:var(--surface);box-shadow:0 0 0 2px rgba(79,140,255,0.16),inset 0 0 0 1000px rgba(79,140,255,0.06);'
     : 'background:var(--surface);';
   const admBadge = admStatus === 'discharged'
     ? `<span style="font-size:10px;font-weight:700;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;margin-left:6px;">退院済</span>`
@@ -1819,7 +2060,33 @@ function toggleCheck(id, key) {
   if (!c.checks) c.checks = {};
   c.checks[key] = !c.checks[key];
   save();
-  render();
+  // カード内部のみ更新（全再描画を避けて開閉状態を保持）
+  const body = document.getElementById('body_' + id);
+  if (!body) { render(); return; }
+  const cl = body.querySelector('.checklist');
+  if (cl) {
+    cl.innerHTML = CHECKLIST_DEFAULTS.map(item => {
+      const done = c.checks && c.checks[item.key];
+      const warn = item.warn;
+      return '<span class="check-item' + (done ? ' done' : '') + (warn && !done ? ' warn' : '') + '" onclick="toggleCheck(\'' + id + '\',\'' + item.key + '\')">'
+        + '<span class="check-icon">' + (done ? '☑' : '□') + '</span>' + item.label
+        + '</span>';
+    }).join('');
+  }
+  // プログレスリングを更新
+  const prog = getCheckProgress(c);
+  const pct = Math.round(prog.done / prog.total * 100);
+  const r = 14, circ = 2 * Math.PI * r;
+  const offset = circ - (pct / 100) * circ;
+  const ringFill = document.querySelector('#card_' + id + ' .ring-fill');
+  const ringText = document.querySelector('#card_' + id + ' .ring-text');
+  if (ringFill) {
+    ringFill.className = 'ring-fill' + (pct === 100 ? ' done' : pct >= 50 ? '' : ' warn');
+    ringFill.setAttribute('stroke-dashoffset', offset.toFixed(1));
+  }
+  if (ringText) ringText.textContent = prog.done + '/' + prog.total;
+  updatePendingBadge();
+  updateHeaderStats();
 }
 
 function toggleFreeCheckCard(id, idx) {
@@ -1827,7 +2094,18 @@ function toggleFreeCheckCard(id, idx) {
   if (!c || !c.freeChecks || !c.freeChecks[idx]) return;
   c.freeChecks[idx].done = !c.freeChecks[idx].done;
   save();
-  render();
+  // カード内部のみ更新
+  const body = document.getElementById('body_' + id);
+  if (!body) { render(); return; }
+  const fc = c.freeChecks[idx];
+  const span = body.querySelectorAll('.check-item[onclick*="toggleFreeCheckCard"]')[idx];
+  if (span) {
+    span.className = 'check-item' + (fc.done ? ' done' : '');
+    const icon = span.querySelector('.check-icon');
+    if (icon) icon.textContent = fc.done ? '☑' : '□';
+  }
+  updatePendingBadge();
+  updateHeaderStats();
 }
 
 // ========== REMINDERS ==========
@@ -1908,6 +2186,8 @@ function openAddModal() {
   }
   buildChecklistForm({});
   renderFreeChecklistForm();
+  const pp = document.getElementById('prepSuggestPanel');
+  if (pp) pp.style.display = 'none';
   document.getElementById('addModal').classList.add('open');
 }
 
@@ -1931,6 +2211,7 @@ function openEditModal(id) {
   document.getElementById('f_recon').checked = !!c.recon;
   buildChecklistForm(c.checks || {});
   renderFreeChecklistForm();
+  onSurgeryChange();
   document.getElementById('addModal').classList.add('open');
 }
 
