@@ -946,6 +946,16 @@ GH_CONFIG_END -->
     </div>
 
     <div class="form-group">
+      <label class="form-label">🔬 病理結果</label>
+      <input type="text" class="form-input" id="f_pathology" placeholder="例：扁桃慢性炎、悪性なし／検体提出なし">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">📝 入院経過・特記事項</label>
+      <textarea class="form-input" id="f_courseNotes" placeholder="例：術後出血で再手術、ICU延長、合併症など" style="min-height:70px;"></textarea>
+    </div>
+
+    <div class="form-group">
       <label class="form-label">患者名（ひらがな） *</label>
       <input type="text" class="form-input" id="f_name" placeholder="やまだ たろう">
     </div>
@@ -1818,14 +1828,30 @@ function renderDischargeWeekly(el) {
       const summaryBadge = summaryDone
         ? `<span style="font-size:10px;color:var(--green,#43d9a0);font-weight:700;">📋 完了</span>`
         : `<button onclick="event.stopPropagation();markDischargeSummaryDone('${c.id}')" style="font-size:10px;color:#fff;background:var(--accent2);border:none;border-radius:4px;padding:2px 8px;font-weight:700;cursor:pointer;font-family:inherit;">📋 未記載→完了</button>`;
-      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);">
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:11px;font-weight:700;color:var(--text);">${c.name || '名前未設定'}</div>
-          <div style="font-size:10px;color:var(--text2);margin-top:2px;">${c.surgery || '—'} ／ 退院:${toDateStr(c.dischargeDate)}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-          ${summaryBadge}
-          <button onclick="event.stopPropagation();openEditModal('${c.id}')" style="background:none;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:inherit;">✏️ 編集</button>
+      const pathBadge = c.pathology
+        ? `<div style="display:flex;align-items:flex-start;gap:5px;margin-top:5px;">
+            <span style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:0.06em;white-space:nowrap;padding-top:1px;">🔬 病理</span>
+            <span style="font-size:11px;color:var(--text);line-height:1.4;">${c.pathology}</span>
+           </div>`
+        : '';
+      const courseHtml = c.courseNotes
+        ? `<div style="display:flex;align-items:flex-start;gap:5px;margin-top:4px;">
+            <span style="font-size:9px;font-weight:700;color:var(--accent3);letter-spacing:0.06em;white-space:nowrap;padding-top:1px;">📝 経過</span>
+            <span style="font-size:11px;color:var(--text2);line-height:1.4;white-space:pre-wrap;">${c.courseNotes}</span>
+           </div>`
+        : '';
+      return `<div style="padding:10px 12px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:11px;font-weight:700;color:var(--text);">${c.name || '名前未設定'}</div>
+            <div style="font-size:10px;color:var(--text2);margin-top:2px;">${c.surgery || '—'} ／ 退院:${toDateStr(c.dischargeDate)}</div>
+            ${pathBadge}
+            ${courseHtml}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+            ${summaryBadge}
+            <button onclick="event.stopPropagation();openEditModal('${c.id}')" style="background:none;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:inherit;">✏️ 編集</button>
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -2201,6 +2227,8 @@ function openEditModal(id) {
   document.getElementById('f_opDate').value = c.opDate || '';
   document.getElementById('f_admDate').value = c.admDate || '';
   document.getElementById('f_dischargeDate').value = c.dischargeDate || '';
+  document.getElementById('f_pathology').value = c.pathology || '';
+  document.getElementById('f_courseNotes').value = c.courseNotes || '';
   document.getElementById('f_name').value = c.name || '';
   document.getElementById('f_surgery').value = c.surgery || '';
   document.getElementById('f_time').value = c.time || '';
@@ -2216,7 +2244,7 @@ function openEditModal(id) {
 }
 
 function clearForm() {
-  ['f_opDate','f_admDate','f_dischargeDate','f_name','f_surgery','f_time','f_team','f_items','f_memo'].forEach(id => {
+  ['f_opDate','f_admDate','f_dischargeDate','f_pathology','f_courseNotes','f_name','f_surgery','f_time','f_team','f_items','f_memo'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('f_icu').checked = false;
@@ -2292,6 +2320,8 @@ function saveCase() {
     opDate,
     admDate: document.getElementById('f_admDate').value,
     dischargeDate: document.getElementById('f_dischargeDate').value,
+    pathology: document.getElementById('f_pathology').value.trim(),
+    courseNotes: document.getElementById('f_courseNotes').value.trim(),
     name,
     surgery: document.getElementById('f_surgery').value.trim(),
     time: document.getElementById('f_time').value.trim(),
