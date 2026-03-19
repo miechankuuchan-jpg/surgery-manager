@@ -877,6 +877,200 @@ GH_CONFIG_END -->
     transition: opacity 0.15s;
   }
   .prep-apply-btn:active { opacity: 0.85; }
+
+  /* ========== CALENDAR ========== */
+  .cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .cal-nav-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 6px 16px;
+    font-size: 18px;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: 1;
+  }
+  .cal-nav-btn:active { background: var(--border); }
+  .cal-month-label {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    margin-bottom: 14px;
+  }
+  .cal-weekday {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text3);
+    text-align: center;
+    padding: 4px 0;
+  }
+  .cal-weekday.sun { color: #ff7070; }
+  .cal-weekday.sat { color: var(--accent); }
+  .cal-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.12s;
+    min-height: 38px;
+    padding: 4px 2px 5px;
+    color: var(--text);
+  }
+  .cal-day-num {
+    line-height: 1.2;
+    margin-bottom: 2px;
+  }
+  .cal-day-op {
+    font-size: 8px;
+    font-weight: 600;
+    color: var(--accent3);
+    text-align: center;
+    line-height: 1.3;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+    padding: 0 2px;
+  }
+  .cal-day.today .cal-day-op { color: rgba(255,255,255,0.85); }
+  .cal-day.sun { color: #ff7070; }
+  .cal-day.sat { color: var(--accent); }
+  .cal-day:not(.empty):active { background: var(--surface2); }
+  .cal-day.empty { cursor: default; opacity: 0; }
+  .cal-day.today { background: var(--accent); color: #fff !important; font-weight: 700; }
+  .cal-day.has-event::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent3);
+  }
+  .cal-day.today.has-event::after { background: rgba(255,255,255,0.8); }
+  .cal-day.selected:not(.today) {
+    background: rgba(79,140,255,0.15);
+    border: 1px solid var(--accent);
+  }
+  .cal-day-detail {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .cal-day-detail-header {
+    padding: 10px 14px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .cal-task-row {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.4;
+  }
+  .cal-task-row:last-child { border-bottom: none; }
+  .cal-task-icon { font-size: 14px; flex-shrink: 0; }
+
+  /* ========== DAILY BRIEF POPUP ========== */
+  .daily-brief-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 900;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .daily-brief-overlay.hidden { display: none; }
+  .daily-brief-modal {
+    background: var(--surface);
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 20px 20px 36px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 82vh;
+    overflow-y: auto;
+  }
+  .daily-brief-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+  .daily-brief-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+  .daily-brief-subtitle {
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 16px;
+  }
+  .daily-brief-section { margin-bottom: 14px; }
+  .daily-brief-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 7px;
+  }
+  .daily-brief-row {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 12px;
+    color: var(--text);
+    margin-bottom: 5px;
+    line-height: 1.45;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .daily-brief-row.warn { border-color: rgba(255,87,87,0.4); background: rgba(255,87,87,0.05); }
+  .daily-brief-row.alert { border-color: rgba(255,209,102,0.4); background: rgba(255,209,102,0.05); }
+  .daily-brief-close-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 13px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: 16px;
+  }
+  .daily-brief-close-btn:active { opacity: 0.85; }
 </style>
 </head>
 <body>
@@ -889,7 +1083,7 @@ GH_CONFIG_END -->
   </div>
   <div class="header-actions">
     <div class="icon-btn-wrap">
-      <button class="icon-btn" onclick="showNotifSettings()" title="通知設定">🔔</button>
+      <button class="icon-btn" onclick="showNotifCenter()" title="今日のタスク">🔔</button>
       <span class="notif-badge" id="pendingBadge" style="display:none">!</span>
     </div>
     <button class="icon-btn" onclick="toggleSearch()" id="searchToggleBtn" title="検索">🔍</button>
@@ -904,8 +1098,7 @@ GH_CONFIG_END -->
   <div class="tab" onclick="switchTab('pending', this)">未完了タスク</div>
   <div class="tab" onclick="switchTab('summary_incomplete', this)">📋 サマリ未完了</div>
   <div class="tab" onclick="switchTab('discharge_weekly', this)">🏥 退院一覧</div>
-  <div class="tab" onclick="switchTab('summary', this)">テキスト出力</div>
-  <div class="tab" onclick="switchTab('import', this)">インポート</div>
+  <div class="tab" onclick="switchTab('calendar', this)">📅 カレンダー</div>
 </div>
 
 <div id="searchBar" style="padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);display:none;">
@@ -931,7 +1124,7 @@ GH_CONFIG_END -->
 
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">オペ日 *</label>
+        <label class="form-label">オペ日</label>
         <input type="date" class="form-input" id="f_opDate">
       </div>
       <div class="form-group">
@@ -961,12 +1154,20 @@ GH_CONFIG_END -->
     </div>
 
     <div class="form-group">
-      <label class="form-label">術式 *</label>
-      <input type="text" class="form-input" id="f_surgery" placeholder="右扁桃摘出＋アデノイド切除" oninput="onSurgeryChange()">
+      <label class="form-label">疾患名 *</label>
+      <input type="text" class="form-input" id="f_disease" placeholder="副鼻腔炎・扁桃炎・頭頸部癌など" oninput="onDiseaseOrSurgeryChange()">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">術式（術後症例のみ）</label>
+      <input type="text" class="form-input" id="f_surgery" placeholder="右扁桃摘出＋アデノイド切除" oninput="onDiseaseOrSurgeryChange()">
     </div>
 
     <!-- 術前準備 自動提案パネル -->
     <div id="prepSuggestPanel" style="display:none;background:rgba(79,140,255,0.06);border:1px solid rgba(79,140,255,0.25);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;"></div>
+
+    <!-- 疾患別チェックリスト提案パネル -->
+    <div id="diseaseCheckSuggestPanel" style="display:none;background:rgba(67,217,160,0.06);border:1px solid rgba(67,217,160,0.25);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;"></div>
 
     <div class="form-row">
       <div class="form-group">
@@ -977,10 +1178,10 @@ GH_CONFIG_END -->
         <label class="form-label">特記</label>
         <div style="display:flex;gap:8px;margin-top:6px">
           <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer">
-            <input type="checkbox" id="f_icu" style="accent-color:var(--icu)" onchange="onSurgeryChange()"> ★ICU
+            <input type="checkbox" id="f_icu" style="accent-color:var(--icu)" onchange="onDiseaseOrSurgeryChange()"> ★ICU
           </label>
           <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer">
-            <input type="checkbox" id="f_recon" style="accent-color:var(--green)" onchange="onSurgeryChange()"> ★再建
+            <input type="checkbox" id="f_recon" style="accent-color:var(--green)" onchange="onDiseaseOrSurgeryChange()"> ★再建
           </label>
         </div>
       </div>
@@ -1026,99 +1227,17 @@ GH_CONFIG_END -->
   </div>
 </div>
 
-<!-- Notification Settings Modal -->
+<!-- Notification Center Modal (今日のタスク) -->
 <div class="modal-overlay" id="notifModal" onclick="closeModalOnBg(event)">
   <div class="modal" style="max-height:92vh;overflow-y:auto;padding-bottom:32px;">
     <div class="modal-handle"></div>
-    <div class="modal-title">🔔 通知・連携設定</div>
-
-    <!-- 通知状態バナー -->
-    <div id="notifBanner" style="border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:1.6;"></div>
-
-    <!-- iOSの制限説明 -->
-    <div style="background:rgba(255,209,102,0.08);border:1px solid rgba(255,209,102,0.25);border-radius:10px;padding:12px 14px;margin-bottom:14px;">
-      <div style="font-size:12px;font-weight:700;color:var(--accent3);margin-bottom:6px;">📱 iPhoneでの通知について</div>
-      <div style="font-size:10px;color:var(--text2);line-height:1.7;">
-        SafariのPWAはバックグラウンド通知が<strong style="color:var(--text)">できません</strong>（iOSの制限）。<br>
-        代わりに以下の方法を使ってください：<br>
-        ① <strong style="color:var(--accent3)">カレンダー登録</strong>（各カードの📅ボタン）→ iPhoneのアラームで通知<br>
-        ② アプリを開いている間だけ通知が届く（下のトグルで設定）
-      </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="modal-title" style="margin-bottom:0;">🔔 今日のタスク</div>
+      <div id="notifCenterDate" style="font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;"></div>
     </div>
-
-    <!-- 自動リマインダー -->
-    <div class="notif-panel">
-      <div class="notif-panel-title">🔔 アプリ起動中のリマインダー</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5;">アプリを開いている間だけ有効です</div>
-      <div class="notif-row">
-        <div>
-          <div style="font-size:13px;">術前日（20:00）</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px;">手術前日の夜にリマインド</div>
-        </div>
-        <div class="toggle" id="tog1" onclick="toggleNotif(this,'prev_day')"></div>
-      </div>
-      <div class="notif-row">
-        <div>
-          <div style="font-size:13px;">手術当日朝（7:00）</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px;">当日朝にチェック状況を通知</div>
-        </div>
-        <div class="toggle" id="tog2" onclick="toggleNotif(this,'op_morning')"></div>
-      </div>
-      <div class="notif-row">
-        <div>
-          <div style="font-size:13px;">未完了タスクあり（8:00）</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px;">毎朝8時に未完了件数を通知</div>
-        </div>
-        <div class="toggle" id="tog3" onclick="toggleNotif(this,'pending_tasks')"></div>
-      </div>
+    <div id="notifCenterContent" style="margin-top:14px;">
+      <!-- populated by showNotifCenter() -->
     </div>
-
-    <!-- 通知許可ボタン -->
-    <button class="btn-primary" onclick="requestNotifPermission()" style="margin-top:10px;">通知を許可する</button>
-    <div id="notifStatus" style="font-size:12px;color:var(--text3);margin:8px 0 4px;line-height:1.6;"></div>
-
-    <!-- テスト送信 -->
-    <div class="notif-panel" style="margin-top:14px;">
-      <div class="notif-panel-title">🧪 テスト送信</div>
-      <div style="font-size:11px;color:var(--text3);margin:6px 0 10px;line-height:1.6;">通知が届くか確認できます</div>
-      <div style="display:flex;gap:8px;">
-        <button onclick="sendTestNotif('now')" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">⚡️ 今すぐ</button>
-        <button onclick="sendTestNotif('5sec')" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">⏱ 5秒後</button>
-        <button onclick="sendTestNotif('1min')" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🕐 1分後</button>
-      </div>
-      <div id="testNotifStatus" style="font-size:11px;color:var(--green);margin-top:8px;min-height:16px;"></div>
-    </div>
-
-    <!-- GitHub連携 -->
-    <div class="notif-panel" style="margin-top:14px;">
-      <div class="notif-panel-title">🐙 GitHub自動バックアップ</div>
-      <div style="font-size:10px;color:var(--text2);margin:6px 0 12px;line-height:1.7;">
-        データをGitHubリポジトリに自動保存します。<br>
-        <a href="https://github.com/settings/tokens/new?scopes=repo&description=surgery-manager" target="_blank" style="color:var(--accent);">Personal Access Token（repo権限）</a>を発行して入力してください。
-      </div>
-      <div class="form-group">
-        <label class="form-label">GitHubユーザー名</label>
-        <input type="text" class="form-input" id="gh_user" placeholder="username" style="font-size:13px;" oninput="saveGhSettings()">
-      </div>
-      <div class="form-group">
-        <label class="form-label">リポジトリ名</label>
-        <input type="text" class="form-input" id="gh_repo" placeholder="surgery-manager" style="font-size:13px;" oninput="saveGhSettings()">
-      </div>
-      <div class="form-group">
-        <label class="form-label">ファイルパス（リポジトリ内）</label>
-        <input type="text" class="form-input" id="gh_path" placeholder="surgery-manager.html" style="font-size:13px;" oninput="saveGhSettings()">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Personal Access Token</label>
-        <input type="password" class="form-input" id="gh_token" placeholder="ghp_xxxxxxxxxxxx" style="font-family:'IBM Plex Mono',monospace;font-size:12px;" oninput="saveGhSettings()">
-      </div>
-      <button onclick="pushToGitHub()" id="ghPushBtn"
-        style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;">
-        🚀 GitHubへプッシュ
-      </button>
-      <div id="ghStatus" style="font-size:11px;margin-top:8px;min-height:16px;line-height:1.5;"></div>
-    </div>
-
     <button class="btn-danger" onclick="closeNotifModal()" style="border-color:transparent;color:var(--text3);margin-top:14px;">閉じる</button>
   </div>
 </div>
@@ -1193,7 +1312,7 @@ GH_CONFIG_END -->
         <div style="font-size:11px;font-weight:700;color:var(--text);">アプリ内から自動更新できるように設定</div>
       </div>
       <div style="font-size:10px;color:var(--text2);line-height:1.8;margin-bottom:12px;margin-left:34px;">
-        入力しておくと🔔ボタン内「🚀 GitHubへプッシュ」でアプリを自動更新できます。<br>
+        入力しておくと⚙️設定内「🚀 GitHubへプッシュ」でアプリを自動更新できます。<br>
         <a href="https://github.com/settings/tokens/new?scopes=repo&description=surgery-manager" target="_blank" style="color:var(--accent);">ここからToken発行</a>（repo権限にチェック）
       </div>
       <div class="form-group">
@@ -1225,7 +1344,84 @@ GH_CONFIG_END -->
     <div class="modal-handle"></div>
     <div class="modal-title">⚙️ 設定</div>
     <div id="settingsContent"></div>
+
+    <!-- 通知設定 -->
+    <div class="summary-block" style="margin-top:12px;">
+      <div style="font-size:11px;font-weight:700;margin-bottom:12px;color:var(--text);">🔔 アプリ内通知設定</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5;">アプリを開いている間だけ有効です</div>
+      <div class="notif-row">
+        <div>
+          <div style="font-size:13px;">術前日（20:00）</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">手術前日の夜にリマインド</div>
+        </div>
+        <div class="toggle" id="tog1" onclick="toggleNotif(this,'prev_day')"></div>
+      </div>
+      <div class="notif-row">
+        <div>
+          <div style="font-size:13px;">手術当日朝（7:00）</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">当日朝にチェック状況を通知</div>
+        </div>
+        <div class="toggle" id="tog2" onclick="toggleNotif(this,'op_morning')"></div>
+      </div>
+      <div class="notif-row">
+        <div>
+          <div style="font-size:13px;">未完了タスクあり（8:00）</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">毎朝8時に未完了件数を通知</div>
+        </div>
+        <div class="toggle" id="tog3" onclick="toggleNotif(this,'pending_tasks')"></div>
+      </div>
+      <button class="btn-primary" onclick="requestNotifPermission()" style="margin-top:10px;">通知を許可する</button>
+      <div id="notifStatus" style="font-size:12px;color:var(--text3);margin:8px 0 4px;line-height:1.6;"></div>
+      <div class="notif-panel" style="margin-top:12px;">
+        <div class="notif-panel-title">🧪 テスト送信</div>
+        <div style="font-size:11px;color:var(--text3);margin:6px 0 10px;line-height:1.6;">通知が届くか確認できます</div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="sendTestNotif('now')" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">⚡️ 今すぐ</button>
+          <button onclick="sendTestNotif('5sec')" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">⏱ 5秒後</button>
+          <button onclick="sendTestNotif('1min')" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🕐 1分後</button>
+        </div>
+        <div id="testNotifStatus" style="font-size:11px;color:var(--green);margin-top:8px;min-height:16px;"></div>
+      </div>
+    </div>
+
+    <!-- GitHub自動バックアップ -->
+    <div class="summary-block" style="margin-top:12px;">
+      <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:var(--text);">🐙 GitHub自動バックアップ</div>
+      <div style="font-size:10px;color:var(--text2);margin:0 0 12px;line-height:1.7;">
+        データをGitHubリポジトリに自動保存します。<br>
+        <a href="https://github.com/settings/tokens/new?scopes=repo&description=surgery-manager" target="_blank" style="color:var(--accent);">Personal Access Token（repo権限）</a>を発行して入力してください。
+      </div>
+      <div class="form-group">
+        <label class="form-label">GitHubユーザー名</label>
+        <input type="text" class="form-input" id="gh_user" placeholder="username" style="font-size:13px;" oninput="saveGhSettings()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">リポジトリ名</label>
+        <input type="text" class="form-input" id="gh_repo" placeholder="surgery-manager" style="font-size:13px;" oninput="saveGhSettings()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ファイルパス（リポジトリ内）</label>
+        <input type="text" class="form-input" id="gh_path" placeholder="surgery-manager.html" style="font-size:13px;" oninput="saveGhSettings()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Personal Access Token</label>
+        <input type="password" class="form-input" id="gh_token" placeholder="ghp_xxxxxxxxxxxx" style="font-family:'IBM Plex Mono',monospace;font-size:12px;" oninput="saveGhSettings()">
+      </div>
+      <button onclick="pushToGitHub()" id="ghPushBtn"
+        style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;">
+        🚀 GitHubへプッシュ
+      </button>
+      <div id="ghStatus" style="font-size:11px;margin-top:8px;min-height:16px;line-height:1.5;"></div>
+    </div>
+
     <button class="btn-danger" onclick="closeSettingsModal()" style="border-color:transparent;color:var(--text3);margin-top:12px;">閉じる</button>
+  </div>
+</div>
+
+<!-- Daily Brief Popup -->
+<div class="daily-brief-overlay hidden" id="dailyBriefOverlay" onclick="closeDailyBriefOnBg(event)">
+  <div class="daily-brief-modal" id="dailyBriefModal">
+    <!-- filled by JS -->
   </div>
 </div>
 
@@ -1240,6 +1436,7 @@ const CHECKLIST_DEFAULTS_BUILTIN = [
   { key: 'consent', label: '手術同意書' },
   { key: 'blood_consent', label: '輸血同意書', optional: true },
   { key: 'discharge_summary', label: '退院サマリ' },
+  { key: 'summary_rounds', label: 'サマリ回診' },
   { key: 'rapid_order', label: '⚠️迅速オーダー', warn: true },
   { key: 'ope_input', label: 'オペ入力' },
 ];
@@ -1349,6 +1546,74 @@ const DEADLINE_CHECK_KEYS = [
   'summary_pre', 'cp', 'plan', 'dpc', 'consent', 'blood_consent', 'rapid_order', 'ope_input'
 ];
 
+// ========== 疾患別チェックルール デフォルト ==========
+const DISEASE_CHECK_RULES_BUILTIN = [
+  {
+    id: 'builtin_chemo',
+    keyword: '化学療法,ケモ',
+    items: [
+      'Ccr計算（<60: CDDP不可→レジメン再検討）',
+      '採血オーダー（前日 or 当日7:00）',
+      '投与可否確認（WBC>2000/好中球>1000/Hb>9/Plt>10万）',
+      '用量計算・切捨て（CDDP:5mg/5-FU:50mg/CBDCA等:10mg単位）',
+      'HEC：オランザピン5mg追加（DM不可）',
+      '外来化学療法室に連絡（調剤確定後）',
+      '体重測定指示（Day0-5毎日）',
+      '尿量確認指示（6時間ごとDay1-5/Day1朝6時開始）',
+      'モニター指示（心電図・SpO2 投与開始〜翌朝）',
+      'レジメン締切確認（前日8:00/過ぎたら外来ケモ室へ）',
+      'Ccrとオーダー画面スクショ保存',
+    ],
+  },
+  {
+    id: 'builtin_cddp',
+    keyword: 'CDDP',
+    items: [
+      'Ccr確認（<60: 投与不可）',
+      '大量補液時：Day4-5に生化学（CBC不要）',
+      '体重管理（Day2-3: +2kgで注意/Day4-5: +5kgでラシックス1/2A）',
+      '尿量管理（Day1: 300ml/6hrでラシックス1/2A）',
+      '骨髄抑制期は2日に1回採血可・必要時G-CSF',
+    ],
+  },
+  {
+    id: 'builtin_fn',
+    keyword: 'FN',
+    items: [
+      '血培2set採取',
+      '胸部Xp',
+      '尿培・痰培提出',
+      'β-Dグルカン/プロカルシトニン採血',
+      'アセトアミノフェン（解熱）',
+      'FN疑い：セフェピム1g×2/day or スルバシリン開始',
+    ],
+  },
+  {
+    id: 'builtin_outpatient_chemo',
+    keyword: '外来ケモ',
+    items: [
+      'レボフロキサシン500mg頓用（38℃以上で内服・5日分）',
+      'メトクロプラミド or ノバミン（制吐）',
+      'ロペラミド（止痢・4時間ごと追加可）',
+      'カロナール2T（解熱鎮痛）',
+    ],
+  },
+  {
+    id: 'builtin_crt',
+    keyword: 'CRT',
+    items: [
+      'PS記録',
+      '体重記録（day0+○kg）',
+      '疼痛評価記録',
+      '栄養評価記録（経口/経管）',
+      '有害事象CTCAE記載（粘膜炎/皮膚炎/倦怠感/食欲低下/便秘）',
+      'chemo開始日・コース数・用量（mg/m2）記載',
+      '最重AE記載',
+      'Ccr確認（CDDP使用時）',
+    ],
+  },
+];
+
 // Settings
 let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || {
   doctorName: '山口',
@@ -1357,7 +1622,20 @@ let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || 
   accentColor: '#4f8cff',
   checklistItems: JSON.parse(JSON.stringify(CHECKLIST_DEFAULTS_BUILTIN)),
   showFields: { time: true, items: true, team: true, memo: true },
+  diseaseCheckRules: JSON.parse(JSON.stringify(DISEASE_CHECK_RULES_BUILTIN)),
 };
+// 既存ユーザーでルールが空なら初期ルールを追加
+if (!appSettings.diseaseCheckRules) appSettings.diseaseCheckRules = JSON.parse(JSON.stringify(DISEASE_CHECK_RULES_BUILTIN));
+if (appSettings.diseaseCheckRules.length === 0) appSettings.diseaseCheckRules = JSON.parse(JSON.stringify(DISEASE_CHECK_RULES_BUILTIN));
+// builtin IDのルールを最新内容に更新（ユーザーがカスタムしたルールは対象外）
+DISEASE_CHECK_RULES_BUILTIN.forEach(builtin => {
+  const idx = appSettings.diseaseCheckRules.findIndex(r => r.id === builtin.id);
+  if (idx >= 0) {
+    appSettings.diseaseCheckRules[idx] = JSON.parse(JSON.stringify(builtin));
+  } else {
+    appSettings.diseaseCheckRules.push(JSON.parse(JSON.stringify(builtin)));
+  }
+});
 
 // ========== 術前準備 自動提案 ==========
 function detectPrepRules(surgeryName, isIcu, isRecon) {
@@ -1372,12 +1650,53 @@ function detectPrepRules(surgeryName, isIcu, isRecon) {
   return matched;
 }
 
-function onSurgeryChange() {
+function onSurgeryChange() { onDiseaseOrSurgeryChange(); }
+function onDiseaseOrSurgeryChange() {
+  const disease = document.getElementById('f_disease')?.value || '';
   const surgery = document.getElementById('f_surgery')?.value || '';
   const isIcu   = document.getElementById('f_icu')?.checked || false;
   const isRecon = document.getElementById('f_recon')?.checked || false;
   const rules = detectPrepRules(surgery, isIcu, isRecon);
   renderPrepSuggestions(rules);
+  renderDiseaseCheckSuggestions(disease + ' ' + surgery);
+}
+
+function renderDiseaseCheckSuggestions(text) {
+  const panel = document.getElementById('diseaseCheckSuggestPanel');
+  if (!panel) return;
+  const ltext = text.toLowerCase();
+  const matched = (appSettings.diseaseCheckRules || []).map(r => {
+    if (!r.keyword) return null;
+    const keywords = r.keyword.split(/[,、\s]+/).map(k => k.trim()).filter(k => k);
+    const hit = keywords.find(kw => ltext.includes(kw.toLowerCase()));
+    return hit ? { rule: r, hitKeyword: hit } : null;
+  }).filter(Boolean);
+  if (matched.length === 0) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  panel.innerHTML = matched.map(({ rule: r, hitKeyword }) => `
+    <div style="margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:5px;">🏷️ 「${hitKeyword}」チェックリスト（${r.items.length}件）</div>
+      <div style="display:flex;flex-direction:column;gap:3px;margin-bottom:8px;">
+        ${r.items.map(i => `<div style="font-size:11px;color:var(--text2);padding:2px 0;">• ${i}</div>`).join('')}
+      </div>
+      <button onclick="addDiseaseCheckItemsToFreeChecks('${r.id}')"
+        style="background:rgba(67,217,160,0.15);color:var(--green);border:1px solid rgba(67,217,160,0.4);border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+        ＋ フリーチェックリストに追加
+      </button>
+    </div>
+  `).join('<div style="height:1px;background:var(--border);margin:8px 0;"></div>');
+}
+
+function addDiseaseCheckItemsToFreeChecks(ruleId) {
+  const rule = (appSettings.diseaseCheckRules || []).find(r => r.id === ruleId);
+  if (!rule) return;
+  rule.items.forEach(item => {
+    if (!freeChecks.some(f => f.label === item)) {
+      freeChecks.push({ label: item, done: false });
+    }
+  });
+  renderFreeChecklistForm();
+  showPrepFeedback('✅ 追加しました', 'var(--green)');
 }
 
 function renderPrepSuggestions(rules) {
@@ -1469,6 +1788,38 @@ let notifSettings = JSON.parse(localStorage.getItem('notif_settings') || '{"prev
 let currentTab = 'list';
 let editingId = null;
 let freeChecks = []; // [{label, done}] for current editing session
+let calendarViewDate = new Date(); // currently viewed month
+
+// ========== 病棟業務 週間スケジュール ==========
+// dow: 0=日, 1=月, 2=火, 3=水, 4=木, 5=金, 6=土
+const WARD_DUTIES = {
+  0: [], // 日曜
+  1: [ // 月曜
+    { icon: '📋', label: '耳鼻科ボード確認', note: '自分の患者の質問・記載事項をチェック' },
+    { icon: '🏥', label: '担当症例確認', note: '病棟医長が担当割り振り → 火曜医局会で確定' },
+  ],
+  2: [ // 火曜
+    { icon: '🏥', label: '医局会（担当最終決定）', note: '担当決定後すぐに入院指示・CP・同意書入力を' },
+    { icon: '📋', label: '耳鼻科ボード確認', note: '定期処方ボード：有無（○/×）・変更点を記載' },
+    { icon: '💊', label: '定期処方（早めに）', note: '変更なさそうな患者は火曜回診時に処方しておくと親切' },
+  ],
+  3: [ // 水曜
+    { icon: '🩺', label: 'サマリ回診', note: '16:00カンファ後に実施' },
+    { icon: '💊', label: '定期処方 入力期限', note: '水曜までに入力すること（看護師確認のため）' },
+    { icon: '🗄️', label: '頭頸部癌データベース入力確認', note: 'サマリ回診前に必ず入力を済ませること' },
+    { icon: '📋', label: '耳鼻科ボード確認', note: '定期処方ボード：水曜までに記載' },
+  ],
+  4: [ // 木曜
+    { icon: '📋', label: '耳鼻科ボード確認', note: '' },
+  ],
+  5: [ // 金曜
+    { icon: '📋', label: '耳鼻科ボード確認', note: '' },
+    { icon: '💊', label: '土曜分の処方確認', note: '土曜が定期処方開始日のため金曜までに確認' },
+  ],
+  6: [ // 土曜
+    { icon: '💊', label: '定期処方開始（1–9F）', note: '1週間分処方' },
+  ],
+};
 
 // Show today's date in header
 function updateTodayDisplay() {
@@ -1585,8 +1936,9 @@ function save() {
 function groupByOpDate(arr) {
   const map = {};
   arr.forEach(c => {
-    if (!map[c.opDate]) map[c.opDate] = [];
-    map[c.opDate].push(c);
+    const key = c.opDate || c.admDate || '';
+    if (!map[key]) map[key] = [];
+    map[key].push(c);
   });
   return map;
 }
@@ -1607,6 +1959,7 @@ function render() {
   else if (currentTab === 'pending') renderPending(el);
   else if (currentTab === 'summary_incomplete') renderSummaryIncomplete(el);
   else if (currentTab === 'discharge_weekly') renderDischargeWeekly(el);
+  else if (currentTab === 'calendar') renderCalendar(el);
   else if (currentTab === 'summary') renderSummary(el);
   else if (currentTab === 'import') renderImport(el);
   updatePendingBadge();
@@ -1627,11 +1980,22 @@ function renderList(el) {
       : emptyState('🏥', '症例がまだありません<br>右下の＋ボタンから追加してください');
     return;
   }
-  const sorted = [...filtered].sort((a,b) => a.opDate.localeCompare(b.opDate));
+  const sorted = [...filtered].sort((a,b) => {
+    const ka = a.opDate || a.admDate || '';
+    const kb = b.opDate || b.admDate || '';
+    return ka.localeCompare(kb);
+  });
   const groups = groupByOpDate(sorted);
   let html = '';
   Object.keys(groups).sort().forEach(date => {
-    const label = isToday(date) ? '今日のオペ ▼' : `オペ日 ${formatOpDate(date)}`;
+    let label;
+    if (!date) label = '入院中（手術なし）';
+    else if (isToday(date)) label = '今日のオペ ▼';
+    else {
+      // Determine if this date is an opDate or admDate for the cases in this group
+      const hasOp = groups[date].some(c => c.opDate === date);
+      label = hasOp ? `オペ日 ${formatOpDate(date)}` : `入院日 ${formatOpDate(date)}`;
+    }
     html += `<div class="date-separator"><div class="date-separator-line"></div><div class="date-separator-text">${label}</div><div class="date-separator-line"></div></div>`;
     groups[date].forEach(c => { html += renderCard(c); });
   });
@@ -1868,6 +2232,186 @@ function renderDischargeWeekly(el) {
   el.innerHTML = html;
 }
 
+// ========== CALENDAR ==========
+let calendarSelectedDate = null;
+
+function renderCalendar(el) {
+  const year = calendarViewDate.getFullYear();
+  const month = calendarViewDate.getMonth(); // 0-indexed
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = toISODate(today);
+
+  // Map of opDate → [case names]
+  const opsByDate = {};
+  cases.forEach(c => {
+    if (!c.opDate) return;
+    if (!opsByDate[c.opDate]) opsByDate[c.opDate] = [];
+    opsByDate[c.opDate].push(c.name || '?');
+  });
+
+  // Days in month
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const firstDow = firstDay.getDay(); // 0=Sun — use directly for Sunday-start
+  const startOffset = firstDow;
+
+  // Sunday-start week headers
+  const WEEKDAYS = ['日','月','火','水','木','金','土'];
+  const weekdayClasses = ['sun','','','','','','sat'];
+
+  let cells = '';
+  for (let i = 0; i < startOffset; i++) {
+    cells += '<div class="cal-day empty"></div>';
+  }
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow = new Date(year, month, d).getDay(); // 0=Sun,6=Sat
+    const isToday = dateStr === todayStr;
+    const ops = opsByDate[dateStr] || [];
+    const hasEvent = ops.length > 0;
+    const isSelected = dateStr === calendarSelectedDate;
+    const dowClass = dow === 0 ? 'sun' : dow === 6 ? 'sat' : '';
+    const classes = ['cal-day', dowClass, isToday ? 'today' : '', hasEvent ? 'has-event' : '', isSelected && !isToday ? 'selected' : ''].filter(Boolean).join(' ');
+    // Show up to 2 op names inside the cell
+    let opLabels = '';
+    if (ops.length > 0) {
+      const shown = ops.slice(0, 2);
+      shown.forEach(name => {
+        opLabels += `<div class="cal-day-op">${name}</div>`;
+      });
+      if (ops.length > 2) opLabels += `<div class="cal-day-op">+${ops.length - 2}</div>`;
+    }
+    cells += `<div class="${classes}" onclick="selectCalendarDate('${dateStr}')"><div class="cal-day-num">${d}</div>${opLabels}</div>`;
+  }
+
+  // Day detail
+  let detailHtml = '';
+  if (calendarSelectedDate) {
+    detailHtml = buildCalendarDayDetail(calendarSelectedDate);
+  }
+
+  const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+  el.innerHTML = `
+    <div class="cal-header">
+      <button class="cal-nav-btn" onclick="calNavMonth(-1)">‹</button>
+      <div class="cal-month-label">${year}年 ${monthNames[month]}</div>
+      <button class="cal-nav-btn" onclick="calNavMonth(1)">›</button>
+    </div>
+    <div class="cal-grid">
+      ${WEEKDAYS.map((w,i) => `<div class="cal-weekday ${weekdayClasses[i]}">${w}</div>`).join('')}
+      ${cells}
+    </div>
+    ${detailHtml}
+  `;
+}
+
+function toISODate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function calNavMonth(delta) {
+  calendarViewDate = new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth() + delta, 1);
+  render();
+}
+
+function selectCalendarDate(dateStr) {
+  calendarSelectedDate = calendarSelectedDate === dateStr ? null : dateStr;
+  render();
+}
+
+function buildCalendarDayDetail(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const days = ['日','月','火','水','木','金','土'];
+  const label = `${d.getMonth()+1}月${d.getDate()}日（${days[d.getDay()]}）`;
+
+  const rows = [];
+
+  // Operations on this day
+  const ops = cases.filter(c => c.opDate === dateStr);
+  ops.forEach(c => {
+    const prog = getCheckProgress(c);
+    rows.push(`<div class="cal-task-row">
+      <span class="cal-task-icon">🔪</span>
+      <div>
+        <div style="font-weight:700;">${c.name || '患者名未設定'}</div>
+        <div style="font-size:11px;color:var(--text2);">${c.disease || c.surgery || '疾患名未設定'} ／ チェック ${prog.done}/${prog.total}</div>
+      </div>
+    </div>`);
+  });
+
+  // Admissions on this day
+  const adms = cases.filter(c => c.admDate === dateStr && c.opDate !== dateStr);
+  adms.forEach(c => {
+    rows.push(`<div class="cal-task-row">
+      <span class="cal-task-icon">🏥</span>
+      <div>
+        <div style="font-weight:700;">${c.name || '患者名未設定'} 入院</div>
+        <div style="font-size:11px;color:var(--text2);">${c.disease || c.surgery || '疾患名未設定'}${c.opDate ? ` ／ オペ日:${toDateStr(c.opDate)}` : ''}</div>
+      </div>
+    </div>`);
+  });
+
+  // Discharges on this day
+  const discharges = cases.filter(c => c.dischargeDate === dateStr);
+  discharges.forEach(c => {
+    rows.push(`<div class="cal-task-row">
+      <span class="cal-task-icon">🚪</span>
+      <div>
+        <div style="font-weight:700;">${c.name || '患者名未設定'} 退院</div>
+        <div style="font-size:11px;color:var(--text2);">${c.disease || c.surgery || '疾患名未設定'}</div>
+      </div>
+    </div>`);
+  });
+
+  // Pending checklist items for cases with opDate = today or future, where admDate is on/before this date
+  const pendingChecks = cases.filter(c => {
+    if (isPast(c.opDate) && !isToday(c.opDate)) return false;
+    if (!c.admDate || c.admDate > dateStr) return false;
+    if (c.opDate < dateStr) return false;
+    const prog = getCheckProgress(c);
+    return prog.done < prog.total;
+  });
+  pendingChecks.forEach(c => {
+    const pendingItems = CHECKLIST_DEFAULTS.filter(item => !(c.checks && c.checks[item.key])).map(i => i.label);
+    if (pendingItems.length === 0) return;
+    rows.push(`<div class="cal-task-row" style="border-color:rgba(255,209,102,0.3);background:rgba(255,209,102,0.04);">
+      <span class="cal-task-icon">⚠️</span>
+      <div>
+        <div style="font-weight:700;color:var(--accent3);">${c.name} 未完了チェック</div>
+        <div style="font-size:11px;color:var(--text2);">${pendingItems.join(' ／ ')}</div>
+      </div>
+    </div>`);
+  });
+
+  // Ward duties for this day of week
+  const duties = WARD_DUTIES[d.getDay()] || [];
+  if (duties.length > 0) {
+    // Add a divider before duties if there are case rows above
+    if (rows.length > 0) {
+      rows.push(`<div style="padding:6px 14px 2px;font-size:10px;font-weight:700;letter-spacing:0.07em;color:var(--text3);text-transform:uppercase;border-top:1px solid var(--border);background:var(--surface2);">病棟業務</div>`);
+    }
+    duties.forEach(duty => {
+      rows.push(`<div class="cal-task-row" style="border-color:rgba(79,140,255,0.2);background:rgba(79,140,255,0.03);">
+        <span class="cal-task-icon">${duty.icon}</span>
+        <div>
+          <div style="font-weight:700;color:var(--accent);">${duty.label}</div>
+          ${duty.note ? `<div style="font-size:11px;color:var(--text2);">${duty.note}</div>` : ''}
+        </div>
+      </div>`);
+    });
+  }
+
+  if (rows.length === 0) {
+    rows.push(`<div class="cal-task-row" style="color:var(--text3);">この日の予定はありません</div>`);
+  }
+
+  return `<div class="cal-day-detail">
+    <div class="cal-day-detail-header">📋 ${label} のタスク</div>
+    ${rows.join('')}
+  </div>`;
+}
+
 function renderSummary(el) {
   const sorted = [...cases].sort((a,b) => a.opDate.localeCompare(b.opDate));
   const groups = groupByOpDate(sorted);
@@ -2034,7 +2578,8 @@ function renderCard(c, expandByDefault=false) {
       <div class="card-main">
         <div class="patient-name">${c.name || '患者名未設定'}${dlBadge}${summaryWarn}</div>
         <div class="patient-meta" style="margin-top:3px;">
-          <span class="meta-tag">${c.surgery || '術式未設定'}</span>
+          <span class="meta-tag">${c.disease || c.surgery || '疾患名未設定'}</span>
+          ${c.disease && c.surgery ? `<span class="meta-tag" style="color:var(--text3);font-size:10px;">${c.surgery}</span>` : ''}
           ${admStr ? `<span class="meta-tag">${admStr}</span>` : ''}
           ${c.dischargeDate ? `<span class="meta-tag" style="color:var(--text3);">退院:${toDateStr(c.dischargeDate)}</span>` : ''}
           ${admBadge}
@@ -2230,6 +2775,7 @@ function openEditModal(id) {
   document.getElementById('f_pathology').value = c.pathology || '';
   document.getElementById('f_courseNotes').value = c.courseNotes || '';
   document.getElementById('f_name').value = c.name || '';
+  document.getElementById('f_disease').value = c.disease || '';
   document.getElementById('f_surgery').value = c.surgery || '';
   document.getElementById('f_time').value = c.time || '';
   document.getElementById('f_team').value = c.team || '';
@@ -2244,7 +2790,7 @@ function openEditModal(id) {
 }
 
 function clearForm() {
-  ['f_opDate','f_admDate','f_dischargeDate','f_pathology','f_courseNotes','f_name','f_surgery','f_time','f_team','f_items','f_memo'].forEach(id => {
+  ['f_opDate','f_admDate','f_dischargeDate','f_pathology','f_courseNotes','f_name','f_disease','f_surgery','f_time','f_team','f_items','f_memo'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('f_icu').checked = false;
@@ -2306,9 +2852,11 @@ function buildChecklistForm(checks) {
 
 function saveCase() {
   const opDate = document.getElementById('f_opDate').value;
+  const admDate = document.getElementById('f_admDate').value;
   const name = document.getElementById('f_name').value.trim();
-  if (!opDate || !name) {
-    alert('オペ日と患者名は必須です');
+  const disease = document.getElementById('f_disease').value.trim();
+  if (!name || !admDate || !disease) {
+    alert('患者名・疾患名・入院日は必須です');
     return;
   }
   const checks = {};
@@ -2318,11 +2866,12 @@ function saveCase() {
 
   const data = {
     opDate,
-    admDate: document.getElementById('f_admDate').value,
+    admDate,
     dischargeDate: document.getElementById('f_dischargeDate').value,
     pathology: document.getElementById('f_pathology').value.trim(),
     courseNotes: document.getElementById('f_courseNotes').value.trim(),
     name,
+    disease,
     surgery: document.getElementById('f_surgery').value.trim(),
     time: document.getElementById('f_time').value.trim(),
     team: document.getElementById('f_team').value.trim(),
@@ -2448,6 +2997,215 @@ function showNotifSettings() {
       banner.innerHTML = '<span style="color:var(--text3);font-weight:700;">⚠️ このブラウザは通知未対応です</span>';
     }
   }
+}
+
+function showNotifCenter() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = ['日','月','火','水','木','金','土'];
+  const dateLabel = `${today.getMonth()+1}月${today.getDate()}日（${days[today.getDay()]}）`;
+
+  const dateEl = document.getElementById('notifCenterDate');
+  if (dateEl) dateEl.textContent = dateLabel;
+
+  const sections = [];
+
+  // Stats
+  const todayOps = cases.filter(c => isToday(c.opDate));
+  const urgentPending = cases.filter(c => {
+    if (isPast(c.opDate) || isToday(c.opDate)) return false;
+    const daysLeft = Math.round((new Date(c.opDate + 'T00:00:00') - today) / 86400000);
+    if (daysLeft > 3) return false;
+    const prog = getCheckProgress(c);
+    return prog.done < prog.total;
+  });
+  const overdueSummary = cases.filter(c => getDischargeSummaryWarning(c));
+  const allPending = cases.filter(c => {
+    const prog = getCheckProgress(c);
+    return prog.done < prog.total;
+  });
+  const noRounds = cases.filter(c => {
+    if (!isPast(c.opDate) || isToday(c.opDate)) return false;
+    if (c.checks && c.checks['summary_rounds']) return false;
+    return true;
+  });
+
+  sections.push(`
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <div style="flex:1;background:rgba(79,140,255,0.1);border:1px solid rgba(79,140,255,0.25);border-radius:10px;padding:10px 6px;text-align:center;">
+        <div style="font-size:22px;font-weight:700;color:var(--accent);line-height:1;">${todayOps.length}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px;">今日のオペ</div>
+      </div>
+      <div style="flex:1;background:rgba(255,87,87,0.08);border:1px solid rgba(255,87,87,0.2);border-radius:10px;padding:10px 6px;text-align:center;">
+        <div style="font-size:22px;font-weight:700;color:var(--red);line-height:1;">${urgentPending.length + overdueSummary.length}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px;">要対応</div>
+      </div>
+      <div style="flex:1;background:rgba(67,217,160,0.08);border:1px solid rgba(67,217,160,0.2);border-radius:10px;padding:10px 6px;text-align:center;">
+        <div style="font-size:22px;font-weight:700;color:var(--green);line-height:1;">${allPending.length}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px;">未完了総数</div>
+      </div>
+    </div>
+  `);
+
+  // 1. Today's ops
+  if (todayOps.length > 0) {
+    const rows = todayOps.map(c => {
+      const prog = getCheckProgress(c);
+      const allDone = prog.done === prog.total;
+      return `<div class="daily-brief-row${allDone ? '' : ' alert'}">
+        <span>🔪</span>
+        <div>
+          <div style="font-weight:700;">${c.name || '患者名未設定'}</div>
+          <div style="font-size:11px;color:var(--text2);">${c.surgery || '術式未設定'} ／ チェック ${prog.done}/${prog.total}${allDone ? ' ✅' : ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+    sections.push(`<div class="daily-brief-section">
+      <div class="daily-brief-section-title">🔪 本日のオペ（${todayOps.length}件）</div>
+      ${rows}
+    </div>`);
+  }
+
+  // 2. Urgent pending within 3 days
+  if (urgentPending.length > 0) {
+    const rows = urgentPending.map(c => {
+      const daysLeft = Math.round((new Date(c.opDate + 'T00:00:00') - today) / 86400000);
+      const prog = getCheckProgress(c);
+      return `<div class="daily-brief-row warn">
+        <span>⚠️</span>
+        <div>
+          <div style="font-weight:700;">${c.name} — あと${daysLeft}日</div>
+          <div style="font-size:11px;color:var(--text2);">${c.surgery || ''} ／ チェック ${prog.done}/${prog.total} 未完了</div>
+        </div>
+      </div>`;
+    }).join('');
+    sections.push(`<div class="daily-brief-section">
+      <div class="daily-brief-section-title">⚠️ 直近3日以内・チェック未完了</div>
+      ${rows}
+    </div>`);
+  }
+
+  // 3. Overdue discharge summaries
+  if (overdueSummary.length > 0) {
+    const rows = overdueSummary.map(c => {
+      const daysSince = c.dischargeDate
+        ? Math.floor((today - new Date(c.dischargeDate + 'T00:00:00')) / 86400000)
+        : null;
+      return `<div class="daily-brief-row warn">
+        <span>📋</span>
+        <div>
+          <div style="font-weight:700;">${c.name}</div>
+          <div style="font-size:11px;color:var(--text2);">退院後${daysSince !== null ? daysSince + '日' : '—'} ／ 退院サマリ未記載</div>
+        </div>
+      </div>`;
+    }).join('');
+    sections.push(`<div class="daily-brief-section">
+      <div class="daily-brief-section-title">📋 退院サマリ未記載（5日超）</div>
+      ${rows}
+    </div>`);
+  }
+
+  // 4. Summary rounds incomplete
+  if (noRounds.length > 0) {
+    const rows = noRounds.slice(0, 5).map(c => `<div class="daily-brief-row">
+      <span>🩺</span>
+      <div>
+        <div style="font-weight:700;">${c.name}</div>
+        <div style="font-size:11px;color:var(--text2);">${c.surgery || ''} ／ サマリ回診未完了</div>
+      </div>
+    </div>`).join('');
+    const more = noRounds.length > 5 ? `<div style="font-size:11px;color:var(--text3);padding:6px 12px;">他${noRounds.length - 5}件...</div>` : '';
+    sections.push(`<div class="daily-brief-section">
+      <div class="daily-brief-section-title">🩺 サマリ回診 未完了（${noRounds.length}件）</div>
+      ${rows}${more}
+    </div>`);
+  }
+
+  if (sections.length === 1) {
+    sections.push(`<div class="daily-brief-row" style="color:var(--green);">✅ 本日の未完了タスクはありません。</div>`);
+  }
+
+  // 5. Today's ward duties
+  const todayDuties = WARD_DUTIES[today.getDay()] || [];
+  if (todayDuties.length > 0) {
+    const dutyRows = todayDuties.map(d => `<div class="daily-brief-row">
+      <span>${d.icon}</span>
+      <div>
+        <div style="font-weight:700;">${d.label}</div>
+        ${d.note ? `<div style="font-size:11px;color:var(--text2);">${d.note}</div>` : ''}
+      </div>
+    </div>`).join('');
+    sections.push(`<div class="daily-brief-section">
+      <div class="daily-brief-section-title">🏥 本日の病棟業務</div>
+      ${dutyRows}
+    </div>`);
+  }
+
+  document.getElementById('notifCenterContent').innerHTML = sections.join('');
+  document.getElementById('notifModal').classList.add('open');
+}
+
+// ========== 疾患別チェックリスト管理 ==========
+function addDiseaseRule() {
+  const kw = document.getElementById('newDiseaseKeyword')?.value.trim();
+  if (!kw) return;
+  if (!appSettings.diseaseCheckRules) appSettings.diseaseCheckRules = [];
+  appSettings.diseaseCheckRules.push({ id: uid(), keyword: kw, items: [] });
+  document.getElementById('newDiseaseKeyword').value = '';
+  save();
+  renderSettings();
+}
+
+function removeDiseaseRule(ruleId) {
+  if (!appSettings.diseaseCheckRules) return;
+  appSettings.diseaseCheckRules = appSettings.diseaseCheckRules.filter(r => r.id !== ruleId);
+  save();
+  renderSettings();
+}
+
+function addDiseaseRuleItem(ruleId) {
+  const inputEl = document.getElementById('newItem_' + ruleId);
+  if (!inputEl) return;
+  const val = inputEl.value.trim();
+  if (!val) return;
+  const rule = (appSettings.diseaseCheckRules || []).find(r => r.id === ruleId);
+  if (!rule) return;
+  rule.items.push(val);
+  inputEl.value = '';
+  save();
+  renderSettings();
+}
+
+function removeDiseaseRuleItem(ruleId, itemIdx) {
+  const rule = (appSettings.diseaseCheckRules || []).find(r => r.id === ruleId);
+  if (!rule) return;
+  rule.items.splice(itemIdx, 1);
+  save();
+  renderSettings();
+}
+
+function moveDiseaseRuleUp(ruleId) {
+  const arr = appSettings.diseaseCheckRules;
+  const idx = arr.findIndex(r => r.id === ruleId);
+  if (idx <= 0) return;
+  [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+  save();
+  renderSettings();
+}
+
+function moveDiseaseRuleDown(ruleId) {
+  const arr = appSettings.diseaseCheckRules;
+  const idx = arr.findIndex(r => r.id === ruleId);
+  if (idx < 0 || idx >= arr.length - 1) return;
+  [arr[idx + 1], arr[idx]] = [arr[idx], arr[idx + 1]];
+  save();
+  renderSettings();
+}
+
+function updateDiseaseRuleKeyword(ruleId, val) {
+  const rule = (appSettings.diseaseCheckRules || []).find(r => r.id === ruleId);
+  if (!rule) return;
+  rule.keyword = val.trim();
+  save();
 }
 
 function loadGhSettings() {
@@ -2743,7 +3501,7 @@ function normalizeText(str) {
 function matchesSearch(c, q) {
   if (!q) return true;
   const nq = normalizeText(q);
-  const targets = [c.name, c.surgery, c.memo, c.items, c.team].map(normalizeText);
+  const targets = [c.name, c.disease, c.surgery, c.memo, c.items, c.team].map(normalizeText);
   return targets.some(t => t.includes(nq));
 }
 
@@ -3005,6 +3763,13 @@ function applyTheme() {
 // ========== SETTINGS ==========
 function openSettingsModal() {
   renderSettings();
+  // Load GitHub settings into static fields
+  const gh = JSON.parse(localStorage.getItem('gh_settings') || '{}');
+  if (document.getElementById('gh_user')) document.getElementById('gh_user').value = gh.user || '';
+  if (document.getElementById('gh_repo')) document.getElementById('gh_repo').value = gh.repo || '';
+  if (document.getElementById('gh_path')) document.getElementById('gh_path').value = gh.path || 'surgery-manager.html';
+  if (document.getElementById('gh_token')) document.getElementById('gh_token').value = gh.token || '';
+  updateToggleUI();
   document.getElementById('settingsModal').classList.add('open');
 }
 
@@ -3091,6 +3856,44 @@ function renderSettings() {
         <input type="text" class="form-input" id="s_defaultTeam" value="${appSettings.defaultTeam}" placeholder="梶川・三谷・山口">
       </div>
       <button class="btn-primary" onclick="saveBasicSettings()" style="margin-top:4px;">保存</button>
+    </div>
+
+    <!-- 疾患別チェックリスト自動提案 -->
+    <div class="summary-block" style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;margin-bottom:4px;color:var(--text);">🏷️ 疾患別チェックリスト自動提案</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.6;">疾患名・術式入力時にキーワードが一致すると提案されます。<br>キーワードはカンマ区切りで複数指定可（例：化学療法,ケモ）</div>
+      ${(appSettings.diseaseCheckRules || []).length === 0
+        ? `<div style="font-size:11px;color:var(--text3);padding:8px 0;">まだルールがありません</div>`
+        : (appSettings.diseaseCheckRules || []).map((r, ridx) => `
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+              <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0;">
+                <button onclick="moveDiseaseRuleUp('${r.id}')" ${ridx===0?'disabled style="opacity:0.3;cursor:default;"':''} style="background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:4px;padding:1px 7px;font-size:10px;cursor:pointer;line-height:1.5;">▲</button>
+                <button onclick="moveDiseaseRuleDown('${r.id}')" ${ridx===(appSettings.diseaseCheckRules.length-1)?'disabled style="opacity:0.3;cursor:default;"':''} style="background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:4px;padding:1px 7px;font-size:10px;cursor:pointer;line-height:1.5;">▼</button>
+              </div>
+              <input type="text" value="${r.keyword.replace(/"/g,'&quot;')}" onchange="updateDiseaseRuleKeyword('${r.id}',this.value)"
+                style="flex:1;background:var(--surface);border:1px solid rgba(67,217,160,0.4);border-radius:6px;padding:6px 10px;font-size:12px;font-weight:700;color:var(--green);font-family:inherit;outline:none;"
+                placeholder="キーワード（カンマ区切りで複数可）">
+              <button onclick="removeDiseaseRule('${r.id}')" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:0 2px;line-height:1;flex-shrink:0;">×</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">
+              ${r.items.map((item, idx) => `
+                <div style="display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px;">
+                  <span style="font-size:11px;color:var(--text2);flex:1;line-height:1.4;">${item}</span>
+                  <button onclick="removeDiseaseRuleItem('${r.id}',${idx})" style="background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;padding:0;line-height:1;flex-shrink:0;">×</button>
+                </div>
+              `).join('')}
+            </div>
+            <div style="display:flex;gap:6px;">
+              <input type="text" class="form-input" id="newItem_${r.id}" placeholder="チェック項目を追加..." style="flex:1;font-size:12px;" onkeydown="if(event.key==='Enter'){event.preventDefault();addDiseaseRuleItem('${r.id}');}">
+              <button onclick="addDiseaseRuleItem('${r.id}')" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">追加</button>
+            </div>
+          </div>
+        `).join('')}
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <input type="text" class="form-input" id="newDiseaseKeyword" placeholder="新しいキーワード（例：副鼻腔炎,副鼻腔）" style="flex:1;">
+        <button class="btn-primary" onclick="addDiseaseRule()" style="width:auto;padding:10px 16px;margin:0;">＋ 追加</button>
+      </div>
     </div>
 
     <!-- データ管理 -->
@@ -3282,6 +4085,151 @@ function skipSetup() {
   document.getElementById('setupModal').classList.remove('open');
 }
 
+// ========== DAILY BRIEF POPUP ==========
+function closeDailyBriefOnBg(e) {
+  if (e.target.id === 'dailyBriefOverlay') closeDailyBrief();
+}
+
+function closeDailyBrief() {
+  document.getElementById('dailyBriefOverlay').classList.add('hidden');
+}
+
+function showDailyBriefIfNeeded() {
+  const todayStr = toISODate(new Date());
+  const lastShown = localStorage.getItem('daily_brief_date');
+  if (lastShown === todayStr) return; // already shown today
+  localStorage.setItem('daily_brief_date', todayStr);
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = ['日','月','火','水','木','金','土'];
+  const dateLabel = `${today.getMonth()+1}月${today.getDate()}日（${days[today.getDay()]}）`;
+
+  const sections = [];
+
+  // 1. Today's operations
+  const todayOps = cases.filter(c => isToday(c.opDate));
+  if (todayOps.length > 0) {
+    const rows = todayOps.map(c => {
+      const prog = getCheckProgress(c);
+      const allDone = prog.done === prog.total;
+      return `<div class="daily-brief-row${allDone ? '' : ' alert'}">
+        <span>🔪</span>
+        <div>
+          <div style="font-weight:700;">${c.name || '患者名未設定'}</div>
+          <div style="font-size:11px;color:var(--text2);">${c.surgery || '術式未設定'} ／ チェック ${prog.done}/${prog.total}${allDone ? ' ✅' : ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+    sections.push(`<div class="daily-brief-section">
+      <div class="daily-brief-section-title">🔪 本日のオペ（${todayOps.length}件）</div>
+      ${rows}
+    </div>`);
+  }
+
+  // 2. Upcoming ops with incomplete checklists (within 3 days)
+  const urgentPending = cases.filter(c => {
+    if (isPast(c.opDate) || isToday(c.opDate)) return false;
+    const daysLeft = Math.round((new Date(c.opDate + 'T00:00:00') - today) / 86400000);
+    if (daysLeft > 3) return false;
+    const prog = getCheckProgress(c);
+    return prog.done < prog.total;
+  });
+  if (urgentPending.length > 0) {
+    const rows = urgentPending.map(c => {
+      const daysLeft = Math.round((new Date(c.opDate + 'T00:00:00') - today) / 86400000);
+      const prog = getCheckProgress(c);
+      return `<div class="daily-brief-row warn">
+        <span>⚠️</span>
+        <div>
+          <div style="font-weight:700;">${c.name} — あと${daysLeft}日</div>
+          <div style="font-size:11px;color:var(--text2);">${c.surgery || ''} ／ チェック ${prog.done}/${prog.total} 未完了</div>
+        </div>
+      </div>`;
+    }).join('');
+    sections.push(`<div class="daily-brief-section">
+      <div class="daily-brief-section-title">⚠️ 直近3日以内・チェック未完了</div>
+      ${rows}
+    </div>`);
+  }
+
+  // 3. Overdue discharge summaries
+  const overdueSummary = cases.filter(c => getDischargeSummaryWarning(c));
+  if (overdueSummary.length > 0) {
+    const rows = overdueSummary.map(c => {
+      const daysSince = c.dischargeDate
+        ? Math.floor((today - new Date(c.dischargeDate + 'T00:00:00')) / 86400000)
+        : null;
+      return `<div class="daily-brief-row warn">
+        <span>📋</span>
+        <div>
+          <div style="font-weight:700;">${c.name}</div>
+          <div style="font-size:11px;color:var(--text2);">退院後${daysSince !== null ? daysSince + '日' : '—'} ／ 退院サマリ未記載</div>
+        </div>
+      </div>`;
+    }).join('');
+    sections.push(`<div class="daily-brief-section">
+      <div class="daily-brief-section-title">📋 退院サマリ未記載（5日超）</div>
+      ${rows}
+    </div>`);
+  }
+
+  // 4. サマリ回診 未完了 — 水曜日のみ通知（カンファ後に回診があるため）
+  const isWednesday = today.getDay() === 3; // 0=Sun,3=Wed
+  if (isWednesday) {
+    const noRounds = cases.filter(c => {
+      if (!isPast(c.opDate) || isToday(c.opDate)) return false;
+      if (c.checks && c.checks['summary_rounds']) return false;
+      return true;
+    });
+    if (noRounds.length > 0) {
+      const rows = noRounds.slice(0, 5).map(c => `<div class="daily-brief-row">
+        <span>🩺</span>
+        <div>
+          <div style="font-weight:700;">${c.name}</div>
+          <div style="font-size:11px;color:var(--text2);">${c.surgery || ''} ／ 本日16時カンファ後に回診予定</div>
+        </div>
+      </div>`).join('');
+      const more = noRounds.length > 5 ? `<div style="font-size:11px;color:var(--text3);padding:6px 12px;">他${noRounds.length - 5}件...</div>` : '';
+      sections.push(`<div class="daily-brief-section">
+        <div class="daily-brief-section-title">🩺 本日サマリ回診 未完了（${noRounds.length}件）</div>
+        ${rows}${more}
+      </div>`);
+    }
+  }
+
+  if (sections.length === 0) {
+    sections.push(`<div class="daily-brief-row" style="color:var(--green);">✅ 本日の未完了タスクはありません。</div>`);
+  }
+
+  // Always show ward duties for today at the bottom
+  const todayDuties = WARD_DUTIES[today.getDay()] || [];
+  let dutySection = '';
+  if (todayDuties.length > 0) {
+    const dutyRows = todayDuties.map(d => `<div class="daily-brief-row">
+      <span>${d.icon}</span>
+      <div>
+        <div style="font-weight:700;">${d.label}</div>
+        ${d.note ? `<div style="font-size:11px;color:var(--text2);">${d.note}</div>` : ''}
+      </div>
+    </div>`).join('');
+    dutySection = `<div class="daily-brief-section">
+      <div class="daily-brief-section-title">🏥 本日の病棟業務</div>
+      ${dutyRows}
+    </div>`;
+  }
+
+  const modal = document.getElementById('dailyBriefModal');
+  modal.innerHTML = `
+    <div class="daily-brief-handle"></div>
+    <div class="daily-brief-title">📅 ${dateLabel} のタスク</div>
+    <div class="daily-brief-subtitle">本日のやることリスト</div>
+    ${sections.join('')}
+    ${dutySection}
+    <button class="daily-brief-close-btn" onclick="closeDailyBrief()">確認しました</button>
+  `;
+  document.getElementById('dailyBriefOverlay').classList.remove('hidden');
+}
+
 // ========== INIT ==========
 loadGhSettings();
 seedIfEmpty();
@@ -3290,6 +4238,7 @@ applyTheme();
 render();
 scheduleNotifications();
 showSetupIfNeeded();
+showDailyBriefIfNeeded();
 </script>
 </body>
 </html>
