@@ -1159,8 +1159,10 @@ GH_CONFIG_END -->
     </div>
 
     <div class="form-group">
-      <label class="form-label">術式（術後症例のみ）</label>
-      <input type="text" class="form-input" id="f_surgery" placeholder="右扁桃摘出＋アデノイド切除" oninput="onDiseaseOrSurgeryChange()">
+      <label class="form-label">術式/ケモ等</label>
+      <input type="text" class="form-input" id="f_surgery" placeholder="右扁桃摘出・CDDP+RT・TPF など" oninput="onDiseaseOrSurgeryChange()" autocomplete="off">
+      <!-- レジメン候補パネル -->
+      <div id="regimenSuggestPanel" style="display:none;margin-top:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;"></div>
     </div>
 
     <!-- 術前準備 自動提案パネル -->
@@ -1551,6 +1553,7 @@ const DISEASE_CHECK_RULES_BUILTIN = [
   {
     id: 'builtin_chemo',
     keyword: '化学療法,ケモ',
+    chemoMode: true,
     items: [
       'Ccr計算（<60: CDDP不可→レジメン再検討）',
       '採血オーダー（前日 or 当日7:00）',
@@ -1568,6 +1571,7 @@ const DISEASE_CHECK_RULES_BUILTIN = [
   {
     id: 'builtin_cddp',
     keyword: 'CDDP',
+    chemoMode: true,
     items: [
       'Ccr確認（<60: 投与不可）',
       '大量補液時：Day4-5に生化学（CBC不要）',
@@ -1591,6 +1595,7 @@ const DISEASE_CHECK_RULES_BUILTIN = [
   {
     id: 'builtin_outpatient_chemo',
     keyword: '外来ケモ',
+    chemoMode: true,
     items: [
       'レボフロキサシン500mg頓用（38℃以上で内服・5日分）',
       'メトクロプラミド or ノバミン（制吐）',
@@ -1601,6 +1606,7 @@ const DISEASE_CHECK_RULES_BUILTIN = [
   {
     id: 'builtin_crt',
     keyword: 'CRT',
+    chemoMode: true,
     items: [
       'PS記録',
       '体重記録（day0+○kg）',
@@ -1614,6 +1620,289 @@ const DISEASE_CHECK_RULES_BUILTIN = [
   },
 ];
 
+// ケモモード時に表示するチェックリスト項目
+const CHEMO_CHECK_ITEMS_BUILTIN = [
+  { key: 'chemo_regimen', label: 'レジメン入力' },
+  { key: 'chemo_screenshot', label: 'レジメンスクショ' },
+  { key: 'chemo_blood_monfi', label: '採血（月金）' },
+  { key: 'chemo_blood_monthly', label: '化学療法中採血（月1回）' },
+  { key: 'chemo_continue', label: '継続指示' },
+  { key: 'chemo_rx', label: '矛盾ない処方・注射確認' },
+  { key: 'chemo_plan', label: '入院診療計画書（初回なら同意書も）' },
+];
+
+// ケモラジモード チェックリスト
+const CRT_CHECK_ITEMS_BUILTIN = [
+  { key: 'crt_regimen', label: 'レジメン入力' },
+  { key: 'crt_screenshot', label: 'レジメンスクショ' },
+  { key: 'crt_blood_monfi', label: '採血（月金）' },
+  { key: 'crt_blood_monthly', label: '化学療法中採血（月1回）' },
+  { key: 'crt_continue', label: '継続指示' },
+  { key: 'crt_rx', label: '矛盾ない処方・注射確認' },
+  { key: 'crt_plan', label: '入院診療計画書（初回なら同意書も）' },
+  { key: 'crt_rt_schedule', label: 'RTスケジュール確認' },
+  { key: 'crt_rt_liaison', label: '放射線科連携確認' },
+];
+
+// ケモモード時に非表示にする通常チェックリストのキー
+const SURGERY_ONLY_KEYS = ['consent', 'blood_consent', 'ope_input', 'plan'];
+
+// レジメン一覧 デフォルト
+const REGIMEN_DEFAULTS_BUILTIN = [
+  // ===== 導入化学療法 =====
+  {
+    id: 'reg_tpf', name: 'TPF', category: '導入化学療法', mode: 'chemo',
+    keywords: ['TPF'],
+    checkItems: [
+      { key: 'r_tpf_ccr', label: 'Ccr計算（CDDP: <60不可）' },
+      { key: 'r_tpf_hydration', label: '補液確認（Day3-4: ソルデム3A×2+NaCl）' },
+      { key: 'r_tpf_weight', label: '体重管理（Day0-5）' },
+      { key: 'r_tpf_urine', label: '尿量管理（6時間ごとDay1-5）' },
+      { key: 'r_tpf_gcsf', label: 'G-CSF（骨髄抑制時）' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: '骨髄抑制（好中球減少/FN）' },
+      { severity: 'high', label: '腎障害・感音難聴/耳鳴（CDDP）' },
+      { severity: 'high', label: '高度悪心嘔吐（CDDP）' },
+      { severity: 'high', label: '口内炎/咽頭粘膜炎（5-FU）' },
+      { severity: 'mid', label: '脱毛・浮腫（DTX）' },
+      { severity: 'mid', label: '低Mg血症（CDDP）・下痢（5-FU）' },
+      { severity: 'low', label: '心毒性（5-FU・冠攣縮）' },
+    ],
+  },
+  {
+    id: 'reg_pf', name: 'PF', category: '導入化学療法', mode: 'chemo',
+    keywords: ['PF', 'CDDP/5-FU', 'CDDP＋5-FU', 'CDDP+5-FU', 'fp'],
+    checkItems: [
+      { key: 'r_pf_ccr', label: 'Ccr計算（CDDP: <60不可）' },
+      { key: 'r_pf_hydration', label: '補液確認（大量輸液）' },
+      { key: 'r_pf_weight', label: '体重管理（Day0-5）' },
+      { key: 'r_pf_urine', label: '尿量管理（6時間ごと）' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: '腎障害（CDDP）' },
+      { severity: 'high', label: '高度悪心嘔吐（CDDP）' },
+      { severity: 'high', label: '口内炎/咽頭粘膜炎（5-FU）' },
+      { severity: 'mid', label: '骨髄抑制・感音難聴/耳鳴（CDDP）' },
+      { severity: 'mid', label: '下痢・低Mg血症' },
+      { severity: 'low', label: '心毒性（5-FU・冠攣縮）' },
+    ],
+  },
+  // ===== 化学放射線療法 =====
+  {
+    id: 'reg_cddp_rt', name: 'CDDP＋RT', category: '化学放射線療法', mode: 'crt',
+    keywords: ['CDDP+RT', 'CDDP＋RT', 'CDDP/RT'],
+    checkItems: [
+      { key: 'r_cddprt_ccr', label: 'Ccr計算（CDDP: <60不可）' },
+      { key: 'r_cddprt_weight', label: '体重管理（Day0-5）' },
+      { key: 'r_cddprt_urine', label: '尿量管理（6時間ごと）' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: '放射線性粘膜炎・嚥下障害' },
+      { severity: 'high', label: '腎障害・高度悪心嘔吐（CDDP）' },
+      { severity: 'mid', label: '骨髄抑制・感音難聴/耳鳴・低Mg血症（CDDP）' },
+      { severity: 'mid', label: '口腔乾燥・放射線性皮膚炎' },
+      { severity: 'low', label: '疲労感' },
+    ],
+  },
+  {
+    id: 'reg_w_cddp_rt', name: 'weekly CDDP＋RT', category: '化学放射線療法', mode: 'crt',
+    keywords: ['weekly CDDP', 'wCDDP', 'w-CDDP', 'weeklyCDDP'],
+    checkItems: [
+      { key: 'r_wcddp_ccr', label: 'Ccr確認（毎週）' },
+      { key: 'r_wcddp_blood', label: '毎週採血（投与前）' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: '放射線性粘膜炎・嚥下障害' },
+      { severity: 'mid', label: '腎障害（週1回のため軽度）・骨髄抑制' },
+      { severity: 'mid', label: '口腔乾燥・皮膚炎・感音難聴/耳鳴' },
+      { severity: 'low', label: '悪心嘔吐・疲労感' },
+    ],
+  },
+  {
+    id: 'reg_cbdca_rt', name: 'CBDCA＋RT', category: '化学放射線療法', mode: 'crt',
+    keywords: ['CBDCA+RT', 'CBDCA＋RT', 'CBDCA/RT'],
+    checkItems: [
+      { key: 'r_cbdcart_blood', label: '採血（投与前CBC・生化）' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: '血小板減少・白血球減少（CBDCA）' },
+      { severity: 'high', label: '放射線性粘膜炎・嚥下障害' },
+      { severity: 'mid', label: '口腔乾燥・放射線性皮膚炎' },
+      { severity: 'low', label: '悪心嘔吐（軽度）・疲労感' },
+    ],
+  },
+  {
+    id: 'reg_cmab_rt', name: 'Cmab＋RT', category: '化学放射線療法', mode: 'crt',
+    keywords: ['Cmab+RT', 'Cmab＋RT', 'Cmab/RT', 'cetuximab+RT', 'cetuximab＋RT'],
+    checkItems: [
+      { key: 'r_cmabrt_infusion', label: 'Infusion reaction対策（初回前投薬）' },
+      { key: 'r_cmabrt_mg', label: 'Mg・電解質確認（週1）' },
+      { key: 'r_cmabrt_skin', label: '皮膚ケア指導（ざ瘡様皮疹）' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: 'ざ瘡様皮疹（Cmab・ほぼ全例）' },
+      { severity: 'high', label: 'Infusion reaction（初回注意）' },
+      { severity: 'high', label: '放射線性粘膜炎・嚥下障害' },
+      { severity: 'mid', label: '低Mg血症・間質性肺炎（Cmab）' },
+      { severity: 'mid', label: '口腔乾燥・皮膚炎' },
+      { severity: 'low', label: '倦怠感' },
+    ],
+  },
+  // ===== 再発・転移 =====
+  {
+    id: 'reg_pembro_mono', name: 'Pembrolizumab単剤', category: '再発・転移', mode: 'chemo',
+    keywords: ['Pembrolizumab単剤', 'Pembro単剤', 'pembro単剤', 'pembrolizumab単剤'],
+    checkItems: [
+      { key: 'r_pembro_irae', label: 'irAE確認（甲状腺・肺・腸・皮膚・肝）' },
+      { key: 'r_pembro_blood', label: '採血（TSH・コルチゾール）' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: 'irAE：間質性肺炎' },
+      { severity: 'mid', label: 'irAE：甲状腺機能異常・肝炎' },
+      { severity: 'mid', label: 'irAE：発疹・疲労感' },
+      { severity: 'low', label: '食欲低下' },
+    ],
+  },
+  {
+    id: 'reg_pembro_pf', name: 'FP＋Pembro', category: '再発・転移', mode: 'chemo',
+    keywords: ['FP+Pembro', 'FP＋Pembro', 'fp+pembro', 'fp＋pembro', 'Pembrolizumab+PF', 'Pembro+PF', 'FP Pembro'],
+    checkItems: [
+      { key: 'r_pembro_pf_ccr', label: 'Ccr計算（CDDP）' },
+      { key: 'r_pembro_pf_irae', label: 'irAE確認' },
+      { key: 'r_pembro_pf_weight', label: '体重管理（Day0-5）' },
+      { key: 'r_pembro_pf_urine', label: '尿量管理（6時間ごと）' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: '腎障害・高度悪心嘔吐（CDDP）' },
+      { severity: 'high', label: 'irAE：甲状腺機能異常・肝炎・肺炎（Pembro）' },
+      { severity: 'mid', label: '骨髄抑制・口内炎/咽頭粘膜炎（5-FU）' },
+      { severity: 'mid', label: '下痢（5-FU）・感音難聴/耳鳴（CDDP）' },
+      { severity: 'low', label: '低Mg血症・発疹・疲労感' },
+    ],
+  },
+  {
+    id: 'reg_nivo', name: 'Nivolumab', category: '再発・転移', mode: 'chemo',
+    keywords: ['Nivolumab', 'ニボルマブ', 'Nivo', 'nivo'],
+    checkItems: [
+      { key: 'r_nivo_irae', label: 'irAE確認（甲状腺・肺・腸・皮膚・肝）' },
+      { key: 'r_nivo_blood', label: '採血（TSH・コルチゾール）' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: 'irAE：間質性肺炎' },
+      { severity: 'high', label: 'irAE：大腸炎' },
+      { severity: 'mid', label: 'irAE：甲状腺炎・皮疹' },
+      { severity: 'mid', label: '倦怠感' },
+      { severity: 'low', label: '疲労感' },
+    ],
+  },
+  {
+    id: 'reg_extreme', name: 'EXTREME', category: '再発・転移', mode: 'chemo',
+    keywords: ['EXTREME', 'extreme'],
+    checkItems: [
+      { key: 'r_ext_ccr', label: 'Ccr計算（CDDP）' },
+      { key: 'r_ext_infusion', label: 'Infusion reaction対策（Cmab初回）' },
+      { key: 'r_ext_mg', label: 'Mg・電解質確認（Cmab）' },
+      { key: 'r_ext_skin', label: '皮膚ケア指導（ざ瘡様皮疹）' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: 'ざ瘡様皮疹（Cmab）・Infusion reaction（初回）' },
+      { severity: 'high', label: '腎障害・高度悪心嘔吐（CDDP）' },
+      { severity: 'mid', label: '骨髄抑制・低Mg・間質性肺炎（Cmab）' },
+      { severity: 'mid', label: '口内炎/咽頭粘膜炎・下痢（5-FU）' },
+      { severity: 'low', label: '感音難聴/耳鳴（CDDP）・心毒性（5-FU）' },
+    ],
+  },
+  {
+    id: 'reg_tpex', name: 'TPEx', category: '再発・転移', mode: 'chemo',
+    keywords: ['TPEx', 'tpex'],
+    checkItems: [
+      { key: 'r_tpex_ccr', label: 'Ccr計算（CDDP）' },
+      { key: 'r_tpex_infusion', label: 'Infusion reaction対策（Cmab）' },
+      { key: 'r_tpex_mg', label: 'Mg確認（Cmab）' },
+      { key: 'r_tpex_neuro', label: '末梢神経症状確認（DTX）' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: 'ざ瘡様皮疹（Cmab）・Infusion reaction' },
+      { severity: 'high', label: '腎障害（CDDP）' },
+      { severity: 'mid', label: '好中球減少/FN・脱毛・浮腫（DTX）' },
+      { severity: 'mid', label: '低Mg血症・間質性肺炎（Cmab）' },
+      { severity: 'low', label: '口内炎（DTX）・悪心嘔吐' },
+    ],
+  },
+  {
+    id: 'reg_ptx_cmab', name: 'PTX＋Cmab', category: '再発・転移', mode: 'chemo',
+    keywords: ['PTX+Cmab', 'PTX＋Cmab', 'PTX/Cmab', 'ptx+cmab', 'ptx＋cmab'],
+    checkItems: [
+      { key: 'r_ptxcmab_infusion', label: 'Infusion reaction対策（Cmab）' },
+      { key: 'r_ptxcmab_mg', label: 'Mg確認（週1）' },
+      { key: 'r_ptxcmab_neuro', label: '末梢神経症状確認（PTX）' },
+      { key: 'r_ptxcmab_allergy', label: '過敏反応確認（PTX前投薬）' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: 'ざ瘡様皮疹（Cmab）・Infusion reaction' },
+      { severity: 'high', label: '過敏反応（PTX）' },
+      { severity: 'mid', label: '末梢神経障害・白血球減少（PTX）' },
+      { severity: 'mid', label: '低Mg血症・間質性肺炎（Cmab）' },
+      { severity: 'low', label: '悪心嘔吐（軽度）・脱毛' },
+    ],
+  },
+  {
+    id: 'reg_ptx_mono', name: 'PTX単剤', category: '再発・転移', mode: 'chemo',
+    keywords: ['PTX単剤', 'wPTX', 'Paclitaxel単剤', 'ptx単剤', 'wptx'],
+    checkItems: [
+      { key: 'r_ptx_neuro', label: '末梢神経症状確認' },
+      { key: 'r_ptx_allergy', label: '過敏反応確認（前投薬）' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: '過敏反応（PTX）' },
+      { severity: 'mid', label: '末梢神経障害・白血球減少' },
+      { severity: 'low', label: '悪心（軽度）・脱毛' },
+    ],
+  },
+  {
+    id: 'reg_doc_mono', name: 'DOC単剤', category: '再発・転移', mode: 'chemo',
+    keywords: ['DOC単剤', 'Docetaxel単剤', 'DTX単剤', 'doc単剤', 'dtx単剤'],
+    checkItems: [
+      { key: 'r_doc_neuro', label: '末梢神経症状確認' },
+      { key: 'r_doc_edema', label: '浮腫確認・体重チェック' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: '好中球減少/FN' },
+      { severity: 'mid', label: '脱毛・浮腫（蓄積毒性）・口内炎' },
+      { severity: 'low', label: '悪心（軽度）' },
+    ],
+  },
+  {
+    id: 'reg_s1_mono', name: 'S-1単剤', category: '再発・転移', mode: 'chemo',
+    keywords: ['S-1', 'S-1単剤', 'S1', 'TS-1', 'エスワン', 's-1', 's1'],
+    checkItems: [
+      { key: 'r_s1_mucositis', label: '口腔粘膜炎確認（Grade記録）' },
+      { key: 'r_s1_diarrhea', label: '下痢確認・対策' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: '口内炎/咽頭粘膜炎・下痢' },
+      { severity: 'mid', label: '骨髄抑制・悪心嘔吐' },
+      { severity: 'low', label: '心毒性（冠攣縮）・色素沈着・倦怠感' },
+    ],
+  },
+  {
+    id: 'reg_cbdca_ptx', name: 'CBDCA＋PTX', category: '再発・転移', mode: 'chemo',
+    keywords: ['CBDCA+PTX', 'CBDCA＋PTX', 'CBDCA/PTX', 'cbdca+ptx', 'cbdca＋ptx'],
+    checkItems: [
+      { key: 'r_cbdcaptx_blood', label: '採血（CBC・生化）' },
+      { key: 'r_cbdcaptx_neuro', label: '末梢神経症状確認（PTX）' },
+      { key: 'r_cbdcaptx_allergy', label: '過敏反応確認（PTX前投薬）' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: '血小板減少・白血球減少（CBDCA）' },
+      { severity: 'high', label: '過敏反応（PTX）' },
+      { severity: 'mid', label: '末梢神経障害（PTX）・悪心嘔吐' },
+      { severity: 'low', label: '脱毛・倦怠感' },
+    ],
+  },
+];
+
 // Settings
 let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || {
   doctorName: '山口',
@@ -1623,18 +1912,30 @@ let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || 
   checklistItems: JSON.parse(JSON.stringify(CHECKLIST_DEFAULTS_BUILTIN)),
   showFields: { time: true, items: true, team: true, memo: true },
   diseaseCheckRules: JSON.parse(JSON.stringify(DISEASE_CHECK_RULES_BUILTIN)),
+  chemoCheckItems: JSON.parse(JSON.stringify(CHEMO_CHECK_ITEMS_BUILTIN)),
+  crtCheckItems: JSON.parse(JSON.stringify(CRT_CHECK_ITEMS_BUILTIN)),
+  regimenList: JSON.parse(JSON.stringify(REGIMEN_DEFAULTS_BUILTIN)),
 };
 // 既存ユーザーでルールが空なら初期ルールを追加
 if (!appSettings.diseaseCheckRules) appSettings.diseaseCheckRules = JSON.parse(JSON.stringify(DISEASE_CHECK_RULES_BUILTIN));
 if (appSettings.diseaseCheckRules.length === 0) appSettings.diseaseCheckRules = JSON.parse(JSON.stringify(DISEASE_CHECK_RULES_BUILTIN));
-// builtin IDのルールを最新内容に更新（ユーザーがカスタムしたルールは対象外）
+// builtin IDのルールを最新内容に更新
 DISEASE_CHECK_RULES_BUILTIN.forEach(builtin => {
   const idx = appSettings.diseaseCheckRules.findIndex(r => r.id === builtin.id);
-  if (idx >= 0) {
-    appSettings.diseaseCheckRules[idx] = JSON.parse(JSON.stringify(builtin));
-  } else {
-    appSettings.diseaseCheckRules.push(JSON.parse(JSON.stringify(builtin)));
-  }
+  if (idx >= 0) appSettings.diseaseCheckRules[idx] = JSON.parse(JSON.stringify(builtin));
+  else appSettings.diseaseCheckRules.push(JSON.parse(JSON.stringify(builtin)));
+});
+if (!appSettings.chemoCheckItems || !appSettings.chemoCheckItems.length)
+  appSettings.chemoCheckItems = JSON.parse(JSON.stringify(CHEMO_CHECK_ITEMS_BUILTIN));
+if (!appSettings.crtCheckItems || !appSettings.crtCheckItems.length)
+  appSettings.crtCheckItems = JSON.parse(JSON.stringify(CRT_CHECK_ITEMS_BUILTIN));
+if (!appSettings.regimenList || !appSettings.regimenList.length)
+  appSettings.regimenList = JSON.parse(JSON.stringify(REGIMEN_DEFAULTS_BUILTIN));
+// builtin レジメンを最新に更新
+REGIMEN_DEFAULTS_BUILTIN.forEach(builtin => {
+  const idx = appSettings.regimenList.findIndex(r => r.id === builtin.id);
+  if (idx >= 0) appSettings.regimenList[idx] = JSON.parse(JSON.stringify(builtin));
+  else appSettings.regimenList.push(JSON.parse(JSON.stringify(builtin)));
 });
 
 // ========== 術前準備 自動提案 ==========
@@ -1659,6 +1960,59 @@ function onDiseaseOrSurgeryChange() {
   const rules = detectPrepRules(surgery, isIcu, isRecon);
   renderPrepSuggestions(rules);
   renderDiseaseCheckSuggestions(disease + ' ' + surgery);
+  renderRegimenSuggestions(surgery);
+  // ケモモード切替時にチェックリスト表示を即時更新
+  const checklistEl = document.getElementById('checklistOptions');
+  if (checklistEl) {
+    const currentChecks = {};
+    checklistEl.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+      if (chk.id.startsWith('chk_')) currentChecks[chk.id.slice(4)] = chk.checked;
+    });
+    buildChecklistForm(currentChecks);
+  }
+}
+
+function renderRegimenSuggestions(text) {
+  const panel = document.getElementById('regimenSuggestPanel');
+  if (!panel) return;
+  if (!text || text.trim().length < 1) { panel.style.display = 'none'; return; }
+  const ltext = text.toLowerCase();
+  const regList = getRegimenList();
+
+  // 既に完全一致するレジメンがあれば候補表示不要
+  if (regList.some(r => regimenMatchesText(r, text))) { panel.style.display = 'none'; return; }
+
+  // 名前またはキーワードに部分一致するレジメンを候補に
+  const candidates = regList.filter(r => {
+    if (r.name.toLowerCase().includes(ltext)) return true;
+    return (r.keywords || []).some(kw => kw.toLowerCase().includes(ltext));
+  });
+  if (candidates.length === 0) { panel.style.display = 'none'; return; }
+
+  panel.style.display = 'block';
+  panel.innerHTML = `
+    <div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:7px;letter-spacing:0.04em;">💉 レジメン候補（タップで確定）</div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px;">
+      ${candidates.map(r => `
+        <button onclick="selectRegimen('${r.id}')"
+          style="background:${r.mode==='crt'?'rgba(67,217,160,0.1)':'rgba(245,158,11,0.08)'};
+                 border:1px solid ${r.mode==='crt'?'rgba(67,217,160,0.4)':'rgba(245,158,11,0.35)'};
+                 color:${r.mode==='crt'?'var(--green)':'#f59e0b'};
+                 border-radius:6px;padding:5px 11px;font-size:11px;font-weight:700;
+                 cursor:pointer;font-family:inherit;line-height:1.4;">
+          ${r.mode==='crt'?'📡':'💊'} ${r.name}
+        </button>
+      `).join('')}
+    </div>`;
+}
+
+function selectRegimen(id) {
+  const r = getRegimenList().find(r => r.id === id);
+  if (!r) return;
+  const el = document.getElementById('f_surgery');
+  if (el) { el.value = r.name; }
+  document.getElementById('regimenSuggestPanel').style.display = 'none';
+  onDiseaseOrSurgeryChange();
 }
 
 function renderDiseaseCheckSuggestions(text) {
@@ -1783,6 +2137,64 @@ function CHECKLIST_DEFAULTS_getter() { return getChecklist(); }
 // Alias for backward compat
 Object.defineProperty(window, 'CHECKLIST_DEFAULTS', { get: getChecklist });
 
+function getRegimenList() {
+  return appSettings.regimenList || REGIMEN_DEFAULTS_BUILTIN;
+}
+
+// レジメン名またはキーワードが text に含まれるか（大小文字無視）
+function regimenMatchesText(r, text) {
+  const ltext = text.toLowerCase();
+  if (ltext.includes(r.name.toLowerCase())) return true;
+  return (r.keywords || []).some(kw => ltext.includes(kw.toLowerCase()));
+}
+
+// 'ope' / 'chemo' / 'crt' を返す
+function detectCaseMode(surgery) {
+  if (!surgery) return 'ope';
+  const regList = getRegimenList();
+  if (regList.some(r => r.mode === 'crt' && regimenMatchesText(r, surgery))) return 'crt';
+  if (regList.some(r => r.mode === 'chemo' && regimenMatchesText(r, surgery))) return 'chemo';
+  if ((appSettings.diseaseCheckRules || []).some(r => {
+    if (!r.chemoMode) return false;
+    return r.keyword.split(/[,、\s]+/).map(k => k.trim()).filter(k => k)
+      .some(kw => surgery.toLowerCase().includes(kw.toLowerCase()));
+  })) return 'chemo';
+  return 'ope';
+}
+
+// マッチするレジメンを返す
+function detectRegimen(surgery) {
+  if (!surgery) return null;
+  return getRegimenList().find(r => regimenMatchesText(r, surgery)) || null;
+}
+
+// 後方互換
+function isChemoCase(surgery) {
+  const mode = detectCaseMode(surgery);
+  return mode === 'chemo' || mode === 'crt';
+}
+
+// ケース表示に使うチェックリスト項目を返す（オペ/ケモ/ケモラジ + レジメン固有）
+function getDisplayedChecklistItems(c) {
+  const mode = detectCaseMode(c.surgery);
+  let baseItems;
+  if (mode === 'crt') {
+    baseItems = CHECKLIST_DEFAULTS.filter(item => !SURGERY_ONLY_KEYS.includes(item.key))
+      .concat(appSettings.crtCheckItems || CRT_CHECK_ITEMS_BUILTIN);
+  } else if (mode === 'chemo') {
+    baseItems = CHECKLIST_DEFAULTS.filter(item => !SURGERY_ONLY_KEYS.includes(item.key))
+      .concat(appSettings.chemoCheckItems || CHEMO_CHECK_ITEMS_BUILTIN);
+  } else {
+    baseItems = [...CHECKLIST_DEFAULTS];
+  }
+  const regimen = detectRegimen(c.surgery);
+  if (regimen && regimen.checkItems && regimen.checkItems.length) {
+    const existingKeys = new Set(baseItems.map(i => i.key));
+    baseItems = baseItems.concat(regimen.checkItems.filter(ri => !existingKeys.has(ri.key)));
+  }
+  return baseItems;
+}
+
 let cases = JSON.parse(localStorage.getItem('surgery_cases') || '[]');
 let notifSettings = JSON.parse(localStorage.getItem('notif_settings') || '{"prev_day":false,"op_morning":false,"pending_tasks":false}');
 let currentTab = 'list';
@@ -1872,9 +2284,9 @@ function formatOpDate(dateStr) {
 }
 
 function getCheckProgress(c) {
-  const keys = CHECKLIST_DEFAULTS.map(x=>x.key);
-  const done = keys.filter(k => c.checks && c.checks[k]);
-  return { done: done.length, total: keys.length };
+  const items = getDisplayedChecklistItems(c);
+  const done = items.filter(item => c.checks && c.checks[item.key]).length;
+  return { done, total: items.length };
 }
 
 // 入院状態判定: 'discharged' | 'admitted' | 'pre'
@@ -1904,7 +2316,7 @@ function getDeadlineStatus(c) {
   const now = new Date();
   const deadline = getDeadline(c);
   const targetKeys = DEADLINE_CHECK_KEYS.filter(k =>
-    CHECKLIST_DEFAULTS.some(item => item.key === k)
+    getDisplayedChecklistItems(c).some(item => item.key === k)
   );
   const allDone = targetKeys.every(k => c.checks && c.checks[k]);
 
@@ -2529,7 +2941,7 @@ function renderCard(c, expandByDefault=false) {
     + '<div class="ring-text">' + prog.done + '/' + prog.total + '</div>'
     + '</div>';
 
-  const checks = CHECKLIST_DEFAULTS.map(item => {
+  const checks = getDisplayedChecklistItems(c).map(item => {
     const done = c.checks && c.checks[item.key];
     const warn = item.warn;
     return '<span class="check-item' + (done?' done':'') + (warn&&!done?' warn':'') + '" onclick="toggleCheck(\'' + c.id + '\',\'' + item.key + '\')">'
@@ -2559,6 +2971,35 @@ function renderCard(c, expandByDefault=false) {
     </div>` : '';
 
   const memoHtml = (sf.memo !== false && c.memo) ? `<div class="note-box">${c.memo}</div>` : '';
+
+  // モードバッジ
+  const caseMode = detectCaseMode(c.surgery);
+  const modeBadgeHtml = caseMode === 'crt'
+    ? `<span style="font-size:10px;font-weight:700;color:var(--green);background:rgba(67,217,160,0.12);border:1px solid rgba(67,217,160,0.35);border-radius:4px;padding:1px 6px;margin-left:4px;">📡ケモラジ</span>`
+    : caseMode === 'chemo'
+    ? `<span style="font-size:10px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:4px;padding:1px 6px;margin-left:4px;">💊ケモ</span>`
+    : '';
+
+  // 副作用セクション
+  const detectedReg = detectRegimen(c.surgery);
+  const sideEffectsHtml = detectedReg && detectedReg.sideEffects && detectedReg.sideEffects.length ? (() => {
+    const sevMap = { high: { icon: '🔴', label: '高' }, mid: { icon: '🟡', label: '中' }, low: { icon: '🟢', label: '低' } };
+    const grouped = { high: [], mid: [], low: [] };
+    detectedReg.sideEffects.forEach(se => (grouped[se.severity] || grouped.low).push(se.label));
+    const rows = Object.entries(grouped).filter(([,arr]) => arr.length).map(([sev, arr]) =>
+      `<div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:4px;">
+        <span style="font-size:11px;flex-shrink:0;">${sevMap[sev].icon}</span>
+        <span style="font-size:11px;color:var(--text2);line-height:1.5;">${arr.join('　')}</span>
+      </div>`
+    ).join('');
+    return `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer;" onclick="toggleSideEffects('${c.id}')">
+        <span style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.06em;">⚠️ 副作用（${detectedReg.name}）</span>
+        <span id="se_toggle_${c.id}" style="font-size:10px;color:var(--text3);">▼</span>
+      </div>
+      <div id="se_panel_${c.id}" style="display:none;">${rows}</div>
+    </div>`;
+  })() : '';
   const isOpen = expandByDefault || isToday(c.opDate);
   const isPastCase = isPast(c.opDate) && !isToday(c.opDate);
 
@@ -2580,6 +3021,7 @@ function renderCard(c, expandByDefault=false) {
         <div class="patient-meta" style="margin-top:3px;">
           <span class="meta-tag">${c.disease || c.surgery || '疾患名未設定'}</span>
           ${c.disease && c.surgery ? `<span class="meta-tag" style="color:var(--text3);font-size:10px;">${c.surgery}</span>` : ''}
+          ${modeBadgeHtml}
           ${admStr ? `<span class="meta-tag">${admStr}</span>` : ''}
           ${c.dischargeDate ? `<span class="meta-tag" style="color:var(--text3);">退院:${toDateStr(c.dischargeDate)}</span>` : ''}
           ${admBadge}
@@ -2606,6 +3048,7 @@ function renderCard(c, expandByDefault=false) {
       ${sf.team !== false ? `<div class="info-row"><span class="info-label">担当</span><div class="team-chips">${teamChips || '<span style="color:var(--text3);font-size:12px">未設定</span>'}</div></div>` : ''}
       <div class="checklist" style="margin-top:10px">${checks}</div>
       ${freeCheckHtml}
+      ${sideEffectsHtml}
       ${memoHtml}
       <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">
         <button onclick="event.stopPropagation();addReminderPrevDay('${c.id}')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
@@ -2625,6 +3068,15 @@ function toggleCard(id) {
   if (body) body.classList.toggle('open');
 }
 
+function toggleSideEffects(id) {
+  const panel = document.getElementById('se_panel_' + id);
+  const toggle = document.getElementById('se_toggle_' + id);
+  if (!panel) return;
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  if (toggle) toggle.textContent = open ? '▲' : '▼';
+}
+
 function toggleCheck(id, key) {
   const c = cases.find(x => x.id === id);
   if (!c) return;
@@ -2636,7 +3088,7 @@ function toggleCheck(id, key) {
   if (!body) { render(); return; }
   const cl = body.querySelector('.checklist');
   if (cl) {
-    cl.innerHTML = CHECKLIST_DEFAULTS.map(item => {
+    cl.innerHTML = getDisplayedChecklistItems(c).map(item => {
       const done = c.checks && c.checks[item.key];
       const warn = item.warn;
       return '<span class="check-item' + (done ? ' done' : '') + (warn && !done ? ' warn' : '') + '" onclick="toggleCheck(\'' + id + '\',\'' + item.key + '\')">'
@@ -2841,13 +3293,25 @@ function renderFreeChecklistForm() {
 }
 
 function buildChecklistForm(checks) {
+  const surgeryVal = document.getElementById('f_surgery')?.value || '';
+  const mode = detectCaseMode(surgeryVal);
+  const items = getDisplayedChecklistItems({ surgery: surgeryVal });
   const el = document.getElementById('checklistOptions');
-  el.innerHTML = CHECKLIST_DEFAULTS.map(item => `
+  if (!el) return;
+  let html = '';
+  const regDetected = detectRegimen(surgeryVal);
+  if (mode === 'crt') {
+    html += `<div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px;padding:4px 8px;background:rgba(67,217,160,0.08);border-radius:4px;border:1px solid rgba(67,217,160,0.2);">📡 ケモラジモード${regDetected?'（'+regDetected.name+'）':''}</div>`;
+  } else if (mode === 'chemo') {
+    html += `<div style="font-size:10px;font-weight:700;color:#f59e0b;margin-bottom:6px;padding:4px 8px;background:rgba(245,158,11,0.06);border-radius:4px;border:1px solid rgba(245,158,11,0.25);">💊 ケモモード${regDetected?'（'+regDetected.name+'）':''}</div>`;
+  }
+  html += items.map(item => `
     <label class="checkbox-row">
       <input type="checkbox" id="chk_${item.key}" ${checks[item.key]?'checked':''}>
       ${item.label}${item.optional?' (必要時)':''}${item.warn?' ⚠️':''}
     </label>
   `).join('');
+  el.innerHTML = html;
 }
 
 function saveCase() {
@@ -2859,8 +3323,11 @@ function saveCase() {
     alert('患者名・疾患名・入院日は必須です');
     return;
   }
-  const checks = {};
-  CHECKLIST_DEFAULTS.forEach(item => {
+  const surgeryForChecks = document.getElementById('f_surgery').value.trim();
+  // 既存ケースのチェック状態を保持しつつ、現在表示中の項目だけ更新
+  const existingCase = editingId ? cases.find(c => c.id === editingId) : null;
+  const checks = Object.assign({}, existingCase?.checks || {});
+  getDisplayedChecklistItems({ surgery: surgeryForChecks }).forEach(item => {
     checks[item.key] = document.getElementById('chk_' + item.key)?.checked || false;
   });
 
@@ -3206,6 +3673,147 @@ function updateDiseaseRuleKeyword(ruleId, val) {
   if (!rule) return;
   rule.keyword = val.trim();
   save();
+}
+
+function toggleDiseaseRuleChemoMode(ruleId, val) {
+  const rule = (appSettings.diseaseCheckRules || []).find(r => r.id === ruleId);
+  if (!rule) return;
+  rule.chemoMode = val;
+  save();
+  renderSettings();
+}
+
+function addChemoCheckItem() {
+  const el = document.getElementById('newChemoItem');
+  if (!el) return;
+  const val = el.value.trim();
+  if (!val) return;
+  if (!appSettings.chemoCheckItems) appSettings.chemoCheckItems = [];
+  appSettings.chemoCheckItems.push({ key: 'chemo_custom_' + Date.now(), label: val });
+  el.value = '';
+  save();
+  renderSettings();
+}
+
+function removeChemoCheckItem(idx) {
+  if (!appSettings.chemoCheckItems) return;
+  appSettings.chemoCheckItems.splice(idx, 1);
+  save();
+  renderSettings();
+}
+
+function resetChemoCheckItems() {
+  if (!confirm('ケモチェックリストを初期値に戻しますか？')) return;
+  appSettings.chemoCheckItems = JSON.parse(JSON.stringify(CHEMO_CHECK_ITEMS_BUILTIN));
+  save(); renderSettings();
+}
+
+// ===== チェックリストタブ切替 =====
+function setChecklistTab(tab) {
+  appSettings._checklistTab = tab;
+  renderSettings();
+}
+
+// ===== オペチェックリスト =====
+function addOpeCheckItem() {
+  const el = document.getElementById('newOpeItem'); if (!el) return;
+  const val = el.value.trim(); if (!val) return;
+  if (!appSettings.checklistItems) appSettings.checklistItems = JSON.parse(JSON.stringify(CHECKLIST_DEFAULTS_BUILTIN));
+  appSettings.checklistItems.push({ key: 'ope_custom_' + Date.now(), label: val });
+  el.value = ''; save(); renderSettings();
+}
+function removeOpeCheckItem(idx) {
+  if (!appSettings.checklistItems) return;
+  appSettings.checklistItems.splice(idx, 1);
+  save(); renderSettings();
+}
+function resetOpeCheckItems() {
+  if (!confirm('オペチェックリストを初期値に戻しますか？')) return;
+  appSettings.checklistItems = JSON.parse(JSON.stringify(CHECKLIST_DEFAULTS_BUILTIN));
+  save(); renderSettings();
+}
+
+// ===== ケモラジチェックリスト =====
+function addCrtCheckItem() {
+  const el = document.getElementById('newCrtItem'); if (!el) return;
+  const val = el.value.trim(); if (!val) return;
+  if (!appSettings.crtCheckItems) appSettings.crtCheckItems = [];
+  appSettings.crtCheckItems.push({ key: 'crt_custom_' + Date.now(), label: val });
+  el.value = ''; save(); renderSettings();
+}
+function removeCrtCheckItem(idx) {
+  if (!appSettings.crtCheckItems) return;
+  appSettings.crtCheckItems.splice(idx, 1);
+  save(); renderSettings();
+}
+function resetCrtCheckItems() {
+  if (!confirm('ケモラジチェックリストを初期値に戻しますか？')) return;
+  appSettings.crtCheckItems = JSON.parse(JSON.stringify(CRT_CHECK_ITEMS_BUILTIN));
+  save(); renderSettings();
+}
+
+// ===== レジメン管理 =====
+function toggleRegimenExpand(id) {
+  const panel = document.getElementById('reg_detail_' + id);
+  const btn = document.getElementById('reg_toggle_' + id);
+  if (!panel) return;
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  if (btn) btn.textContent = open ? '詳細▲' : '詳細▼';
+}
+function updateRegimenKeywords(id, val) {
+  const r = (appSettings.regimenList||[]).find(r => r.id === id); if (!r) return;
+  r.keywords = val.split(/[,、]+/).map(k => k.trim()).filter(k => k);
+  save();
+}
+function addRegimenCheckItem(id) {
+  const el = document.getElementById('newRegCI_' + id); if (!el) return;
+  const val = el.value.trim(); if (!val) return;
+  const r = (appSettings.regimenList||[]).find(r => r.id === id); if (!r) return;
+  if (!r.checkItems) r.checkItems = [];
+  r.checkItems.push({ key: 'r_custom_' + Date.now(), label: val });
+  el.value = ''; save(); renderSettings();
+}
+function removeRegimenCheckItem(id, idx) {
+  const r = (appSettings.regimenList||[]).find(r => r.id === id); if (!r) return;
+  r.checkItems.splice(idx, 1); save(); renderSettings();
+}
+function addRegimenSE(id) {
+  const el = document.getElementById('newRegSE_' + id); if (!el) return;
+  const val = el.value.trim(); if (!val) return;
+  const r = (appSettings.regimenList||[]).find(r => r.id === id); if (!r) return;
+  if (!r.sideEffects) r.sideEffects = [];
+  r.sideEffects.push({ severity: 'mid', label: val });
+  el.value = ''; save(); renderSettings();
+}
+function removeRegimenSE(id, idx) {
+  const r = (appSettings.regimenList||[]).find(r => r.id === id); if (!r) return;
+  r.sideEffects.splice(idx, 1); save(); renderSettings();
+}
+function updateRegimenSEseverity(id, idx, val) {
+  const r = (appSettings.regimenList||[]).find(r => r.id === id); if (!r || !r.sideEffects[idx]) return;
+  r.sideEffects[idx].severity = val; save();
+}
+function removeRegimen(id) {
+  if (!confirm('このレジメンを削除しますか？')) return;
+  appSettings.regimenList = (appSettings.regimenList||[]).filter(r => r.id !== id);
+  save(); renderSettings();
+}
+function addRegimen() {
+  const nameEl = document.getElementById('newRegimenName');
+  const modeEl = document.getElementById('newRegimenMode');
+  if (!nameEl) return;
+  const name = nameEl.value.trim(); if (!name) return;
+  const mode = modeEl?.value || 'chemo';
+  const categories = { chemo: '再発・転移', crt: '化学放射線療法' };
+  if (!appSettings.regimenList) appSettings.regimenList = [];
+  appSettings.regimenList.push({
+    id: 'reg_custom_' + Date.now(),
+    name, category: categories[mode], mode,
+    keywords: [name],
+    checkItems: [], sideEffects: [],
+  });
+  nameEl.value = ''; save(); renderSettings();
 }
 
 function loadGhSettings() {
@@ -3874,6 +4482,9 @@ function renderSettings() {
               <input type="text" value="${r.keyword.replace(/"/g,'&quot;')}" onchange="updateDiseaseRuleKeyword('${r.id}',this.value)"
                 style="flex:1;background:var(--surface);border:1px solid rgba(67,217,160,0.4);border-radius:6px;padding:6px 10px;font-size:12px;font-weight:700;color:var(--green);font-family:inherit;outline:none;"
                 placeholder="キーワード（カンマ区切りで複数可）">
+              <label style="display:flex;align-items:center;gap:3px;font-size:10px;color:${r.chemoMode?'var(--green)':'var(--text3)'};cursor:pointer;flex-shrink:0;white-space:nowrap;">
+                <input type="checkbox" ${r.chemoMode?'checked':''} onchange="toggleDiseaseRuleChemoMode('${r.id}',this.checked)" style="accent-color:var(--green);">💊ケモ
+              </label>
               <button onclick="removeDiseaseRule('${r.id}')" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:0 2px;line-height:1;flex-shrink:0;">×</button>
             </div>
             <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">
@@ -3893,6 +4504,119 @@ function renderSettings() {
       <div style="display:flex;gap:8px;margin-top:10px;">
         <input type="text" class="form-input" id="newDiseaseKeyword" placeholder="新しいキーワード（例：副鼻腔炎,副鼻腔）" style="flex:1;">
         <button class="btn-primary" onclick="addDiseaseRule()" style="width:auto;padding:10px 16px;margin:0;">＋ 追加</button>
+      </div>
+    </div>
+
+    <!-- モード別チェックリスト管理 -->
+    <div class="summary-block" style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;margin-bottom:10px;color:var(--text);">📋 モード別チェックリスト</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.6;">術式/ケモ等フィールドの内容によって切り替わります。<br>オペ・ケモ・ケモラジ それぞれの基本チェックリストを管理できます。</div>
+      <!-- タブ -->
+      <div style="display:flex;gap:4px;margin-bottom:12px;">
+        ${['ope','chemo','crt'].map(m => `
+          <button onclick="setChecklistTab('${m}')" id="ctab_${m}"
+            style="flex:1;padding:7px 4px;font-size:11px;font-weight:700;border-radius:6px;cursor:pointer;font-family:inherit;
+              border:1px solid ${(appSettings._checklistTab||'ope')===m?'var(--accent)':'var(--border)'};
+              background:${(appSettings._checklistTab||'ope')===m?'rgba(79,140,255,0.15)':'var(--surface2)'};
+              color:${(appSettings._checklistTab||'ope')===m?'var(--accent)':'var(--text2)'};">
+            ${{ope:'🔪オペ',chemo:'💊ケモ',crt:'📡ケモラジ'}[m]}
+          </button>
+        `).join('')}
+      </div>
+      ${(() => {
+        const tab = appSettings._checklistTab || 'ope';
+        const configMap = {
+          ope:   { items: appSettings.checklistItems || [], addFn: 'addOpeCheckItem', removeFn: 'removeOpeCheckItem', inputId: 'newOpeItem', resetFn: 'resetOpeCheckItems', color: 'var(--accent)', note: 'オペ症例のデフォルトチェックリスト（手術同意書・オペ入力等を含む）' },
+          chemo: { items: appSettings.chemoCheckItems || [], addFn: 'addChemoCheckItem', removeFn: 'removeChemoCheckItem', inputId: 'newChemoItem', resetFn: 'resetChemoCheckItems', color: '#f59e0b', note: 'ケモ症例のチェックリスト（オペ関連項目の代わりに表示）' },
+          crt:   { items: appSettings.crtCheckItems || [], addFn: 'addCrtCheckItem', removeFn: 'removeCrtCheckItem', inputId: 'newCrtItem', resetFn: 'resetCrtCheckItems', color: 'var(--green)', note: 'ケモラジ症例のチェックリスト（RT固有項目を含む）' },
+        };
+        const cfg = configMap[tab];
+        return `
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;line-height:1.5;">${cfg.note}</div>
+          <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;">
+            ${cfg.items.map((item, idx) => `
+              <div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;">
+                <span style="font-size:11px;color:var(--text);flex:1;">${item.label}${item.optional?' <span style="color:var(--text3);font-size:10px;">(任意)</span>':''}${item.warn?' ⚠️':''}</span>
+                <button onclick="${cfg.removeFn}(${idx})" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0;line-height:1;">×</button>
+              </div>
+            `).join('')}
+          </div>
+          <div style="display:flex;gap:8px;">
+            <input type="text" class="form-input" id="${cfg.inputId}" placeholder="チェック項目を追加..." style="flex:1;font-size:12px;" onkeydown="if(event.key==='Enter'){event.preventDefault();${cfg.addFn}();}">
+            <button onclick="${cfg.addFn}()" style="background:rgba(79,140,255,0.15);color:var(--accent);border:1px solid rgba(79,140,255,0.35);border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">追加</button>
+          </div>
+          <button onclick="${cfg.resetFn}()" style="margin-top:8px;background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;">初期値に戻す</button>
+        `;
+      })()}
+    </div>
+
+    <!-- レジメン管理 -->
+    <div class="summary-block" style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;margin-bottom:4px;color:var(--text);">💉 レジメン管理</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.6;">術式/ケモ等に入力するとレジメン固有チェックリスト・副作用が表示されます。</div>
+      ${(() => {
+        const categories = [...new Set((appSettings.regimenList||[]).map(r => r.category))];
+        return categories.map(cat => `
+          <div style="margin-bottom:12px;">
+            <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;padding:3px 0;border-bottom:1px solid var(--border);">${cat}</div>
+            ${(appSettings.regimenList||[]).filter(r => r.category === cat).map(r => `
+              <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px;">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                  <span style="font-size:12px;font-weight:700;color:${r.mode==='crt'?'var(--green)':'#f59e0b'};flex:1;">${r.mode==='crt'?'📡':'💊'} ${r.name}</span>
+                  <button onclick="toggleRegimenExpand('${r.id}')" id="reg_toggle_${r.id}"
+                    style="background:var(--surface);border:1px solid var(--border);color:var(--text3);border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:inherit;">詳細▼</button>
+                  <button onclick="removeRegimen('${r.id}')" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0;line-height:1;">×</button>
+                </div>
+                <div id="reg_detail_${r.id}" style="display:none;">
+                  <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">キーワード（カンマ区切り）</div>
+                  <input type="text" value="${r.keywords.join(',')}" onchange="updateRegimenKeywords('${r.id}',this.value)"
+                    style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:11px;color:var(--text);font-family:inherit;box-sizing:border-box;margin-bottom:8px;">
+                  <div style="display:flex;gap:8px;margin-bottom:8px;">
+                    <div style="flex:1;">
+                      <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">チェック項目</div>
+                      ${(r.checkItems||[]).map((ci,idx) => `
+                        <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">
+                          <span style="font-size:11px;color:var(--text2);flex:1;">${ci.label}</span>
+                          <button onclick="removeRegimenCheckItem('${r.id}',${idx})" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:0;line-height:1;">×</button>
+                        </div>
+                      `).join('')}
+                      <div style="display:flex;gap:4px;margin-top:4px;">
+                        <input type="text" class="form-input" id="newRegCI_${r.id}" placeholder="チェック項目..." style="flex:1;font-size:11px;padding:5px 8px;" onkeydown="if(event.key==='Enter'){event.preventDefault();addRegimenCheckItem('${r.id}');}">
+                        <button onclick="addRegimenCheckItem('${r.id}')" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer;font-family:inherit;">+</button>
+                      </div>
+                    </div>
+                    <div style="flex:1;">
+                      <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">副作用</div>
+                      ${(r.sideEffects||[]).map((se,idx) => `
+                        <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">
+                          <select onchange="updateRegimenSEseverity('${r.id}',${idx},this.value)" style="background:var(--surface);border:1px solid var(--border);border-radius:4px;font-size:10px;padding:1px;color:var(--text);font-family:inherit;">
+                            <option value="high" ${se.severity==='high'?'selected':''}>🔴</option>
+                            <option value="mid" ${se.severity==='mid'?'selected':''}>🟡</option>
+                            <option value="low" ${se.severity==='low'?'selected':''}>🟢</option>
+                          </select>
+                          <span style="font-size:11px;color:var(--text2);flex:1;">${se.label}</span>
+                          <button onclick="removeRegimenSE('${r.id}',${idx})" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:0;line-height:1;">×</button>
+                        </div>
+                      `).join('')}
+                      <div style="display:flex;gap:4px;margin-top:4px;">
+                        <input type="text" class="form-input" id="newRegSE_${r.id}" placeholder="副作用..." style="flex:1;font-size:11px;padding:5px 8px;" onkeydown="if(event.key==='Enter'){event.preventDefault();addRegimenSE('${r.id}');}">
+                        <button onclick="addRegimenSE('${r.id}')" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer;font-family:inherit;">+</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `).join('');
+      })()}
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <input type="text" class="form-input" id="newRegimenName" placeholder="レジメン名（例: DCF）" style="flex:1;font-size:12px;">
+        <select id="newRegimenMode" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;color:var(--text);font-family:inherit;">
+          <option value="chemo">💊ケモ</option>
+          <option value="crt">📡ケモラジ</option>
+        </select>
+        <button onclick="addRegimen()" style="background:rgba(79,140,255,0.15);color:var(--accent);border:1px solid rgba(79,140,255,0.35);border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">追加</button>
       </div>
     </div>
 
