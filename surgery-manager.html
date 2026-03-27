@@ -1093,7 +1093,8 @@ GH_CONFIG_END -->
 </div>
 
 <div class="tab-bar">
-  <div class="tab active" onclick="switchTab('list', this)">症例一覧</div>
+  <div class="tab active" onclick="switchTab('admitted', this)">🏥 入院中</div>
+  <div class="tab" onclick="switchTab('list', this)">症例一覧</div>
   <div class="tab" onclick="switchTab('today', this)">今日のオペ</div>
   <div class="tab" onclick="switchTab('pending', this)">未完了タスク</div>
   <div class="tab" onclick="switchTab('summary_incomplete', this)">📋 サマリ未完了</div>
@@ -1153,13 +1154,32 @@ GH_CONFIG_END -->
       <input type="text" class="form-input" id="f_name" placeholder="やまだ たろう">
     </div>
 
+    <div class="form-group" style="margin-bottom:16px;">
+      <label class="form-label">治療モード *</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px;">
+        <button type="button" id="modeBtn_ope" onclick="selectFormMode('ope')"
+          style="background:rgba(79,140,255,0.15);border:2px solid var(--accent);color:var(--accent);border-radius:8px;padding:10px 6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+          🔪 オペ
+        </button>
+        <button type="button" id="modeBtn_chemo" onclick="selectFormMode('chemo')"
+          style="background:var(--surface2);border:2px solid var(--border);color:var(--text2);border-radius:8px;padding:10px 6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+          💊 ケモ
+        </button>
+        <button type="button" id="modeBtn_crt" onclick="selectFormMode('crt')"
+          style="background:var(--surface2);border:2px solid var(--border);color:var(--text2);border-radius:8px;padding:10px 6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+          📡 ケモラジ
+        </button>
+      </div>
+      <input type="hidden" id="f_mode" value="ope">
+    </div>
+
     <div class="form-group">
       <label class="form-label">疾患名 *</label>
       <input type="text" class="form-input" id="f_disease" placeholder="副鼻腔炎・扁桃炎・頭頸部癌など" oninput="onDiseaseOrSurgeryChange()">
     </div>
 
     <div class="form-group">
-      <label class="form-label">術式/ケモ等</label>
+      <label class="form-label" id="surgeryLabel">術式/ケモ等</label>
       <input type="text" class="form-input" id="f_surgery" placeholder="右扁桃摘出・CDDP+RT・TPF など" oninput="onDiseaseOrSurgeryChange()" autocomplete="off">
       <!-- レジメン候補パネル -->
       <div id="regimenSuggestPanel" style="display:none;margin-top:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;"></div>
@@ -1219,6 +1239,32 @@ GH_CONFIG_END -->
           <input type="datetime-local" class="form-input" id="freeCheckDateTime" style="font-size:12px;">
         </div>
         <button class="btn-primary" onclick="addFreeCheck()" style="align-self:flex-end;width:auto;padding:10px 18px;margin-top:0;">追加</button>
+      </div>
+    </div>
+
+    <div class="section-divider" style="margin-top:14px;">🧪 検査スケジュール</div>
+    <div id="examScheduleList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:700;">検査を追加</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+        <button onclick="setExamType('blood')" id="examTypeBtn_blood" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.4);color:#ef4444;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🩸 採血</button>
+        <button onclick="setExamType('ct')" id="examTypeBtn_ct" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🔬 CT</button>
+        <button onclick="setExamType('xp')" id="examTypeBtn_xp" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">📷 Xp</button>
+        <button onclick="setExamType('other')" id="examTypeBtn_other" style="background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">＋ その他</button>
+      </div>
+      <div id="examOtherNameRow" style="display:none;margin-bottom:8px;">
+        <input type="text" class="form-input" id="examOtherName" placeholder="検査名を入力..." style="font-size:12px;">
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-end;">
+        <div style="flex:1;">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">日付</div>
+          <input type="date" class="form-input" id="examDate" style="font-size:12px;">
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">メモ（任意）</div>
+          <input type="text" class="form-input" id="examNote" placeholder="空腹時など" style="font-size:12px;">
+        </div>
+        <button onclick="addExamSchedule()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">追加</button>
       </div>
     </div>
 
@@ -1645,7 +1691,7 @@ const CRT_CHECK_ITEMS_BUILTIN = [
 ];
 
 // ケモモード時に非表示にする通常チェックリストのキー
-const SURGERY_ONLY_KEYS = ['consent', 'blood_consent', 'ope_input', 'plan'];
+const SURGERY_ONLY_KEYS = ['consent', 'blood_consent', 'ope_input', 'plan', 'rapid_order', 'path_pending'];
 
 // レジメン一覧 デフォルト
 const REGIMEN_DEFAULTS_BUILTIN = [
@@ -1968,7 +2014,7 @@ function onDiseaseOrSurgeryChange() {
     checklistEl.querySelectorAll('input[type="checkbox"]').forEach(chk => {
       if (chk.id.startsWith('chk_')) currentChecks[chk.id.slice(4)] = chk.checked;
     });
-    buildChecklistForm(currentChecks);
+    buildChecklistForm(currentChecks, document.getElementById('f_mode')?.value);
   }
 }
 
@@ -2176,7 +2222,7 @@ function isChemoCase(surgery) {
 
 // ケース表示に使うチェックリスト項目を返す（オペ/ケモ/ケモラジ + レジメン固有）
 function getDisplayedChecklistItems(c) {
-  const mode = detectCaseMode(c.surgery);
+  const mode = c.mode || detectCaseMode(c.surgery);
   let baseItems;
   if (mode === 'crt') {
     baseItems = CHECKLIST_DEFAULTS.filter(item => !SURGERY_ONLY_KEYS.includes(item.key))
@@ -2197,10 +2243,12 @@ function getDisplayedChecklistItems(c) {
 
 let cases = JSON.parse(localStorage.getItem('surgery_cases') || '[]');
 let notifSettings = JSON.parse(localStorage.getItem('notif_settings') || '{"prev_day":false,"op_morning":false,"pending_tasks":false}');
-let currentTab = 'list';
+let currentTab = 'admitted';
 let editingId = null;
 let freeChecks = []; // [{label, done}] for current editing session
 let calendarViewDate = new Date(); // currently viewed month
+let currentExamSchedules = []; // 編集中の検査スケジュール
+let selectedExamType = 'blood'; // 現在選択中の検査タイプ
 
 // ========== 病棟業務 週間スケジュール ==========
 // dow: 0=日, 1=月, 2=火, 3=水, 4=木, 5=金, 6=土
@@ -2366,7 +2414,8 @@ function render() {
   if (currentTab !== 'list') {
     document.getElementById('searchBar').style.display = 'none';
   }
-  if (currentTab === 'list') renderList(el);
+  if (currentTab === 'admitted') renderAdmitted(el);
+  else if (currentTab === 'list') renderList(el);
   else if (currentTab === 'today') renderToday(el);
   else if (currentTab === 'pending') renderPending(el);
   else if (currentTab === 'summary_incomplete') renderSummaryIncomplete(el);
@@ -2378,6 +2427,61 @@ function render() {
   updateHeaderStats();
   const ht = document.getElementById('headerDoctorName');
   if (ht) ht.textContent = appSettings.doctorName || '山口';
+}
+
+function renderAdmitted(container) {
+  const el = container || document.getElementById('mainContent');
+  if (!el) return;
+  const todayStr = toISODate(new Date());
+  const admitted = cases.filter(c => {
+    if (!c.admDate) return false;
+    if (c.admDate > todayStr) return false;
+    if (c.dischargeDate && c.dischargeDate < todayStr) return false;
+    return true;
+  }).sort((a, b) => (a.admDate || '').localeCompare(b.admDate || ''));
+
+  if (admitted.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:48px 16px;color:var(--text3);font-size:13px;">入院中の患者はいません</div>';
+    return;
+  }
+
+  // 今日の検査スケジュールを集計
+  const todayExams = {};
+  admitted.forEach(c => {
+    const exams = (c.examSchedules || []).filter(e => e.date === todayStr);
+    if (exams.length) todayExams[c.id] = exams;
+  });
+
+  // 今日の検査バナー（全患者分をまとめて）
+  const examBanner = Object.keys(todayExams).length > 0
+    ? `<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:10px 14px;margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:700;color:#f59e0b;margin-bottom:8px;">🧪 本日の検査予定</div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+        ${Object.entries(todayExams).map(([cid, exams]) => {
+          const c2 = cases.find(x => x.id === cid);
+          const pName = c2 ? c2.name : '';
+          return exams.map(e => {
+            const icon = {blood:'🩸',ct:'🔬',xp:'📷',other:'🧪'}[e.type]||'🧪';
+            return `<div style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;">
+              <span style="font-size:14px;">${icon}</span>
+              <div style="flex:1;min-width:0;">
+                <span style="font-size:11px;font-weight:700;color:var(--text);">${pName}</span>
+                <span style="font-size:11px;color:var(--text3);"> — ${e.label}</span>
+                ${e.note ? `<span style="font-size:10px;color:var(--text3);">（${e.note}）</span>` : ''}
+              </div>
+            </div>`;
+          }).join('');
+        }).join('')}
+        </div>
+      </div>`
+    : '';
+
+  el.innerHTML = `
+    <div style="padding:14px 14px 4px;">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">入院中 ${admitted.length}名</div>
+      ${examBanner}
+      ${admitted.map(c => renderCard(c)).join('')}
+    </div>`;
 }
 
 function renderList(el) {
@@ -2973,7 +3077,7 @@ function renderCard(c, expandByDefault=false) {
   const memoHtml = (sf.memo !== false && c.memo) ? `<div class="note-box">${c.memo}</div>` : '';
 
   // モードバッジ
-  const caseMode = detectCaseMode(c.surgery);
+  const caseMode = c.mode || detectCaseMode(c.surgery);
   const modeBadgeHtml = caseMode === 'crt'
     ? `<span style="font-size:10px;font-weight:700;color:var(--green);background:rgba(67,217,160,0.12);border:1px solid rgba(67,217,160,0.35);border-radius:4px;padding:1px 6px;margin-left:4px;">📡ケモラジ</span>`
     : caseMode === 'chemo'
@@ -3196,10 +3300,99 @@ function openReminderOrCalendar(title, notes, dt, c) {
   URL.revokeObjectURL(url);
 }
 
+// ========== 検査スケジュール ==========
+function setExamType(type) {
+  selectedExamType = type;
+  ['blood','ct','xp','other'].forEach(t => {
+    const btn = document.getElementById('examTypeBtn_' + t);
+    if (!btn) return;
+    if (t === type) {
+      const colors = { blood:'rgba(239,68,68,0.2)', ct:'rgba(79,140,255,0.15)', xp:'rgba(67,217,160,0.12)', other:'rgba(245,158,11,0.12)' };
+      const textColors = { blood:'#ef4444', ct:'var(--accent)', xp:'var(--green)', other:'#f59e0b' };
+      const borderColors = { blood:'rgba(239,68,68,0.6)', ct:'rgba(79,140,255,0.5)', xp:'rgba(67,217,160,0.5)', other:'rgba(245,158,11,0.5)' };
+      btn.style.background = colors[t];
+      btn.style.borderColor = borderColors[t];
+      btn.style.color = textColors[t];
+    } else {
+      btn.style.background = 'var(--surface)';
+      btn.style.borderColor = 'var(--border)';
+      btn.style.color = 'var(--text2)';
+    }
+  });
+  const otherRow = document.getElementById('examOtherNameRow');
+  if (otherRow) otherRow.style.display = type === 'other' ? 'block' : 'none';
+}
+
+function addExamSchedule() {
+  const date = document.getElementById('examDate')?.value;
+  const note = document.getElementById('examNote')?.value?.trim() || '';
+  if (!date) { alert('日付を入力してください'); return; }
+
+  const typeLabels = { blood: '採血', ct: 'CT', xp: 'Xp' };
+  let label = typeLabels[selectedExamType] || '';
+  if (selectedExamType === 'other') {
+    label = document.getElementById('examOtherName')?.value?.trim() || 'その他';
+    if (!label) { alert('検査名を入力してください'); return; }
+  }
+
+  currentExamSchedules.push({
+    id: 'exam_' + Date.now(),
+    type: selectedExamType,
+    label,
+    date,
+    note,
+  });
+
+  if (document.getElementById('examOtherName')) document.getElementById('examOtherName').value = '';
+  if (document.getElementById('examNote')) document.getElementById('examNote').value = '';
+  renderExamScheduleList();
+}
+
+function removeExamSchedule(id) {
+  currentExamSchedules = currentExamSchedules.filter(e => e.id !== id);
+  renderExamScheduleList();
+}
+
+const EXAM_ICONS = { blood: '🩸', ct: '🔬', xp: '📷', other: '🧪' };
+const EXAM_COLORS = { blood: 'rgba(239,68,68,0.12)', ct: 'rgba(79,140,255,0.1)', xp: 'rgba(67,217,160,0.1)', other: 'rgba(245,158,11,0.1)' };
+const EXAM_BORDER_COLORS = { blood: 'rgba(239,68,68,0.3)', ct: 'rgba(79,140,255,0.3)', xp: 'rgba(67,217,160,0.3)', other: 'rgba(245,158,11,0.3)' };
+
+function renderExamScheduleList() {
+  const el = document.getElementById('examScheduleList');
+  if (!el) return;
+  if (currentExamSchedules.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+  const sorted = [...currentExamSchedules].sort((a,b) => a.date.localeCompare(b.date));
+  el.innerHTML = sorted.map(e => {
+    const icon = EXAM_ICONS[e.type] || '🧪';
+    const bg = EXAM_COLORS[e.type] || 'rgba(245,158,11,0.1)';
+    const border = EXAM_BORDER_COLORS[e.type] || 'rgba(245,158,11,0.3)';
+    const dateLabel = formatDateShort(e.date);
+    return `<div style="display:flex;align-items:center;gap:8px;background:${bg};border:1px solid ${border};border-radius:8px;padding:8px 10px;">
+      <span style="font-size:16px;">${icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;color:var(--text);">${e.label}</div>
+        <div style="font-size:11px;color:var(--text3);">${dateLabel}${e.note ? ' · ' + e.note : ''}</div>
+      </div>
+      <button onclick="removeExamSchedule('${e.id}')" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0;line-height:1;">×</button>
+    </div>`;
+  }).join('');
+}
+
+function formatDateShort(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  const days = ['日','月','火','水','木','金','土'];
+  return `${d.getMonth()+1}/${d.getDate()}（${days[d.getDay()]}）`;
+}
+
 // ========== MODAL ==========
 function openAddModal() {
   editingId = null;
   freeChecks = [];
+  currentExamSchedules = [];
   document.getElementById('modalTitle').textContent = '症例を追加';
   document.getElementById('deleteBtn').style.display = 'none';
   clearForm();
@@ -3207,10 +3400,21 @@ function openAddModal() {
   if (appSettings.defaultTeam) {
     document.getElementById('f_team').value = appSettings.defaultTeam;
   }
+  selectedExamType = 'blood';
   buildChecklistForm({});
   renderFreeChecklistForm();
+  renderExamScheduleList();
+  // setExamTypeはDOMが存在する時のみ、検査日付は今日をデフォルト
+  setTimeout(() => {
+    setExamType('blood');
+    const ed = document.getElementById('examDate');
+    if (ed && !ed.value) ed.value = toISODate(new Date());
+  }, 0);
   const pp = document.getElementById('prepSuggestPanel');
   if (pp) pp.style.display = 'none';
+  // モード選択をリセット
+  const fMode = document.getElementById('f_mode');
+  if (fMode) { fMode.value = 'ope'; setTimeout(() => selectFormMode('ope'), 0); }
   document.getElementById('addModal').classList.add('open');
 }
 
@@ -3219,6 +3423,7 @@ function openEditModal(id) {
   const c = cases.find(x => x.id === id);
   if (!c) return;
   freeChecks = c.freeChecks ? JSON.parse(JSON.stringify(c.freeChecks)) : [];
+  currentExamSchedules = JSON.parse(JSON.stringify(c.examSchedules || []));
   document.getElementById('modalTitle').textContent = '症例を編集';
   document.getElementById('deleteBtn').style.display = 'block';
   document.getElementById('f_opDate').value = c.opDate || '';
@@ -3235,9 +3440,19 @@ function openEditModal(id) {
   document.getElementById('f_memo').value = c.memo || '';
   document.getElementById('f_icu').checked = !!c.icu;
   document.getElementById('f_recon').checked = !!c.recon;
+  const editMode = c.mode || detectCaseMode(c.surgery || '');
+  const fMode = document.getElementById('f_mode');
+  if (fMode) fMode.value = editMode;
   buildChecklistForm(c.checks || {});
   renderFreeChecklistForm();
+  renderExamScheduleList();
   onSurgeryChange();
+  setTimeout(() => {
+    selectFormMode(editMode);
+    setExamType('blood');
+    const ed = document.getElementById('examDate');
+    if (ed && !ed.value) ed.value = toISODate(new Date());
+  }, 0);
   document.getElementById('addModal').classList.add('open');
 }
 
@@ -3292,18 +3507,58 @@ function renderFreeChecklistForm() {
   }).join('');
 }
 
-function buildChecklistForm(checks) {
+function selectFormMode(mode) {
+  document.getElementById('f_mode').value = mode;
+  const configs = {
+    ope:   { bg: 'rgba(79,140,255,0.15)',   border: 'var(--accent)',  color: 'var(--accent)',  label: '術式' },
+    chemo: { bg: 'rgba(245,158,11,0.12)',   border: '#f59e0b',        color: '#f59e0b',        label: 'レジメン名' },
+    crt:   { bg: 'rgba(67,217,160,0.12)',   border: 'var(--green)',   color: 'var(--green)',   label: 'レジメン名（RT含む）' },
+  };
+  ['ope','chemo','crt'].forEach(m => {
+    const btn = document.getElementById('modeBtn_' + m);
+    if (!btn) return;
+    if (m === mode) {
+      btn.style.background = configs[m].bg;
+      btn.style.borderColor = configs[m].border;
+      btn.style.color = configs[m].color;
+    } else {
+      btn.style.background = 'var(--surface2)';
+      btn.style.borderColor = 'var(--border)';
+      btn.style.color = 'var(--text2)';
+    }
+  });
+  const lbl = document.getElementById('surgeryLabel');
+  if (lbl) lbl.textContent = configs[mode]?.label || '術式/ケモ等';
+
+  // チェックリスト再構築
+  const checklistEl = document.getElementById('checklistOptions');
+  if (checklistEl) {
+    const currentChecks = {};
+    checklistEl.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+      if (chk.id.startsWith('chk_')) currentChecks[chk.id.slice(4)] = chk.checked;
+    });
+    buildChecklistForm(currentChecks, mode);
+  }
+  // レジメン候補もリセット
+  const panel = document.getElementById('regimenSuggestPanel');
+  if (panel) panel.style.display = 'none';
+}
+
+function buildChecklistForm(checks, modeOverride) {
   const surgeryVal = document.getElementById('f_surgery')?.value || '';
-  const mode = detectCaseMode(surgeryVal);
-  const items = getDisplayedChecklistItems({ surgery: surgeryVal });
+  const selectedMode = document.getElementById('f_mode')?.value;
+  const mode = modeOverride || selectedMode || detectCaseMode(surgeryVal);
+  const items = getDisplayedChecklistItems({ surgery: surgeryVal, mode });
   const el = document.getElementById('checklistOptions');
   if (!el) return;
   let html = '';
   const regDetected = detectRegimen(surgeryVal);
   if (mode === 'crt') {
-    html += `<div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px;padding:4px 8px;background:rgba(67,217,160,0.08);border-radius:4px;border:1px solid rgba(67,217,160,0.2);">📡 ケモラジモード${regDetected?'（'+regDetected.name+'）':''}</div>`;
+    html += `<div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px;padding:4px 8px;background:rgba(67,217,160,0.08);border-radius:4px;border:1px solid rgba(67,217,160,0.2);">📡 ケモラジモード${regDetected?'（'+regDetected.name+'）':''} — RTスケジュール・放射線科連携含む</div>`;
   } else if (mode === 'chemo') {
-    html += `<div style="font-size:10px;font-weight:700;color:#f59e0b;margin-bottom:6px;padding:4px 8px;background:rgba(245,158,11,0.06);border-radius:4px;border:1px solid rgba(245,158,11,0.25);">💊 ケモモード${regDetected?'（'+regDetected.name+'）':''}</div>`;
+    html += `<div style="font-size:10px;font-weight:700;color:#f59e0b;margin-bottom:6px;padding:4px 8px;background:rgba(245,158,11,0.06);border-radius:4px;border:1px solid rgba(245,158,11,0.25);">💊 ケモモード${regDetected?'（'+regDetected.name+'）':''} — 手術同意書・オペ入力等は非表示</div>`;
+  } else {
+    html += `<div style="font-size:10px;font-weight:700;color:var(--accent);margin-bottom:6px;padding:4px 8px;background:rgba(79,140,255,0.06);border-radius:4px;border:1px solid rgba(79,140,255,0.2);">🔪 オペモード — 標準チェックリスト</div>`;
   }
   html += items.map(item => `
     <label class="checkbox-row">
@@ -3324,10 +3579,11 @@ function saveCase() {
     return;
   }
   const surgeryForChecks = document.getElementById('f_surgery').value.trim();
+  const modeForChecks = document.getElementById('f_mode')?.value || 'ope';
   // 既存ケースのチェック状態を保持しつつ、現在表示中の項目だけ更新
   const existingCase = editingId ? cases.find(c => c.id === editingId) : null;
   const checks = Object.assign({}, existingCase?.checks || {});
-  getDisplayedChecklistItems({ surgery: surgeryForChecks }).forEach(item => {
+  getDisplayedChecklistItems({ surgery: surgeryForChecks, mode: modeForChecks }).forEach(item => {
     checks[item.key] = document.getElementById('chk_' + item.key)?.checked || false;
   });
 
@@ -3346,8 +3602,10 @@ function saveCase() {
     memo: document.getElementById('f_memo').value.trim(),
     icu: document.getElementById('f_icu').checked,
     recon: document.getElementById('f_recon').checked,
+    mode: document.getElementById('f_mode')?.value || 'ope',
     checks,
     freeChecks: JSON.parse(JSON.stringify(freeChecks)),
+    examSchedules: JSON.parse(JSON.stringify(currentExamSchedules)),
   };
 
   if (editingId) {
@@ -3512,6 +3770,31 @@ function showNotifCenter() {
       </div>
     </div>
   `);
+
+  // Today's exam schedules
+  const todayStr2 = toISODate(new Date());
+  const todayExamItems = [];
+  cases.forEach(c => {
+    (c.examSchedules || []).filter(e => e.date === todayStr2).forEach(e => {
+      todayExamItems.push({ c, e });
+    });
+  });
+  if (todayExamItems.length > 0) {
+    const rows = todayExamItems.map(({c, e}) => {
+      const icon = EXAM_ICONS[e.type] || '🧪';
+      return `<div class="daily-brief-row">
+        <span>${icon}</span>
+        <div>
+          <div style="font-weight:700;">${c.name} — ${e.label}</div>
+          ${e.note ? `<div style="font-size:11px;color:var(--text2);">${e.note}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    sections.splice(1, 0, `<div class="daily-brief-section">
+      <div class="daily-brief-section-title">🧪 本日の検査予定（${todayExamItems.length}件）</div>
+      ${rows}
+    </div>`);
+  }
 
   // 1. Today's ops
   if (todayOps.length > 0) {
