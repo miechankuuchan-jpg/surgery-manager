@@ -1139,7 +1139,7 @@ GH_CONFIG_END -->
       <input type="date" class="form-input" id="f_dischargeDate">
     </div>
 
-    <div class="form-group">
+    <div class="form-group" id="pathologyGroup" style="display:none;">
       <label class="form-label">🔬 病理結果</label>
       <input type="text" class="form-input" id="f_pathology" placeholder="例：扁桃慢性炎、悪性なし／検体提出なし">
     </div>
@@ -1262,7 +1262,7 @@ GH_CONFIG_END -->
         </div>
         <div style="flex:1;">
           <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">メモ（任意）</div>
-          <input type="text" class="form-input" id="examNote" placeholder="空腹時など" style="font-size:12px;">
+          <input type="text" class="form-input" id="examNote" placeholder="空腹時・術前評価・フォローアップなど" style="font-size:12px;">
         </div>
         <button onclick="addExamSchedule()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">追加</button>
       </div>
@@ -1666,31 +1666,51 @@ const DISEASE_CHECK_RULES_BUILTIN = [
   },
 ];
 
-// ケモモード時に表示するチェックリスト項目
+// ========== チェックリスト定数（3層構造） ==========
+// 【共通】全モードで表示される項目
+const DEFAULT_CHECK_ITEMS_BUILTIN = [
+  { key: 'summary_pre',      label: '入院前サマリ' },
+  { key: 'cp',               label: 'CP入力' },
+  { key: 'admission_rx',     label: '入院時処方鑑別' },
+  { key: 'dpc',              label: 'DPC' },
+  { key: 'discharge_summary',label: '退院サマリ' },
+  { key: 'summary_rounds',   label: 'サマリ回診' },
+];
+
+// 【オペ固有】オペモード時のみ追加表示
+const OPE_CHECK_ITEMS_BUILTIN = [
+  { key: 'plan',         label: '入院診療計画書' },
+  { key: 'consent',      label: '手術同意書' },
+  { key: 'blood_consent',label: '輸血同意書', optional: true },
+  { key: 'rapid_order',  label: '⚠️迅速オーダー', warn: true },
+  { key: 'ope_input',    label: 'オペ入力' },
+];
+
+// 【ケモ固有】ケモモード時のみ追加表示
 const CHEMO_CHECK_ITEMS_BUILTIN = [
-  { key: 'chemo_regimen', label: 'レジメン入力' },
-  { key: 'chemo_screenshot', label: 'レジメンスクショ' },
-  { key: 'chemo_blood_monfi', label: '採血（月金）' },
+  { key: 'chemo_regimen',       label: 'レジメン入力' },
+  { key: 'chemo_screenshot',    label: 'レジメンスクショ' },
+  { key: 'chemo_blood_monfi',   label: '採血（月金）' },
   { key: 'chemo_blood_monthly', label: '化学療法中採血（月1回）' },
-  { key: 'chemo_continue', label: '継続指示' },
-  { key: 'chemo_rx', label: '矛盾ない処方・注射確認' },
-  { key: 'chemo_plan', label: '入院診療計画書（初回なら同意書も）' },
+  { key: 'chemo_continue',      label: '継続指示' },
+  { key: 'chemo_rx',            label: '矛盾ない処方・注射確認' },
+  { key: 'chemo_plan',          label: '入院診療計画書（初回なら同意書も）' },
 ];
 
-// ケモラジモード チェックリスト
+// 【ケモラジ固有】ケモラジモード時のみ追加表示
 const CRT_CHECK_ITEMS_BUILTIN = [
-  { key: 'crt_regimen', label: 'レジメン入力' },
-  { key: 'crt_screenshot', label: 'レジメンスクショ' },
-  { key: 'crt_blood_monfi', label: '採血（月金）' },
+  { key: 'crt_regimen',       label: 'レジメン入力' },
+  { key: 'crt_screenshot',    label: 'レジメンスクショ' },
+  { key: 'crt_blood_monfi',   label: '採血（月金）' },
   { key: 'crt_blood_monthly', label: '化学療法中採血（月1回）' },
-  { key: 'crt_continue', label: '継続指示' },
-  { key: 'crt_rx', label: '矛盾ない処方・注射確認' },
-  { key: 'crt_plan', label: '入院診療計画書（初回なら同意書も）' },
-  { key: 'crt_rt_schedule', label: 'RTスケジュール確認' },
-  { key: 'crt_rt_liaison', label: '放射線科連携確認' },
+  { key: 'crt_continue',      label: '継続指示' },
+  { key: 'crt_rx',            label: '矛盾ない処方・注射確認' },
+  { key: 'crt_plan',          label: '入院診療計画書（初回なら同意書も）' },
+  { key: 'crt_rt_schedule',   label: 'RTスケジュール確認' },
+  { key: 'crt_rt_liaison',    label: '放射線科連携確認' },
 ];
 
-// ケモモード時に非表示にする通常チェックリストのキー
+// 後方互換：旧 CHECKLIST_DEFAULTS_BUILTIN は DEFAULT + OPE の合計
 const SURGERY_ONLY_KEYS = ['consent', 'blood_consent', 'ope_input', 'plan', 'rapid_order', 'path_pending'];
 
 // レジメン一覧 デフォルト
@@ -1955,29 +1975,34 @@ let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || 
   defaultTeam: '山口',
   theme: 'dark',
   accentColor: '#4f8cff',
-  checklistItems: JSON.parse(JSON.stringify(CHECKLIST_DEFAULTS_BUILTIN)),
+  checklistItems: JSON.parse(JSON.stringify(CHECKLIST_DEFAULTS_BUILTIN)), // 後方互換用
+  defaultCheckItems: JSON.parse(JSON.stringify(DEFAULT_CHECK_ITEMS_BUILTIN)),
+  opeCheckItems:     JSON.parse(JSON.stringify(OPE_CHECK_ITEMS_BUILTIN)),
+  chemoCheckItems:   JSON.parse(JSON.stringify(CHEMO_CHECK_ITEMS_BUILTIN)),
+  crtCheckItems:     JSON.parse(JSON.stringify(CRT_CHECK_ITEMS_BUILTIN)),
   showFields: { time: true, items: true, team: true, memo: true },
   diseaseCheckRules: JSON.parse(JSON.stringify(DISEASE_CHECK_RULES_BUILTIN)),
-  chemoCheckItems: JSON.parse(JSON.stringify(CHEMO_CHECK_ITEMS_BUILTIN)),
-  crtCheckItems: JSON.parse(JSON.stringify(CRT_CHECK_ITEMS_BUILTIN)),
   regimenList: JSON.parse(JSON.stringify(REGIMEN_DEFAULTS_BUILTIN)),
 };
-// 既存ユーザーでルールが空なら初期ルールを追加
+// 3層チェックリスト 未設定なら初期値でシード
+if (!appSettings.defaultCheckItems || !appSettings.defaultCheckItems.length)
+  appSettings.defaultCheckItems = JSON.parse(JSON.stringify(DEFAULT_CHECK_ITEMS_BUILTIN));
+if (!appSettings.opeCheckItems || !appSettings.opeCheckItems.length)
+  appSettings.opeCheckItems = JSON.parse(JSON.stringify(OPE_CHECK_ITEMS_BUILTIN));
+if (!appSettings.chemoCheckItems || !appSettings.chemoCheckItems.length)
+  appSettings.chemoCheckItems = JSON.parse(JSON.stringify(CHEMO_CHECK_ITEMS_BUILTIN));
+if (!appSettings.crtCheckItems || !appSettings.crtCheckItems.length)
+  appSettings.crtCheckItems = JSON.parse(JSON.stringify(CRT_CHECK_ITEMS_BUILTIN));
+// 疾患別チェックルール 未設定・空なら初期値
 if (!appSettings.diseaseCheckRules) appSettings.diseaseCheckRules = JSON.parse(JSON.stringify(DISEASE_CHECK_RULES_BUILTIN));
 if (appSettings.diseaseCheckRules.length === 0) appSettings.diseaseCheckRules = JSON.parse(JSON.stringify(DISEASE_CHECK_RULES_BUILTIN));
-// builtin IDのルールを最新内容に更新
 DISEASE_CHECK_RULES_BUILTIN.forEach(builtin => {
   const idx = appSettings.diseaseCheckRules.findIndex(r => r.id === builtin.id);
   if (idx >= 0) appSettings.diseaseCheckRules[idx] = JSON.parse(JSON.stringify(builtin));
   else appSettings.diseaseCheckRules.push(JSON.parse(JSON.stringify(builtin)));
 });
-if (!appSettings.chemoCheckItems || !appSettings.chemoCheckItems.length)
-  appSettings.chemoCheckItems = JSON.parse(JSON.stringify(CHEMO_CHECK_ITEMS_BUILTIN));
-if (!appSettings.crtCheckItems || !appSettings.crtCheckItems.length)
-  appSettings.crtCheckItems = JSON.parse(JSON.stringify(CRT_CHECK_ITEMS_BUILTIN));
 if (!appSettings.regimenList || !appSettings.regimenList.length)
   appSettings.regimenList = JSON.parse(JSON.stringify(REGIMEN_DEFAULTS_BUILTIN));
-// builtin レジメンを最新に更新
 REGIMEN_DEFAULTS_BUILTIN.forEach(builtin => {
   const idx = appSettings.regimenList.findIndex(r => r.id === builtin.id);
   if (idx >= 0) appSettings.regimenList[idx] = JSON.parse(JSON.stringify(builtin));
@@ -2220,25 +2245,31 @@ function isChemoCase(surgery) {
   return mode === 'chemo' || mode === 'crt';
 }
 
-// ケース表示に使うチェックリスト項目を返す（オペ/ケモ/ケモラジ + レジメン固有）
+// ケース表示に使うチェックリスト項目を返す（共通 + モード固有 + レジメン固有）
 function getDisplayedChecklistItems(c) {
   const mode = c.mode || detectCaseMode(c.surgery);
-  let baseItems;
-  if (mode === 'crt') {
-    baseItems = CHECKLIST_DEFAULTS.filter(item => !SURGERY_ONLY_KEYS.includes(item.key))
-      .concat(appSettings.crtCheckItems || CRT_CHECK_ITEMS_BUILTIN);
-  } else if (mode === 'chemo') {
-    baseItems = CHECKLIST_DEFAULTS.filter(item => !SURGERY_ONLY_KEYS.includes(item.key))
-      .concat(appSettings.chemoCheckItems || CHEMO_CHECK_ITEMS_BUILTIN);
-  } else {
-    baseItems = [...CHECKLIST_DEFAULTS];
-  }
+
+  // 1. 共通（全モード）
+  const commonItems = appSettings.defaultCheckItems || DEFAULT_CHECK_ITEMS_BUILTIN;
+
+  // 2. モード固有
+  let modeItems;
+  if (mode === 'ope')        modeItems = appSettings.opeCheckItems   || OPE_CHECK_ITEMS_BUILTIN;
+  else if (mode === 'chemo') modeItems = appSettings.chemoCheckItems || CHEMO_CHECK_ITEMS_BUILTIN;
+  else if (mode === 'crt')   modeItems = appSettings.crtCheckItems   || CRT_CHECK_ITEMS_BUILTIN;
+  else                       modeItems = appSettings.opeCheckItems   || OPE_CHECK_ITEMS_BUILTIN;
+
+  // 3. 共通 + モード固有（重複排除）
+  const usedKeys = new Set(commonItems.map(i => i.key));
+  let combined = [...commonItems, ...modeItems.filter(i => !usedKeys.has(i.key))];
+
+  // 4. レジメン固有
   const regimen = detectRegimen(c.surgery);
   if (regimen && regimen.checkItems && regimen.checkItems.length) {
-    const existingKeys = new Set(baseItems.map(i => i.key));
-    baseItems = baseItems.concat(regimen.checkItems.filter(ri => !existingKeys.has(ri.key)));
+    const combinedKeys = new Set(combined.map(i => i.key));
+    combined = combined.concat(regimen.checkItems.filter(ri => !combinedKeys.has(ri.key)));
   }
-  return baseItems;
+  return combined;
 }
 
 let cases = JSON.parse(localStorage.getItem('surgery_cases') || '[]');
@@ -2678,30 +2709,32 @@ function renderDischargeWeekly(el) {
     return;
   }
 
-  // 週の月曜日を取得
-  function getWeekMonday(dateStr) {
+  // 週の木曜日（その週の開始）を取得 ── 木〜次週水曜でグルーピング
+  function getWeekThursday(dateStr) {
     const d = new Date(dateStr + 'T00:00:00');
-    const day = d.getDay(); // 0=日
-    const diff = day === 0 ? -6 : 1 - day;
-    d.setDate(d.getDate() + diff);
+    const day = d.getDay(); // 0=日,1=月,...,4=木,...
+    // 木曜(4)を週頭とするオフセット
+    const diff = ((day - 4) + 7) % 7; // 0〜6: その日から遡って木曜まで何日か
+    d.setDate(d.getDate() - diff);
     return d.toISOString().slice(0, 10);
   }
 
   // 週ごとにグループ化
   const weeks = {};
   discharged.forEach(c => {
-    const monday = getWeekMonday(c.dischargeDate);
-    if (!weeks[monday]) weeks[monday] = [];
-    weeks[monday].push(c);
+    const thu = getWeekThursday(c.dischargeDate);
+    if (!weeks[thu]) weeks[thu] = [];
+    weeks[thu].push(c);
   });
 
+  const dayNames = ['日','月','火','水','木','金','土'];
   let html = '';
-  Object.keys(weeks).sort((a, b) => b.localeCompare(a)).forEach(monday => {
-    const mondayDate = new Date(monday + 'T00:00:00');
-    const sunday = new Date(mondayDate); sunday.setDate(sunday.getDate() + 6);
-    const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
-    const weekLabel = `${fmt(mondayDate)}（月）〜 ${fmt(sunday)}（日）`;
-    const group = weeks[monday];
+  Object.keys(weeks).sort((a, b) => b.localeCompare(a)).forEach(thu => {
+    const thuDate = new Date(thu + 'T00:00:00');
+    const wed = new Date(thuDate); wed.setDate(wed.getDate() + 6);
+    const fmt = d => `${d.getMonth()+1}/${d.getDate()}（${dayNames[d.getDay()]}）`;
+    const weekLabel = `${fmt(thuDate)} 〜 ${fmt(wed)}`;
+    const group = weeks[thu];
 
     const rows = group.map(c => {
       const summaryDone = c.checks && c.checks['discharge_summary'];
@@ -3542,6 +3575,9 @@ function selectFormMode(mode) {
   // レジメン候補もリセット
   const panel = document.getElementById('regimenSuggestPanel');
   if (panel) panel.style.display = 'none';
+  // 病理結果フィールドはオペモードのみ表示
+  const pathGroup = document.getElementById('pathologyGroup');
+  if (pathGroup) pathGroup.style.display = mode === 'ope' ? 'block' : 'none';
 }
 
 function buildChecklistForm(checks, modeOverride) {
@@ -3998,21 +4034,40 @@ function setChecklistTab(tab) {
 }
 
 // ===== オペチェックリスト =====
+// ===== 共通チェックリスト =====
+function addDefaultCheckItem() {
+  const el = document.getElementById('newDefaultItem'); if (!el) return;
+  const val = el.value.trim(); if (!val) return;
+  if (!appSettings.defaultCheckItems) appSettings.defaultCheckItems = JSON.parse(JSON.stringify(DEFAULT_CHECK_ITEMS_BUILTIN));
+  appSettings.defaultCheckItems.push({ key: 'default_custom_' + Date.now(), label: val });
+  el.value = ''; save(); renderSettings();
+}
+function removeDefaultCheckItem(idx) {
+  if (!appSettings.defaultCheckItems) return;
+  appSettings.defaultCheckItems.splice(idx, 1);
+  save(); renderSettings();
+}
+function resetDefaultCheckItems() {
+  if (!confirm('共通チェックリストを初期値に戻しますか？')) return;
+  appSettings.defaultCheckItems = JSON.parse(JSON.stringify(DEFAULT_CHECK_ITEMS_BUILTIN));
+  save(); renderSettings();
+}
+// ===== オペ固有チェックリスト =====
 function addOpeCheckItem() {
   const el = document.getElementById('newOpeItem'); if (!el) return;
   const val = el.value.trim(); if (!val) return;
-  if (!appSettings.checklistItems) appSettings.checklistItems = JSON.parse(JSON.stringify(CHECKLIST_DEFAULTS_BUILTIN));
-  appSettings.checklistItems.push({ key: 'ope_custom_' + Date.now(), label: val });
+  if (!appSettings.opeCheckItems) appSettings.opeCheckItems = JSON.parse(JSON.stringify(OPE_CHECK_ITEMS_BUILTIN));
+  appSettings.opeCheckItems.push({ key: 'ope_custom_' + Date.now(), label: val });
   el.value = ''; save(); renderSettings();
 }
 function removeOpeCheckItem(idx) {
-  if (!appSettings.checklistItems) return;
-  appSettings.checklistItems.splice(idx, 1);
+  if (!appSettings.opeCheckItems) return;
+  appSettings.opeCheckItems.splice(idx, 1);
   save(); renderSettings();
 }
 function resetOpeCheckItems() {
   if (!confirm('オペチェックリストを初期値に戻しますか？')) return;
-  appSettings.checklistItems = JSON.parse(JSON.stringify(CHECKLIST_DEFAULTS_BUILTIN));
+  appSettings.opeCheckItems = JSON.parse(JSON.stringify(OPE_CHECK_ITEMS_BUILTIN));
   save(); renderSettings();
 }
 
@@ -4792,33 +4847,65 @@ function renderSettings() {
 
     <!-- モード別チェックリスト管理 -->
     <div class="summary-block" style="margin-bottom:12px;">
-      <div style="font-size:11px;font-weight:700;margin-bottom:10px;color:var(--text);">📋 モード別チェックリスト</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.6;">術式/ケモ等フィールドの内容によって切り替わります。<br>オペ・ケモ・ケモラジ それぞれの基本チェックリストを管理できます。</div>
-      <!-- タブ -->
-      <div style="display:flex;gap:4px;margin-bottom:12px;">
-        ${['ope','chemo','crt'].map(m => `
-          <button onclick="setChecklistTab('${m}')" id="ctab_${m}"
-            style="flex:1;padding:7px 4px;font-size:11px;font-weight:700;border-radius:6px;cursor:pointer;font-family:inherit;
-              border:1px solid ${(appSettings._checklistTab||'ope')===m?'var(--accent)':'var(--border)'};
-              background:${(appSettings._checklistTab||'ope')===m?'rgba(79,140,255,0.15)':'var(--surface2)'};
-              color:${(appSettings._checklistTab||'ope')===m?'var(--accent)':'var(--text2)'};">
-            ${{ope:'🔪オペ',chemo:'💊ケモ',crt:'📡ケモラジ'}[m]}
-          </button>
-        `).join('')}
+      <div style="font-size:11px;font-weight:700;margin-bottom:6px;color:var(--text);">📋 チェックリスト管理</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.6;">
+        <b>共通</b>は全モードで表示。各モード固有の項目は共通に追加して表示されます。<br>
+        表示 = 共通 ＋ モード固有 ＋ レジメン固有
+      </div>
+      <!-- タブ（共通・オペ・ケモ・ケモラジ） -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:12px;">
+        ${['default','ope','chemo','crt'].map(m => {
+          const cur = appSettings._checklistTab || 'default';
+          const active = cur === m;
+          const labels = {default:'🔵共通', ope:'🔪オペ', chemo:'💊ケモ', crt:'📡ケモラジ'};
+          return `<button onclick="setChecklistTab('${m}')" id="ctab_${m}"
+            style="padding:7px 2px;font-size:10px;font-weight:700;border-radius:6px;cursor:pointer;font-family:inherit;
+              border:1px solid ${active?'var(--accent)':'var(--border)'};
+              background:${active?'rgba(79,140,255,0.15)':'var(--surface2)'};
+              color:${active?'var(--accent)':'var(--text2)'};">
+            ${labels[m]}
+          </button>`;
+        }).join('')}
       </div>
       ${(() => {
-        const tab = appSettings._checklistTab || 'ope';
+        const tab = appSettings._checklistTab || 'default';
         const configMap = {
-          ope:   { items: appSettings.checklistItems || [], addFn: 'addOpeCheckItem', removeFn: 'removeOpeCheckItem', inputId: 'newOpeItem', resetFn: 'resetOpeCheckItems', color: 'var(--accent)', note: 'オペ症例のデフォルトチェックリスト（手術同意書・オペ入力等を含む）' },
-          chemo: { items: appSettings.chemoCheckItems || [], addFn: 'addChemoCheckItem', removeFn: 'removeChemoCheckItem', inputId: 'newChemoItem', resetFn: 'resetChemoCheckItems', color: '#f59e0b', note: 'ケモ症例のチェックリスト（オペ関連項目の代わりに表示）' },
-          crt:   { items: appSettings.crtCheckItems || [], addFn: 'addCrtCheckItem', removeFn: 'removeCrtCheckItem', inputId: 'newCrtItem', resetFn: 'resetCrtCheckItems', color: 'var(--green)', note: 'ケモラジ症例のチェックリスト（RT固有項目を含む）' },
+          default: {
+            items: appSettings.defaultCheckItems || [],
+            addFn: 'addDefaultCheckItem', removeFn: 'removeDefaultCheckItem',
+            inputId: 'newDefaultItem', resetFn: 'resetDefaultCheckItems',
+            color: 'var(--accent)',
+            note: '全モード共通で表示される項目（入院前サマリ・DPC・退院サマリなど）',
+          },
+          ope: {
+            items: appSettings.opeCheckItems || [],
+            addFn: 'addOpeCheckItem', removeFn: 'removeOpeCheckItem',
+            inputId: 'newOpeItem', resetFn: 'resetOpeCheckItems',
+            color: 'var(--accent)',
+            note: 'オペモード時のみ追加表示（手術同意書・オペ入力など）',
+          },
+          chemo: {
+            items: appSettings.chemoCheckItems || [],
+            addFn: 'addChemoCheckItem', removeFn: 'removeChemoCheckItem',
+            inputId: 'newChemoItem', resetFn: 'resetChemoCheckItems',
+            color: '#f59e0b',
+            note: 'ケモモード時のみ追加表示（レジメン入力・採血など）',
+          },
+          crt: {
+            items: appSettings.crtCheckItems || [],
+            addFn: 'addCrtCheckItem', removeFn: 'removeCrtCheckItem',
+            inputId: 'newCrtItem', resetFn: 'resetCrtCheckItems',
+            color: 'var(--green)',
+            note: 'ケモラジモード時のみ追加表示（RT固有項目を含む）',
+          },
         };
         const cfg = configMap[tab];
         return `
-          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;line-height:1.5;">${cfg.note}</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;padding:6px 10px;background:var(--surface2);border-radius:6px;line-height:1.5;">${cfg.note}</div>
           <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;">
-            ${cfg.items.map((item, idx) => `
-              <div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;">
+            ${cfg.items.length === 0 ? '<div style="font-size:11px;color:var(--text3);padding:6px 0;">項目がありません</div>' :
+              cfg.items.map((item, idx) => `
+              <div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;">
                 <span style="font-size:11px;color:var(--text);flex:1;">${item.label}${item.optional?' <span style="color:var(--text3);font-size:10px;">(任意)</span>':''}${item.warn?' ⚠️':''}</span>
                 <button onclick="${cfg.removeFn}(${idx})" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0;line-height:1;">×</button>
               </div>
