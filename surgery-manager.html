@@ -1093,13 +1093,13 @@ GH_CONFIG_END -->
 </div>
 
 <div class="tab-bar">
+  <div class="tab" onclick="switchTab('calendar', this)">📅 カレンダー</div>
   <div class="tab active" onclick="switchTab('admitted', this)">🏥 入院中</div>
   <div class="tab" onclick="switchTab('list', this)">症例一覧</div>
   <div class="tab" onclick="switchTab('today', this)">今日のオペ</div>
   <div class="tab" onclick="switchTab('pending', this)">未完了タスク</div>
   <div class="tab" onclick="switchTab('summary_incomplete', this)">📋 サマリ未完了</div>
   <div class="tab" onclick="switchTab('discharge_weekly', this)">🏥 退院一覧</div>
-  <div class="tab" onclick="switchTab('calendar', this)">📅 カレンダー</div>
 </div>
 
 <div id="searchBar" style="padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);display:none;">
@@ -1983,6 +1983,7 @@ let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || 
   showFields: { time: true, items: true, team: true, memo: true },
   diseaseCheckRules: JSON.parse(JSON.stringify(DISEASE_CHECK_RULES_BUILTIN)),
   regimenList: JSON.parse(JSON.stringify(REGIMEN_DEFAULTS_BUILTIN)),
+  dailyMemo: '',
 };
 // 3層チェックリスト 未設定なら初期値でシード
 if (!appSettings.defaultCheckItems || !appSettings.defaultCheckItems.length)
@@ -2424,6 +2425,11 @@ function save() {
   applyTheme();
 }
 
+function saveDailyMemo(val) {
+  appSettings.dailyMemo = val;
+  localStorage.setItem('app_settings', JSON.stringify(appSettings));
+}
+
 function groupByOpDate(arr) {
   const map = {};
   arr.forEach(c => {
@@ -2507,9 +2513,20 @@ function renderAdmitted(container) {
       </div>`
     : '';
 
+  const memoVal = (appSettings.dailyMemo || '').replace(/"/g, '&quot;');
+  const memoBanner = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;">📝 やることメモ</div>
+      <textarea id="dailyMemoInput" rows="3"
+        style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--text);font-family:inherit;resize:vertical;line-height:1.5;box-sizing:border-box;"
+        placeholder="今日のやること、申し送りなど..."
+        oninput="saveDailyMemo(this.value)">${memoVal}</textarea>
+    </div>`;
+
   el.innerHTML = `
     <div style="padding:14px 14px 4px;">
       <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">入院中 ${admitted.length}名</div>
+      ${memoBanner}
       ${examBanner}
       ${admitted.map(c => renderCard(c)).join('')}
     </div>`;
