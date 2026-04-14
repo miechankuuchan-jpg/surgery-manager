@@ -1848,6 +1848,23 @@ const REGIMEN_DEFAULTS_BUILTIN = [
     ],
   },
   {
+    id: 'reg_pembro_cbdca_fp', name: 'CBDCA＋FP＋Pembro', category: '再発・転移', mode: 'chemo',
+    keywords: ['CBDCA+FP+Pembro', 'CBDCA＋FP＋Pembro', 'cbdca+fp+pembro', 'cbdca fp pembro', 'CBDCA FP Pembro', 'carboplatin fp pembro'],
+    checkItems: [
+      { key: 'r_cbdca_fp_pembro_ccr', label: 'Ccr計算（CBDCA AUC換算）' },
+      { key: 'r_cbdca_fp_pembro_plt', label: '血小板確認（CBDCA）' },
+      { key: 'r_cbdca_fp_pembro_irae', label: 'irAE確認' },
+      { key: 'r_cbdca_fp_pembro_weight', label: '体重管理（Day0-5）' },
+    ],
+    sideEffects: [
+      { severity: 'high', label: '血小板減少・汎血球減少（CBDCA）' },
+      { severity: 'high', label: 'irAE：甲状腺機能異常・肝炎・肺炎（Pembro）' },
+      { severity: 'mid', label: '骨髄抑制・口内炎/咽頭粘膜炎（5-FU）' },
+      { severity: 'mid', label: '悪心嘔吐（CBDCA）・下痢（5-FU）' },
+      { severity: 'low', label: '腎障害軽度・低Mg・発疹・疲労感' },
+    ],
+  },
+  {
     id: 'reg_nivo', name: 'Nivolumab', category: '再発・転移', mode: 'chemo',
     keywords: ['Nivolumab', 'ニボルマブ', 'Nivo', 'nivo'],
     checkItems: [
@@ -3352,7 +3369,7 @@ function addFreeCheckReminder(caseId, idx) {
   if (!fc.remindAt) return;
 
   const dt = new Date(fc.remindAt);
-  const title = encodeURIComponent(`【チェック】${c.name} - ${fc.label}`);
+  const title = encodeURIComponent(`${c.name} - ${fc.label}`);
   const notes = encodeURIComponent(`症例: ${c.name}（${c.surgery}）\nオペ日: ${formatOpDate(c.opDate)}`);
   openReminderOrCalendar(title, notes, dt, c);
 }
@@ -3378,23 +3395,30 @@ function addReminderOpDay(id) {
 }
 
 function openReminderOrCalendar(title, notes, dt, c) {
-  const fmt = (d) => d.toISOString().replace(/[-:]/g,'').split('.')[0] + 'Z';
+  const fmtJST = (d) => {
+    const pad = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  };
+  const fmtUTC = (d) => d.toISOString().replace(/[-:]/g,'').split('.')[0] + 'Z';
   const end = new Date(dt.getTime() + 30 * 60000);
+  const summaryText = decodeURIComponent(title);
+  const notesText = decodeURIComponent(notes);
   const ics = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//手術担当管理//JP',
+    'X-WR-TIMEZONE:Asia/Tokyo',
     'BEGIN:VEVENT',
     `UID:${uid()}@surgery-manager`,
-    `DTSTAMP:${fmt(new Date())}`,
-    `DTSTART:${fmt(dt)}`,
-    `DTEND:${fmt(end)}`,
-    `SUMMARY:${decodeURIComponent(title)}`,
-    `DESCRIPTION:${decodeURIComponent(notes)}`,
+    `DTSTAMP:${fmtUTC(new Date())}`,
+    `DTSTART;TZID=Asia/Tokyo:${fmtJST(dt)}`,
+    `DTEND;TZID=Asia/Tokyo:${fmtJST(end)}`,
+    `SUMMARY:${summaryText}`,
+    `DESCRIPTION:${notesText}`,
     'BEGIN:VALARM',
     'TRIGGER:-PT0M',
     'ACTION:DISPLAY',
-    `DESCRIPTION:${decodeURIComponent(title)}`,
+    `DESCRIPTION:${notesText}`,
     'END:VALARM',
     'END:VEVENT',
     'END:VCALENDAR'
