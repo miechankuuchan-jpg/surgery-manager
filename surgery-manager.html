@@ -1100,6 +1100,7 @@ GH_CONFIG_END -->
   <div class="tab" onclick="switchTab('pending', this)">未完了タスク</div>
   <div class="tab" onclick="switchTab('summary_incomplete', this)">📋 サマリ未完了</div>
   <div class="tab" onclick="switchTab('discharge_weekly', this)">🏥 退院一覧</div>
+  <div class="tab" onclick="switchTab('knowledge', this)">📚 知識</div>
 </div>
 
 <div id="searchBar" style="padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);display:none;">
@@ -2475,6 +2476,7 @@ function render() {
   else if (currentTab === 'summary_incomplete') renderSummaryIncomplete(el);
   else if (currentTab === 'discharge_weekly') renderDischargeWeekly(el);
   else if (currentTab === 'calendar') renderCalendar(el);
+  else if (currentTab === 'knowledge') renderKnowledge(el);
   else if (currentTab === 'summary') renderSummary(el);
   else if (currentTab === 'import') renderImport(el);
   updatePendingBadge();
@@ -2817,6 +2819,277 @@ function renderDischargeWeekly(el) {
 
 // ========== CALENDAR ==========
 let calendarSelectedDate = null;
+
+// ========== KNOWLEDGE ==========
+const DRUG_TOXICITY_DATA = [
+  {
+    name: 'CDDP（シスプラチン）',
+    icon: '💊',
+    color: '#4f8cff',
+    items: [
+      { grade: 'high', label: '腎障害（用量依存性・累積性）' },
+      { grade: 'high', label: '高度悪心・嘔吐（HEC）' },
+      { grade: 'high', label: '感音難聴・耳鳴（不可逆）' },
+      { grade: 'mid',  label: '低Mg血症・低K血症' },
+      { grade: 'mid',  label: '骨髄抑制（白血球・血小板）' },
+      { grade: 'low',  label: '末梢神経障害' },
+    ],
+    notes: 'Ccr<60で原則禁忌。水分補給・尿量管理（Day1-5: 2000mL/日以上）必須。',
+  },
+  {
+    name: 'CBDCA（カルボプラチン）',
+    icon: '💊',
+    color: '#4f8cff',
+    items: [
+      { grade: 'high', label: '血小板減少（用量規定毒性）' },
+      { grade: 'high', label: '汎血球減少・骨髄抑制' },
+      { grade: 'mid',  label: '悪心・嘔吐（CDDPより軽度）' },
+      { grade: 'low',  label: '腎障害（軽度）・末梢神経障害' },
+    ],
+    notes: 'AUC法（Calvert式）で投与量計算。Ccr低下で蓄積リスク増大。',
+  },
+  {
+    name: '5-FU（フルオロウラシル）',
+    icon: '💊',
+    color: '#4f8cff',
+    items: [
+      { grade: 'high', label: '口内炎・咽頭粘膜炎' },
+      { grade: 'mid',  label: '下痢・腸管粘膜炎' },
+      { grade: 'mid',  label: '骨髄抑制（白血球減少）' },
+      { grade: 'low',  label: '心毒性（冠攣縮・胸痛）' },
+      { grade: 'low',  label: '手足症候群（持続投与）' },
+    ],
+    notes: 'DPD欠損症で致死的毒性のリスク。冠動脈疾患既往は注意。',
+  },
+  {
+    name: 'DTX（ドセタキセル）',
+    icon: '💊',
+    color: '#4f8cff',
+    items: [
+      { grade: 'high', label: '好中球減少・FN（発熱性好中球減少症）' },
+      { grade: 'mid',  label: '浮腫（累積性・胸水/腹水）' },
+      { grade: 'mid',  label: '脱毛' },
+      { grade: 'mid',  label: '爪変形・皮膚炎' },
+      { grade: 'low',  label: '末梢神経障害・口内炎' },
+    ],
+    notes: '前投薬（デキサメタゾン）必須。過敏反応予防。累積浮腫に注意。',
+  },
+  {
+    name: 'PTX（パクリタキセル）',
+    icon: '💊',
+    color: '#4f8cff',
+    items: [
+      { grade: 'high', label: '過敏反応（アナフィラキシー）' },
+      { grade: 'high', label: '末梢神経障害（用量依存・累積性）' },
+      { grade: 'mid',  label: '骨髄抑制（好中球減少）' },
+      { grade: 'mid',  label: '脱毛（ほぼ全例）' },
+      { grade: 'low',  label: '悪心・嘔吐（軽度）・筋肉痛' },
+    ],
+    notes: '投与前：デキサメタゾン・抗ヒスタミン・H2ブロッカー前投薬必須。',
+  },
+  {
+    name: 'Cmab（セツキシマブ）',
+    icon: '💊',
+    color: '#ffd166',
+    items: [
+      { grade: 'high', label: 'ざ瘡様皮疹（ほぼ全例・顔面/体幹）' },
+      { grade: 'high', label: 'Infusion reaction（初回・Grade3-4あり）' },
+      { grade: 'mid',  label: '低Mg血症（補正要）' },
+      { grade: 'mid',  label: '間質性肺炎（重篤）' },
+      { grade: 'low',  label: '爪囲炎・乾燥・亀裂' },
+    ],
+    notes: '初回は前投薬（抗ヒスタミン）必須、投与速度を落とす。皮膚ケア指導早期から。',
+  },
+  {
+    name: 'Pembrolizumab（ペムブロリズマブ）',
+    icon: '🔬',
+    color: '#43d9a0',
+    items: [
+      { grade: 'high', label: 'irAE：間質性肺炎（致死的）' },
+      { grade: 'high', label: 'irAE：重症筋無力症・心筋炎' },
+      { grade: 'mid',  label: 'irAE：甲状腺機能異常（低下/亢進）' },
+      { grade: 'mid',  label: 'irAE：肝炎（ALT/AST上昇）' },
+      { grade: 'mid',  label: 'irAE：腸炎・下痢' },
+      { grade: 'low',  label: 'irAE：皮疹・瘙痒感・疲労感' },
+    ],
+    notes: 'irAE疑い→即座にステロイド投与検討。甲状腺ホルモン・コルチゾールを定期モニター。',
+  },
+  {
+    name: 'Nivolumab（ニボルマブ）',
+    icon: '🔬',
+    color: '#43d9a0',
+    items: [
+      { grade: 'high', label: 'irAE：間質性肺炎' },
+      { grade: 'high', label: 'irAE：大腸炎（重症下痢）' },
+      { grade: 'mid',  label: 'irAE：甲状腺炎・副腎不全' },
+      { grade: 'mid',  label: 'irAE：肝炎・皮疹' },
+      { grade: 'low',  label: '倦怠感・食欲低下' },
+    ],
+    notes: 'PembrolizumabとirAEプロファイル類似。大腸炎は早期発見重要（腹痛・血便）。',
+  },
+  {
+    name: '放射線（頭頸部照射）',
+    icon: '📡',
+    color: '#ff6b6b',
+    items: [
+      { grade: 'high', label: '放射線性粘膜炎（Grade3以上：疼痛・嚥下不可）' },
+      { grade: 'high', label: '口腔乾燥（唾液腺障害・不可逆）' },
+      { grade: 'high', label: '嚥下障害（急性・晩期）' },
+      { grade: 'mid',  label: '放射線性皮膚炎（紅斑→落屑→潰瘍）' },
+      { grade: 'mid',  label: '口腔内感染・カンジダ' },
+      { grade: 'mid',  label: '骨髄抑制（照射野が脊椎等含む場合）' },
+      { grade: 'low',  label: '晩期：骨壊死・放射線性脊髄症（高線量）' },
+    ],
+    notes: '口腔ケア（歯科介入）必須。照射中の栄養管理（NGT/PEGを早期検討）。照射線量60-70Gy。',
+  },
+];
+
+let knowledgeTab = 'regimen';
+let knowledgeExpandedRegimen = null;
+
+function setKnowledgeTab(tab) {
+  knowledgeTab = tab;
+  render();
+}
+function toggleKnowledgeRegimen(id) {
+  knowledgeExpandedRegimen = knowledgeExpandedRegimen === id ? null : id;
+  render();
+}
+
+function knGradeColor(g) {
+  if (g === 'high') return '#ff5757';
+  if (g === 'mid')  return '#ffd166';
+  return '#8892a4';
+}
+function knGradeLabel(g) {
+  if (g === 'high') return '高';
+  if (g === 'mid')  return '中';
+  return '低';
+}
+
+function renderKnowledge(el) {
+  var html = '<div style="padding:14px;">';
+  html += '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">📚 耳鼻科ケモ 有害事象リファレンス</div>';
+
+  // タブ
+  var tabs = [{ id:'regimen', label:'💉 レジメン別' }, { id:'drug', label:'💊 薬剤別' }];
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">';
+  for (var ti = 0; ti < tabs.length; ti++) {
+    var t = tabs[ti];
+    var active = knowledgeTab === t.id;
+    html += '<button onclick="setKnowledgeTab(\'' + t.id + '\')" style="padding:9px 4px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;font-family:inherit;'
+      + 'border:1px solid ' + (active ? 'var(--accent)' : 'var(--border)') + ';'
+      + 'background:' + (active ? 'rgba(79,140,255,0.15)' : 'var(--surface2)') + ';'
+      + 'color:' + (active ? 'var(--accent)' : 'var(--text2)') + ';">' + t.label + '</button>';
+  }
+  html += '</div>';
+
+  if (knowledgeTab === 'regimen') {
+    var regimenList = (appSettings && appSettings.regimenList) ? appSettings.regimenList : REGIMEN_DEFAULTS_BUILTIN;
+    var cats = [];
+    for (var ri = 0; ri < regimenList.length; ri++) {
+      if (cats.indexOf(regimenList[ri].category) === -1) cats.push(regimenList[ri].category);
+    }
+    for (var ci = 0; ci < cats.length; ci++) {
+      var cat = cats[ci];
+      html += '<div style="margin-bottom:14px;">';
+      html += '<div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.08em;padding:4px 0;border-bottom:1px solid var(--border);margin-bottom:8px;">' + cat + '</div>';
+      for (var ri2 = 0; ri2 < regimenList.length; ri2++) {
+        var r = regimenList[ri2];
+        if (r.category !== cat) continue;
+        var expanded = knowledgeExpandedRegimen === r.id;
+        var se = r.sideEffects || [];
+        var highSe = se.filter(function(s) { return s.severity === 'high'; });
+        var modeIcon = r.mode === 'crt' ? '📡' : '💊';
+        var borderColor = expanded ? 'var(--accent)' : 'var(--border)';
+        html += '<div onclick="toggleKnowledgeRegimen(\'' + r.id + '\')" style="background:var(--surface2);border:1px solid ' + borderColor + ';border-radius:9px;padding:10px 12px;margin-bottom:6px;cursor:pointer;">';
+        // ヘッダー行
+        html += '<div style="display:flex;align-items:center;gap:6px;">';
+        html += '<span style="font-size:13px;">' + modeIcon + '</span>';
+        html += '<span style="font-size:12px;font-weight:700;color:var(--text);flex:1;">' + r.name + '</span>';
+        if (highSe.length > 0) {
+          html += '<span style="font-size:9px;font-weight:700;color:#ff5757;background:rgba(255,87,87,0.12);border:1px solid rgba(255,87,87,0.3);border-radius:4px;padding:1px 5px;margin-left:4px;">重篤' + highSe.length + '</span>';
+        }
+        html += '<span style="font-size:12px;color:var(--text3);">' + (expanded ? '∨' : '›') + '</span>';
+        html += '</div>';
+        if (!expanded) {
+          // 折りたたみ時：上位3件プレビュー
+          var preview = se.slice(0, 3);
+          if (preview.length > 0) {
+            html += '<div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:3px;">';
+            for (var pi = 0; pi < preview.length; pi++) {
+              var gc = knGradeColor(preview[pi].severity);
+              html += '<span style="font-size:10px;color:' + gc + ';background:' + gc + '22;border-radius:4px;padding:1px 6px;">' + preview[pi].label + '</span>';
+            }
+            if (se.length > 3) html += '<span style="font-size:10px;color:var(--text3);">+' + (se.length - 3) + '</span>';
+            html += '</div>';
+          }
+        } else {
+          // 展開時：詳細
+          html += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">';
+          if (se.length === 0) {
+            html += '<div style="font-size:11px;color:var(--text3);">データなし</div>';
+          } else {
+            var grades = ['high', 'mid', 'low'];
+            for (var gi = 0; gi < grades.length; gi++) {
+              var g = grades[gi];
+              var glist = se.filter(function(s) { return s.severity === g; });
+              if (glist.length === 0) continue;
+              var gc2 = knGradeColor(g);
+              html += '<div style="margin-bottom:7px;">';
+              html += '<div style="font-size:10px;font-weight:700;color:' + gc2 + ';margin-bottom:3px;">▌' + knGradeLabel(g) + 'リスク</div>';
+              for (var si2 = 0; si2 < glist.length; si2++) {
+                html += '<div style="font-size:11px;color:var(--text);padding:3px 0 3px 10px;border-left:2px solid ' + gc2 + ';margin-bottom:2px;">' + glist[si2].label + '</div>';
+              }
+              html += '</div>';
+            }
+          }
+          if (r.checkItems && r.checkItems.length) {
+            html += '<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">';
+            html += '<div style="font-size:10px;font-weight:700;color:var(--accent);margin-bottom:4px;">✅ レジメン固有チェック</div>';
+            for (var cci = 0; cci < r.checkItems.length; cci++) {
+              html += '<div style="font-size:11px;color:var(--text2);padding:2px 0 2px 10px;">・' + r.checkItems[cci].label + '</div>';
+            }
+            html += '</div>';
+          }
+          html += '</div>';
+        }
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+  } else {
+    // 薬剤別タブ
+    for (var di = 0; di < DRUG_TOXICITY_DATA.length; di++) {
+      var drug = DRUG_TOXICITY_DATA[di];
+      html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;">';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">';
+      html += '<span style="font-size:16px;">' + drug.icon + '</span>';
+      html += '<span style="font-size:13px;font-weight:700;color:var(--text);">' + drug.name + '</span>';
+      html += '</div>';
+      var dgrades = ['high', 'mid', 'low'];
+      for (var dgi = 0; dgi < dgrades.length; dgi++) {
+        var dg = dgrades[dgi];
+        var dlist = drug.items.filter(function(i) { return i.grade === dg; });
+        if (dlist.length === 0) continue;
+        var dgc = knGradeColor(dg);
+        html += '<div style="margin-bottom:8px;">';
+        html += '<div style="font-size:10px;font-weight:700;color:' + dgc + ';margin-bottom:3px;">▌' + knGradeLabel(dg) + 'リスク</div>';
+        for (var dii = 0; dii < dlist.length; dii++) {
+          html += '<div style="font-size:11px;color:var(--text);padding:3px 0 3px 10px;border-left:2px solid ' + dgc + ';margin-bottom:2px;">' + dlist[dii].label + '</div>';
+        }
+        html += '</div>';
+      }
+      if (drug.notes) {
+        html += '<div style="margin-top:8px;padding:6px 10px;background:rgba(79,140,255,0.07);border:1px solid rgba(79,140,255,0.2);border-radius:6px;font-size:10px;color:var(--text2);line-height:1.6;">💡 ' + drug.notes + '</div>';
+      }
+      html += '</div>';
+    }
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
+}
 
 function renderCalendar(el) {
   const year = calendarViewDate.getFullYear();
