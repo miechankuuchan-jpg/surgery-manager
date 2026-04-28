@@ -1468,6 +1468,45 @@ GH_CONFIG_END -->
 </div>
 
 <!-- Daily Brief Popup -->
+<!-- Quick Reminder Modal -->
+<div id="quickReminderOverlay" onclick="closeQuickReminder(event)"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9000;align-items:flex-end;justify-content:center;">
+  <div id="quickReminderSheet"
+    style="background:var(--surface);border-radius:20px 20px 0 0;padding:20px 18px 36px;width:100%;max-width:480px;border-top:1px solid var(--border);">
+    <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;"></div>
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;" id="qrTitle">リマインダー登録</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:16px;" id="qrSubtitle"></div>
+    <!-- プリセットボタン -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+      <button onclick="fireReminderPreset('tonight')"
+        style="padding:12px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+        🌙 今夜 20:00
+      </button>
+      <button onclick="fireReminderPreset('tomorrow_morning')"
+        style="padding:12px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+        🌅 明日 8:00
+      </button>
+      <button onclick="fireReminderPreset('tomorrow_evening')"
+        style="padding:12px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+        🌆 明日 18:00
+      </button>
+      <button onclick="fireReminderPreset('2days')"
+        style="padding:12px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+        📅 2日後 8:00
+      </button>
+    </div>
+    <!-- カスタム日時 -->
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="datetime-local" id="qrCustomDt"
+        style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 10px;font-size:12px;color:var(--text);font-family:inherit;">
+      <button onclick="fireReminderCustom()"
+        style="padding:9px 14px;background:rgba(79,140,255,0.15);border:1px solid rgba(79,140,255,0.4);border-radius:8px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+        ✓ 登録
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="daily-brief-overlay hidden" id="dailyBriefOverlay" onclick="closeDailyBriefOnBg(event)">
   <div class="daily-brief-modal" id="dailyBriefModal">
     <!-- filled by JS -->
@@ -3438,8 +3477,8 @@ function renderCard(c, expandByDefault=false) {
           const remindBadge = fc.remindAt && !fc.done
             ? `<span style="font-size:9px;color:var(--accent3);margin-left:4px;">🔔${fc.remindAt.replace('T',' ').slice(5,16)}</span>`
             : '';
-          const remindBtn = fc.remindAt && !fc.done
-            ? `<button onclick="event.stopPropagation();addFreeCheckReminder('${c.id}',${i})" style="background:var(--surface);border:1px solid var(--accent3);color:var(--accent3);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">📅 登録</button>`
+          const remindBtn = !fc.done
+            ? `<button onclick="event.stopPropagation();openReminderQuick('${c.id}','${fc.label.replace(/'/g,"\\'")}');" style="background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;font-family:inherit;flex-shrink:0;line-height:1.2;">🔔</button>`
             : '';
           return `<div style="display:flex;align-items:center;gap:6px;">
             <span class="check-item${fc.done?' done':''}" onclick="toggleFreeCheckCard('${c.id}',${i})" style="flex:1;">
@@ -3554,11 +3593,14 @@ function renderCard(c, expandByDefault=false) {
       ${sideEffectsHtml}
       ${memoHtml}
       <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">
+        <button onclick="event.stopPropagation();openReminderQuick('${c.id}','前日確認')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🔔 リマインダー登録
+        </button>
         <button onclick="event.stopPropagation();addReminderPrevDay('${c.id}')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
-          📅 前日リマインダー
+          📅 前日（自動）
         </button>
         <button onclick="event.stopPropagation();addReminderOpDay('${c.id}')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
-          🌅 当日朝リマインダー
+          🌅 当日朝（自動）
         </button>
       </div>
     </div>
@@ -3635,35 +3677,94 @@ function toggleFreeCheckCard(id, idx) {
 }
 
 // ========== REMINDERS ==========
+// ========== クイックリマインダー ==========
+let _qrContext = null; // { caseId, label }
+
+function openReminderQuick(caseId, label) {
+  _qrContext = { caseId, label };
+  const c = cases.find(x => x.id === caseId);
+  const titleEl = document.getElementById('qrTitle');
+  const subEl   = document.getElementById('qrSubtitle');
+  if (titleEl) titleEl.textContent = '🔔 ' + label;
+  if (subEl)   subEl.textContent   = c ? c.name + (c.surgery ? '（' + c.surgery + '）' : '') : '';
+  // デフォルトを「明日8時」に設定
+  const defDt = new Date(); defDt.setDate(defDt.getDate() + 1); defDt.setHours(8, 0, 0, 0);
+  const pad = n => String(n).padStart(2,'0');
+  const dtStr = defDt.getFullYear() + '-' + pad(defDt.getMonth()+1) + '-' + pad(defDt.getDate()) + 'T08:00';
+  const inp = document.getElementById('qrCustomDt');
+  if (inp) inp.value = dtStr;
+  const ov = document.getElementById('quickReminderOverlay');
+  if (ov) { ov.style.display = 'flex'; }
+}
+
+function closeQuickReminder(e) {
+  if (e && e.target !== document.getElementById('quickReminderOverlay')) return;
+  const ov = document.getElementById('quickReminderOverlay');
+  if (ov) ov.style.display = 'none';
+}
+
+function _fireReminder(dt) {
+  if (!_qrContext) return;
+  const c = cases.find(x => x.id === _qrContext.caseId);
+  const label = _qrContext.label;
+  const patName = c ? c.name : '';
+  const title = encodeURIComponent(label + '（' + patName + '）');
+  const notes = encodeURIComponent(
+    '患者: ' + patName + (c && c.surgery ? '（' + c.surgery + '）' : '') +
+    (c && c.admDate ? '\n入院日: ' + c.admDate : '')
+  );
+  openReminderOrCalendar(title, notes, dt, c);
+  const ov = document.getElementById('quickReminderOverlay');
+  if (ov) ov.style.display = 'none';
+}
+
+function fireReminderPreset(preset) {
+  const dt = new Date();
+  dt.setSeconds(0, 0);
+  if (preset === 'tonight')           { dt.setHours(20, 0, 0, 0); }
+  else if (preset === 'tomorrow_morning') { dt.setDate(dt.getDate()+1); dt.setHours(8, 0, 0, 0); }
+  else if (preset === 'tomorrow_evening') { dt.setDate(dt.getDate()+1); dt.setHours(18, 0, 0, 0); }
+  else if (preset === '2days')        { dt.setDate(dt.getDate()+2); dt.setHours(8, 0, 0, 0); }
+  _fireReminder(dt);
+}
+
+function fireReminderCustom() {
+  const val = document.getElementById('qrCustomDt')?.value;
+  if (!val) { alert('日時を選択してください'); return; }
+  _fireReminder(new Date(val));
+}
+
 function addFreeCheckReminder(caseId, idx) {
+  // 後方互換：remindAt が設定済みの場合はそのまま使う
   const c = cases.find(x => x.id === caseId);
   if (!c || !c.freeChecks || !c.freeChecks[idx]) return;
   const fc = c.freeChecks[idx];
-  if (!fc.remindAt) return;
-
-  const dt = new Date(fc.remindAt);
-  const title = encodeURIComponent(`${c.name} - ${fc.label}`);
-  const notes = encodeURIComponent(`症例: ${c.name}（${c.surgery}）\nオペ日: ${formatOpDate(c.opDate)}`);
-  openReminderOrCalendar(title, notes, dt, c);
+  if (fc.remindAt) {
+    const dt = new Date(fc.remindAt);
+    const title = encodeURIComponent(fc.label + '（' + c.name + '）');
+    const notes = encodeURIComponent('患者: ' + c.name + (c.surgery ? '（' + c.surgery + '）' : ''));
+    openReminderOrCalendar(title, notes, dt, c);
+  } else {
+    openReminderQuick(caseId, fc.label);
+  }
 }
+
 function addReminderPrevDay(id) {
   const c = cases.find(x => x.id === id);
   if (!c || !c.opDate) return;
-  // 前日の20:00
   const dt = new Date(c.opDate + 'T20:00:00');
   dt.setDate(dt.getDate() - 1);
-  const title = encodeURIComponent(`【手術前日】${c.name} ${c.surgery}`);
-  const notes = encodeURIComponent(`オペ日: ${formatOpDate(c.opDate)}\n担当: ${c.team || ''}\n物品: ${c.items || ''}`);
+  const title = encodeURIComponent('手術前日確認（' + c.name + '）');
+  const notes = encodeURIComponent('手術日: ' + formatOpDate(c.opDate) + '\n術式: ' + (c.surgery||'') + '\n担当: ' + (c.team||'') + '\n物品: ' + (c.items||''));
   openReminderOrCalendar(title, notes, dt, c);
 }
 
 function addReminderOpDay(id) {
   const c = cases.find(x => x.id === id);
   if (!c || !c.opDate) return;
-  // 当日の07:00
   const dt = new Date(c.opDate + 'T07:00:00');
-  const title = encodeURIComponent(`【手術当日】${c.name} ${c.surgery}`);
-  const notes = encodeURIComponent(`担当: ${c.team || ''}\n予定時間: ${c.time || ''}\n物品: ${c.items || ''}`);
+  const title = encodeURIComponent('手術当日（' + c.name + '）');
+  const notes = encodeURIComponent('術式: ' + (c.surgery||'') + '\n予定時間: ' + (c.time||'') + '\n担当: ' + (c.team||'') + '\n物品: ' + (c.items||''));
   openReminderOrCalendar(title, notes, dt, c);
 }
 
