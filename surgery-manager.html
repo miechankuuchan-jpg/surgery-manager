@@ -1232,14 +1232,19 @@ GH_CONFIG_END -->
 
     <div class="section-divider" style="margin-top:14px;">フリーチェックリスト</div>
     <div id="freeChecklistOptions" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
-    <div style="display:flex;flex-direction:column;gap:6px;">
-      <input type="text" class="form-input" id="freeCheckInput" placeholder="確認事項を入力..." onkeydown="if(event.key==='Enter'){event.preventDefault();addFreeCheck();}">
-      <div style="display:flex;gap:8px;align-items:center;">
-        <div style="flex:1;">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:4px;letter-spacing:0.04em;">🔔 リマインド日時（任意）</div>
-          <input type="datetime-local" class="form-input" id="freeCheckDateTime" style="font-size:12px;">
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;gap:8px;">
+        <input type="text" class="form-input" id="freeCheckInput" placeholder="確認事項を入力..." style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addFreeCheck();}">
+        <button class="btn-primary" onclick="addFreeCheck()" style="width:auto;padding:10px 16px;flex-shrink:0;">追加</button>
+      </div>
+      <!-- リマインダープリセット -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:7px;letter-spacing:0.04em;">🔔 リマインダー設定（任意）</div>
+        <div id="fcReminderPresets" style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:6px;"></div>
+        <div id="fcCustomRow" style="display:none;margin-top:4px;">
+          <input type="datetime-local" class="form-input" id="freeCheckDateTime" style="font-size:12px;width:100%;">
         </div>
-        <button class="btn-primary" onclick="addFreeCheck()" style="align-self:flex-end;width:auto;padding:10px 18px;margin-top:0;">追加</button>
+        <div id="fcSelectedLabel" style="font-size:10px;color:var(--accent3);min-height:14px;margin-top:2px;"></div>
       </div>
     </div>
 
@@ -1476,25 +1481,8 @@ GH_CONFIG_END -->
     <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;"></div>
     <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;" id="qrTitle">リマインダー登録</div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:16px;" id="qrSubtitle"></div>
-    <!-- プリセットボタン -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-      <button onclick="fireReminderPreset('tonight')"
-        style="padding:12px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
-        🌙 今夜 20:00
-      </button>
-      <button onclick="fireReminderPreset('tomorrow_morning')"
-        style="padding:12px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
-        🌅 明日 8:00
-      </button>
-      <button onclick="fireReminderPreset('tomorrow_evening')"
-        style="padding:12px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
-        🌆 明日 18:00
-      </button>
-      <button onclick="fireReminderPreset('2days')"
-        style="padding:12px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
-        📅 2日後 8:00
-      </button>
-    </div>
+    <!-- プリセットボタン（settings から動的生成） -->
+    <div id="qrPresetButtons" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"></div>
     <!-- カスタム日時 -->
     <div style="display:flex;gap:8px;align-items:center;">
       <input type="datetime-local" id="qrCustomDt"
@@ -2041,6 +2029,12 @@ let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || 
   diseaseCheckRules: JSON.parse(JSON.stringify(DISEASE_CHECK_RULES_BUILTIN)),
   regimenList: JSON.parse(JSON.stringify(REGIMEN_DEFAULTS_BUILTIN)),
   dailyMemo: '',
+  reminderPresets: [
+    { label: '今夜', offsetDays: 0, hour: 20, minute: 0 },
+    { label: '明日朝', offsetDays: 1, hour: 8,  minute: 0 },
+    { label: '明日夕', offsetDays: 1, hour: 18, minute: 0 },
+    { label: '2日後朝', offsetDays: 2, hour: 8,  minute: 0 },
+  ],
 };
 // 3層チェックリスト 未設定なら初期値でシード
 if (!appSettings.defaultCheckItems || !appSettings.defaultCheckItems.length)
@@ -2485,6 +2479,13 @@ function save() {
 function saveDailyMemo(val) {
   appSettings.dailyMemo = val;
   localStorage.setItem('app_settings', JSON.stringify(appSettings));
+}
+
+function updateReminderPreset(idx, key, val) {
+  if (!appSettings.reminderPresets) appSettings.reminderPresets = getReminderPresets();
+  if (!appSettings.reminderPresets[idx]) return;
+  appSettings.reminderPresets[idx][key] = val;
+  save();
 }
 
 function groupByOpDate(arr) {
@@ -3687,8 +3688,19 @@ function openReminderQuick(caseId, label) {
   const subEl   = document.getElementById('qrSubtitle');
   if (titleEl) titleEl.textContent = '🔔 ' + label;
   if (subEl)   subEl.textContent   = c ? c.name + (c.surgery ? '（' + c.surgery + '）' : '') : '';
-  // デフォルトを「明日8時」に設定
-  const defDt = new Date(); defDt.setDate(defDt.getDate() + 1); defDt.setHours(8, 0, 0, 0);
+  // プリセットボタンを動的生成
+  const btnCont = document.getElementById('qrPresetButtons');
+  if (btnCont) {
+    const presets = getReminderPresets();
+    const emojis = ['🌙','🌅','🌆','📅'];
+    btnCont.innerHTML = presets.map((p, i) => {
+      const timeStr = String(p.hour).padStart(2,'0') + ':' + String(p.minute||0).padStart(2,'0');
+      return '<button onclick="fireReminderPreset(' + i + ')" style="padding:12px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">'
+        + (emojis[i]||'📅') + ' ' + p.label + ' ' + timeStr + '</button>';
+    }).join('');
+  }
+  // カスタム日時のデフォルト（明日8時）
+  const defDt = new Date(); defDt.setDate(defDt.getDate() + 1);
   const pad = n => String(n).padStart(2,'0');
   const dtStr = defDt.getFullYear() + '-' + pad(defDt.getMonth()+1) + '-' + pad(defDt.getDate()) + 'T08:00';
   const inp = document.getElementById('qrCustomDt');
@@ -3718,13 +3730,16 @@ function _fireReminder(dt) {
   if (ov) ov.style.display = 'none';
 }
 
-function fireReminderPreset(preset) {
+function fireReminderPreset(idxOrKey) {
   const dt = new Date();
   dt.setSeconds(0, 0);
-  if (preset === 'tonight')           { dt.setHours(20, 0, 0, 0); }
-  else if (preset === 'tomorrow_morning') { dt.setDate(dt.getDate()+1); dt.setHours(8, 0, 0, 0); }
-  else if (preset === 'tomorrow_evening') { dt.setDate(dt.getDate()+1); dt.setHours(18, 0, 0, 0); }
-  else if (preset === '2days')        { dt.setDate(dt.getDate()+2); dt.setHours(8, 0, 0, 0); }
+  const presets = getReminderPresets();
+  const idx = parseInt(idxOrKey, 10);
+  if (!isNaN(idx) && presets[idx]) {
+    const p = presets[idx];
+    dt.setDate(dt.getDate() + (p.offsetDays || 0));
+    dt.setHours(p.hour || 0, p.minute || 0, 0, 0);
+  }
   _fireReminder(dt);
 }
 
@@ -3922,6 +3937,8 @@ function openAddModal() {
   // モード選択をリセット
   const fMode = document.getElementById('f_mode');
   if (fMode) { fMode.value = 'ope'; setTimeout(() => selectFormMode('ope'), 0); }
+  _fcReminderPresetIdx = -1;
+  setTimeout(() => renderFcReminderPresets(), 0);
   document.getElementById('addModal').classList.add('open');
 }
 
@@ -3960,6 +3977,8 @@ function openEditModal(id) {
     const ed = document.getElementById('examDate');
     if (ed && !ed.value) ed.value = toISODate(new Date());
   }, 0);
+  _fcReminderPresetIdx = -1;
+  setTimeout(() => renderFcReminderPresets(), 0);
   document.getElementById('addModal').classList.add('open');
 }
 
@@ -3971,18 +3990,95 @@ function clearForm() {
   document.getElementById('f_recon').checked = false;
 }
 
+let _fcReminderPresetIdx = -1; // -1=なし, 0-3=プリセット, 99=カスタム
+
+function getReminderPresets() {
+  if (appSettings.reminderPresets && appSettings.reminderPresets.length === 4) return appSettings.reminderPresets;
+  return [
+    { label: '今夜', offsetDays: 0, hour: 20, minute: 0 },
+    { label: '明日朝', offsetDays: 1, hour: 8,  minute: 0 },
+    { label: '明日夕', offsetDays: 1, hour: 18, minute: 0 },
+    { label: '2日後朝', offsetDays: 2, hour: 8,  minute: 0 },
+  ];
+}
+
+function computePresetDatetime(p) {
+  const d = new Date();
+  d.setDate(d.getDate() + p.offsetDays);
+  d.setHours(p.hour, p.minute || 0, 0, 0);
+  const pad = n => String(n).padStart(2,'0');
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' + pad(p.hour) + ':' + pad(p.minute||0);
+}
+
+function renderFcReminderPresets() {
+  const cont = document.getElementById('fcReminderPresets');
+  if (!cont) return;
+  const presets = getReminderPresets();
+  cont.innerHTML = presets.map((p, i) => {
+    const active = _fcReminderPresetIdx === i;
+    return '<button onclick="selectFcPreset(' + i + ')" style="padding:7px 4px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;font-family:inherit;'
+      + 'border:1px solid ' + (active ? 'var(--accent3)' : 'var(--border)') + ';'
+      + 'background:' + (active ? 'rgba(255,209,102,0.18)' : 'var(--surface)') + ';'
+      + 'color:' + (active ? 'var(--accent3)' : 'var(--text2)') + ';">'
+      + p.label + '</button>';
+  }).join('')
+    + '<button onclick="selectFcPreset(99)" style="padding:7px 4px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;font-family:inherit;'
+    + 'border:1px solid ' + (_fcReminderPresetIdx === 99 ? 'var(--accent)' : 'var(--border)') + ';'
+    + 'background:' + (_fcReminderPresetIdx === 99 ? 'rgba(79,140,255,0.15)' : 'var(--surface)') + ';'
+    + 'color:' + (_fcReminderPresetIdx === 99 ? 'var(--accent)' : 'var(--text3)') + ';">カスタム</button>';
+}
+
+function selectFcPreset(idx) {
+  _fcReminderPresetIdx = (_fcReminderPresetIdx === idx) ? -1 : idx; // toggle
+  const customRow = document.getElementById('fcCustomRow');
+  const label = document.getElementById('fcSelectedLabel');
+  if (customRow) customRow.style.display = (_fcReminderPresetIdx === 99) ? 'block' : 'none';
+  if (label) {
+    if (_fcReminderPresetIdx === -1) {
+      label.textContent = '';
+    } else if (_fcReminderPresetIdx === 99) {
+      label.textContent = '日時を入力してください';
+    } else {
+      const p = getReminderPresets()[_fcReminderPresetIdx];
+      label.textContent = '🔔 ' + p.label + ' ' + String(p.hour).padStart(2,'0') + ':' + String(p.minute||0).padStart(2,'0') + ' に通知';
+    }
+  }
+  renderFcReminderPresets();
+}
+
 function addFreeCheck() {
   const input = document.getElementById('freeCheckInput');
-  const dtInput = document.getElementById('freeCheckDateTime');
   const val = input.value.trim();
   if (!val) return;
-  freeChecks.push({
-    label: val,
-    done: false,
-    remindAt: dtInput ? dtInput.value : '' // YYYY-MM-DDTHH:mm
-  });
+
+  let remindAt = '';
+  if (_fcReminderPresetIdx >= 0 && _fcReminderPresetIdx <= 3) {
+    const p = getReminderPresets()[_fcReminderPresetIdx];
+    remindAt = computePresetDatetime(p);
+  } else if (_fcReminderPresetIdx === 99) {
+    const dtInput = document.getElementById('freeCheckDateTime');
+    remindAt = dtInput ? dtInput.value : '';
+  }
+
+  freeChecks.push({ label: val, done: false, remindAt });
   input.value = '';
-  if (dtInput) dtInput.value = '';
+
+  // リマインダーが設定されていたら即座に.icsダウンロード
+  if (remindAt) {
+    const patName = document.getElementById('f_name')?.value?.trim() || '患者';
+    const dt = new Date(remindAt);
+    const title = encodeURIComponent(val + '（' + patName + '）');
+    const notes = encodeURIComponent('患者: ' + patName + '\nタスク: ' + val);
+    openReminderOrCalendar(title, notes, dt, null);
+  }
+
+  // リセット
+  _fcReminderPresetIdx = -1;
+  const customRow = document.getElementById('fcCustomRow');
+  if (customRow) customRow.style.display = 'none';
+  const lbl = document.getElementById('fcSelectedLabel');
+  if (lbl) lbl.textContent = '';
+  renderFcReminderPresets();
   renderFreeChecklistForm();
 }
 
@@ -5391,6 +5487,36 @@ function renderSettings() {
           </div>
           <button onclick="${cfg.resetFn}()" style="margin-top:8px;background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;">初期値に戻す</button>
         `;
+      })()}
+    </div>
+
+    <!-- リマインダープリセット設定 -->
+    <div class="summary-block" style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;margin-bottom:4px;color:var(--text);">🔔 リマインダープリセット設定</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.6;">タスク追加時のクイック時間選択ボタンの内容を変更できます。</div>
+      ${(() => {
+        const presets = appSettings.reminderPresets || [
+          { label: '今夜', offsetDays: 0, hour: 20, minute: 0 },
+          { label: '明日朝', offsetDays: 1, hour: 8, minute: 0 },
+          { label: '明日夕', offsetDays: 1, hour: 18, minute: 0 },
+          { label: '2日後朝', offsetDays: 2, hour: 8, minute: 0 },
+        ];
+        return presets.map((p, i) => `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;">
+            <input type="text" value="${p.label}" oninput="updateReminderPreset(${i},'label',this.value)"
+              style="width:70px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 7px;font-size:12px;color:var(--text);font-family:inherit;"
+              placeholder="ラベル">
+            <span style="font-size:11px;color:var(--text3);">+</span>
+            <input type="number" value="${p.offsetDays}" min="0" max="30" oninput="updateReminderPreset(${i},'offsetDays',+this.value)"
+              style="width:44px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 7px;font-size:12px;color:var(--text);font-family:inherit;text-align:center;">
+            <span style="font-size:11px;color:var(--text3);">日後</span>
+            <input type="number" value="${p.hour}" min="0" max="23" oninput="updateReminderPreset(${i},'hour',+this.value)"
+              style="width:44px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 7px;font-size:12px;color:var(--text);font-family:inherit;text-align:center;">
+            <span style="font-size:11px;color:var(--text3);">時</span>
+            <input type="number" value="${p.minute||0}" min="0" max="59" oninput="updateReminderPreset(${i},'minute',+this.value)"
+              style="width:44px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 7px;font-size:12px;color:var(--text);font-family:inherit;text-align:center;">
+            <span style="font-size:11px;color:var(--text3);">分</span>
+          </div>`).join('');
       })()}
     </div>
 
