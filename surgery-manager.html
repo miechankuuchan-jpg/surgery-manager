@@ -1473,6 +1473,46 @@ GH_CONFIG_END -->
 </div>
 
 <!-- Daily Brief Popup -->
+<!-- ===== チェックリスト項目リマインダー設定モーダル ===== -->
+<div id="checkReminderOverlay" onclick="closeCheckReminder(event)"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9100;align-items:flex-end;justify-content:center;">
+  <div id="checkReminderSheet"
+    style="background:var(--surface);border-radius:20px 20px 0 0;padding:18px 16px 40px;width:100%;max-width:480px;border-top:1px solid var(--border);max-height:88vh;overflow-y:auto;">
+    <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px;"></div>
+    <!-- 患者情報 -->
+    <div id="crPatientInfo" style="margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+      <div id="crPatientName" style="font-size:13px;font-weight:700;color:var(--text);"></div>
+      <div id="crPatientSub"  style="font-size:11px;color:var(--text3);margin-top:2px;"></div>
+    </div>
+    <!-- Step1: チェック項目選択 -->
+    <div id="crStep1">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.06em;margin-bottom:8px;">① リマインダーを設定する項目を選択</div>
+      <div id="crItemList" style="display:flex;flex-direction:column;gap:5px;"></div>
+    </div>
+    <!-- Step2: 日付・時間設定 -->
+    <div id="crStep2" style="display:none;margin-top:14px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.06em;margin-bottom:6px;">② 日付を選択</div>
+      <input type="date" id="crDate" oninput="crUpdateSummary()"
+        style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--text);font-family:inherit;box-sizing:border-box;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.06em;margin-bottom:8px;">③ 時間を選択</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:12px;">
+        <div id="crTimePresets" style="display:flex;gap:6px;flex:1;"></div>
+        <input type="time" id="crCustomTime" oninput="_crSelectedTime=this.value;crRenderTimePresets();crUpdateSummary();"
+          style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--text);font-family:inherit;width:100px;flex-shrink:0;">
+      </div>
+      <div id="crSelectedSummary" style="font-size:11px;color:var(--accent3);min-height:16px;margin-bottom:12px;text-align:center;font-weight:700;"></div>
+      <button onclick="registerCheckReminder()"
+        style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
+        🔔 リマインダー登録
+      </button>
+      <button onclick="crBackToStep1()"
+        style="width:100%;padding:10px;background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit;margin-top:6px;">
+        ← 項目選択に戻る
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Quick Reminder Modal -->
 <div id="quickReminderOverlay" onclick="closeQuickReminder(event)"
   style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9000;align-items:flex-end;justify-content:center;">
@@ -2035,6 +2075,11 @@ let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || 
     { label: '明日夕', offsetDays: 1, hour: 18, minute: 0 },
     { label: '2日後朝', offsetDays: 2, hour: 8,  minute: 0 },
   ],
+  reminderTimePresets: [
+    { label: '朝', hour: 7,  minute: 0 },
+    { label: '昼', hour: 12, minute: 0 },
+    { label: '夜', hour: 20, minute: 0 },
+  ],
 };
 // 3層チェックリスト 未設定なら初期値でシード
 if (!appSettings.defaultCheckItems || !appSettings.defaultCheckItems.length)
@@ -2486,6 +2531,14 @@ function updateReminderPreset(idx, key, val) {
   if (!appSettings.reminderPresets[idx]) return;
   appSettings.reminderPresets[idx][key] = val;
   save();
+}
+
+function updateReminderTimePreset(idx, key, val) {
+  if (!appSettings.reminderTimePresets) appSettings.reminderTimePresets = getReminderTimePresets();
+  if (!appSettings.reminderTimePresets[idx]) return;
+  appSettings.reminderTimePresets[idx][key] = val;
+  save();
+  renderSettings(); // プレビューを即時更新
 }
 
 function groupByOpDate(arr) {
@@ -3579,6 +3632,7 @@ function renderCard(c, expandByDefault=false) {
             <span class="op-date-badge ${status}">${isToday(c.opDate)?'TODAY':formatOpDate(c.opDate)}</span>
             <div style="display:flex;gap:4px;align-items:center;">
               ${isPastCase ? `<button class="icon-btn" style="width:28px;height:28px;font-size:11px;background:var(--green);color:#fff;border-color:transparent;" onclick="event.stopPropagation();completeAllTasks('${c.id}')" title="全完了">✅</button>` : ''}
+              <button class="icon-btn" style="width:28px;height:28px;font-size:14px;" onclick="event.stopPropagation();openCheckReminder('${c.id}')" title="リマインダー">🔔</button>
               <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('${c.id}')">✏️</button>
             </div>
           </div>
@@ -3593,17 +3647,6 @@ function renderCard(c, expandByDefault=false) {
       ${freeCheckHtml}
       ${sideEffectsHtml}
       ${memoHtml}
-      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;">
-        <button onclick="event.stopPropagation();openReminderQuick('${c.id}','前日確認')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
-          🔔 リマインダー登録
-        </button>
-        <button onclick="event.stopPropagation();addReminderPrevDay('${c.id}')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
-          📅 前日（自動）
-        </button>
-        <button onclick="event.stopPropagation();addReminderOpDay('${c.id}')" style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:8px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
-          🌅 当日朝（自動）
-        </button>
-      </div>
     </div>
     </div>
   </div>`;
@@ -3781,6 +3824,165 @@ function addReminderOpDay(id) {
   const title = encodeURIComponent('手術当日（' + c.name + '）');
   const notes = encodeURIComponent('術式: ' + (c.surgery||'') + '\n予定時間: ' + (c.time||'') + '\n担当: ' + (c.team||'') + '\n物品: ' + (c.items||''));
   openReminderOrCalendar(title, notes, dt, c);
+}
+
+// ========== チェック項目リマインダーモーダル ==========
+var _crCaseId = null;
+var _crSelectedItem = null; // { key, label }
+var _crSelectedTime = null; // 'HH:MM' string
+
+function getReminderTimePresets() {
+  if (appSettings.reminderTimePresets && appSettings.reminderTimePresets.length > 0)
+    return appSettings.reminderTimePresets;
+  return [
+    { label: '朝', hour: 7,  minute: 0 },
+    { label: '昼', hour: 12, minute: 0 },
+    { label: '夜', hour: 20, minute: 0 },
+  ];
+}
+
+function openCheckReminder(caseId) {
+  _crCaseId = caseId;
+  _crSelectedItem = null;
+  _crSelectedTime = null;
+  var c = cases.find(function(x) { return x.id === caseId; });
+  if (!c) return;
+
+  // 患者情報
+  var nameEl = document.getElementById('crPatientName');
+  var subEl  = document.getElementById('crStep1') && document.getElementById('crPatientSub');
+  if (nameEl) nameEl.textContent = c.name || '患者名未設定';
+  var sub = document.getElementById('crPatientSub');
+  if (sub) sub.textContent = (c.disease || '') + (c.surgery ? '　' + c.surgery : '');
+
+  // チェック項目リスト（default + mode + regimen + freeCheck）
+  var displayItems = getDisplayedChecklistItems(c);
+  var allItems = displayItems.map(function(item) {
+    return { key: item.key, label: item.label, isFree: false };
+  });
+  if (c.freeChecks) {
+    c.freeChecks.forEach(function(fc, i) {
+      if (!fc.done) allItems.push({ key: '__free_' + i, label: fc.label, isFree: true, freeIdx: i });
+    });
+  }
+
+  var itemListEl = document.getElementById('crItemList');
+  if (itemListEl) {
+    itemListEl.innerHTML = allItems.map(function(item) {
+      var done = !item.isFree && c.checks && c.checks[item.key];
+      return '<button onclick="crSelectItem(\'' + item.key.replace(/'/g,"\\'") + '\',\'' + item.label.replace(/'/g,"\\'") + '\')"'
+        + ' style="display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-family:inherit;">'
+        + '<span style="font-size:13px;">' + (item.isFree ? '📝' : (done ? '☑' : '□')) + '</span>'
+        + '<span style="font-size:12px;color:' + (done ? 'var(--text3)' : 'var(--text)') + ';flex:1;">' + item.label + '</span>'
+        + '<span style="font-size:12px;color:var(--text3);">›</span>'
+        + '</button>';
+    }).join('');
+  }
+
+  // Step1表示、Step2非表示
+  var s1 = document.getElementById('crStep1');
+  var s2 = document.getElementById('crStep2');
+  if (s1) s1.style.display = 'block';
+  if (s2) s2.style.display = 'none';
+
+  // 今日の日付をデフォルトに
+  var dateEl = document.getElementById('crDate');
+  if (dateEl) dateEl.value = toISODate(new Date());
+
+  // 時間プリセットを描画
+  crRenderTimePresets();
+
+  var ov = document.getElementById('checkReminderOverlay');
+  if (ov) ov.style.display = 'flex';
+}
+
+function crSelectItem(key, label) {
+  _crSelectedItem = { key: key, label: label };
+  var s1 = document.getElementById('crStep1');
+  var s2 = document.getElementById('crStep2');
+  if (s1) s1.style.display = 'none';
+  if (s2) s2.style.display = 'block';
+  crUpdateSummary();
+}
+
+function crBackToStep1() {
+  _crSelectedItem = null;
+  _crSelectedTime = null;
+  var s1 = document.getElementById('crStep1');
+  var s2 = document.getElementById('crStep2');
+  if (s1) s1.style.display = 'block';
+  if (s2) s2.style.display = 'none';
+}
+
+function crRenderTimePresets() {
+  var cont = document.getElementById('crTimePresets');
+  if (!cont) return;
+  var presets = getReminderTimePresets();
+  cont.innerHTML = presets.map(function(p, i) {
+    var timeStr = String(p.hour).padStart(2,'0') + ':' + String(p.minute||0).padStart(2,'0');
+    var isActive = _crSelectedTime === timeStr;
+    return '<button onclick="crSelectTimePreset(' + i + ')" style="flex:1;padding:10px 4px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;font-family:inherit;'
+      + 'border:1px solid ' + (isActive ? 'var(--accent3)' : 'var(--border)') + ';'
+      + 'background:' + (isActive ? 'rgba(255,209,102,0.2)' : 'var(--surface2)') + ';'
+      + 'color:' + (isActive ? 'var(--accent3)' : 'var(--text2)') + ';">'
+      + p.label + '<br><span style="font-size:10px;font-weight:400;">' + timeStr + '</span></button>';
+  }).join('');
+}
+
+function crSelectTimePreset(idx) {
+  var presets = getReminderTimePresets();
+  var p = presets[idx];
+  if (!p) return;
+  var timeStr = String(p.hour).padStart(2,'0') + ':' + String(p.minute||0).padStart(2,'0');
+  _crSelectedTime = timeStr;
+  var customEl = document.getElementById('crCustomTime');
+  if (customEl) customEl.value = timeStr;
+  crRenderTimePresets();
+  crUpdateSummary();
+}
+
+function crUpdateSummary() {
+  var el = document.getElementById('crSelectedSummary');
+  if (!el) return;
+  var dateEl = document.getElementById('crDate');
+  var timeEl = document.getElementById('crCustomTime');
+  var date = dateEl ? dateEl.value : '';
+  var time = (timeEl && timeEl.value) ? timeEl.value : _crSelectedTime || '';
+  if (_crSelectedItem && date && time) {
+    el.textContent = '🔔 「' + _crSelectedItem.label + '」 ' + date + ' ' + time;
+  } else {
+    el.textContent = date && time ? date + ' ' + time : '';
+  }
+}
+
+function registerCheckReminder() {
+  if (!_crSelectedItem) { alert('項目を選択してください'); return; }
+  var dateEl = document.getElementById('crDate');
+  var timeEl = document.getElementById('crCustomTime');
+  var date = dateEl ? dateEl.value : '';
+  var time = timeEl ? timeEl.value : '';
+  if (!date) { alert('日付を選択してください'); return; }
+  if (!time) { alert('時間を選択してください'); return; }
+  var dt = new Date(date + 'T' + time + ':00');
+  var c = cases.find(function(x) { return x.id === _crCaseId; });
+  var patName = c ? c.name : '患者';
+  var itemLabel = _crSelectedItem.label;
+  var title = encodeURIComponent(itemLabel + '（' + patName + '）');
+  var notes = encodeURIComponent(
+    '患者: ' + patName +
+    (c && c.disease ? '\n疾患: ' + c.disease : '') +
+    (c && c.surgery ? '\n術式/レジメン: ' + c.surgery : '') +
+    '\nタスク: ' + itemLabel
+  );
+  openReminderOrCalendar(title, notes, dt, c);
+  var ov = document.getElementById('checkReminderOverlay');
+  if (ov) ov.style.display = 'none';
+}
+
+function closeCheckReminder(e) {
+  if (e && e.target !== document.getElementById('checkReminderOverlay')) return;
+  var ov = document.getElementById('checkReminderOverlay');
+  if (ov) ov.style.display = 'none';
 }
 
 function openReminderOrCalendar(title, notes, dt, c) {
@@ -5490,10 +5692,36 @@ function renderSettings() {
       })()}
     </div>
 
-    <!-- リマインダープリセット設定 -->
+    <!-- リマインダー時間プリセット設定（3択） -->
     <div class="summary-block" style="margin-bottom:12px;">
-      <div style="font-size:11px;font-weight:700;margin-bottom:4px;color:var(--text);">🔔 リマインダープリセット設定</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.6;">タスク追加時のクイック時間選択ボタンの内容を変更できます。</div>
+      <div style="font-size:11px;font-weight:700;margin-bottom:4px;color:var(--text);">🔔 リマインダー時間プリセット設定</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.6;">🔔ボタンで開く時間選択の3択ボタンをカスタマイズできます。</div>
+      ${(() => {
+        const tps = appSettings.reminderTimePresets || [
+          { label: '朝', hour: 7, minute: 0 },
+          { label: '昼', hour: 12, minute: 0 },
+          { label: '夜', hour: 20, minute: 0 },
+        ];
+        return tps.map((p, i) => `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;">
+            <input type="text" value="${p.label}" oninput="updateReminderTimePreset(${i},'label',this.value)"
+              style="width:60px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 7px;font-size:12px;color:var(--text);font-family:inherit;"
+              placeholder="ラベル">
+            <input type="number" value="${p.hour}" min="0" max="23" oninput="updateReminderTimePreset(${i},'hour',+this.value)"
+              style="width:50px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 7px;font-size:12px;color:var(--text);font-family:inherit;text-align:center;">
+            <span style="font-size:11px;color:var(--text3);">時</span>
+            <input type="number" value="${p.minute||0}" min="0" max="59" oninput="updateReminderTimePreset(${i},'minute',+this.value)"
+              style="width:50px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 7px;font-size:12px;color:var(--text);font-family:inherit;text-align:center;">
+            <span style="font-size:11px;color:var(--text3);">分</span>
+            <span style="font-size:11px;color:var(--accent3);margin-left:4px;">${String(p.hour).padStart(2,'0')}:${String(p.minute||0).padStart(2,'0')}</span>
+          </div>`).join('');
+      })()}
+    </div>
+
+    <!-- リマインダープリセット設定（タスク追加フォーム用・日数オフセット） -->
+    <div class="summary-block" style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;margin-bottom:4px;color:var(--text);">📅 タスク追加フォーム プリセット設定</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.6;">タスク追加時のクイック日時選択ボタンをカスタマイズできます。</div>
       ${(() => {
         const presets = appSettings.reminderPresets || [
           { label: '今夜', offsetDays: 0, hour: 20, minute: 0 },
