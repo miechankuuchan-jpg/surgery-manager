@@ -3532,7 +3532,7 @@ function renderCard(c, expandByDefault=false) {
             ? `<span style="font-size:9px;color:var(--accent3);margin-left:4px;">🔔${fc.remindAt.replace('T',' ').slice(5,16)}</span>`
             : '';
           const remindBtn = !fc.done
-            ? `<button onclick="event.stopPropagation();openReminderQuick('${c.id}','${fc.label.replace(/'/g,"\\'")}');" style="background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;font-family:inherit;flex-shrink:0;line-height:1.2;">🔔</button>`
+            ? `<button onclick="event.stopPropagation();openCheckReminder('${c.id}');" style="background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;font-family:inherit;flex-shrink:0;line-height:1.2;">🔔</button>`
             : '';
           return `<div style="display:flex;align-items:center;gap:6px;">
             <span class="check-item${fc.done?' done':''}" onclick="toggleFreeCheckCard('${c.id}',${i})" style="flex:1;">
@@ -3643,7 +3643,11 @@ function renderCard(c, expandByDefault=false) {
       ${sf.time !== false ? `<div class="info-row"><span class="info-label">予定時間</span><span class="info-value">${c.time || '—'}</span></div>` : ''}
       ${sf.items !== false ? `<div class="info-row"><span class="info-label">物品／注意</span><span class="info-value">${c.items || '特記事項なし'}</span></div>` : ''}
       ${sf.team !== false ? `<div class="info-row"><span class="info-label">担当</span><div class="team-chips">${teamChips || '<span style="color:var(--text3);font-size:12px">未設定</span>'}</div></div>` : ''}
-      <div class="checklist" style="margin-top:10px">${checks}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;margin-bottom:4px;">
+        <span style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.06em;">チェックリスト</span>
+        <button onclick="event.stopPropagation();openCheckReminder('${c.id}')" style="background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:3px;">🔔 リマインダー設定</button>
+      </div>
+      <div class="checklist">${checks}</div>
       ${freeCheckHtml}
       ${sideEffectsHtml}
       ${memoHtml}
