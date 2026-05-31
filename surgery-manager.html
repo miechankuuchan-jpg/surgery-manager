@@ -1101,6 +1101,7 @@ GH_CONFIG_END -->
   <div class="tab" onclick="switchTab('summary_incomplete', this)">📋 サマリ未完了</div>
   <div class="tab" onclick="switchTab('discharge_weekly', this)">🏥 退院一覧</div>
   <div class="tab" onclick="switchTab('knowledge', this)">📚 知識</div>
+  <div class="tab" onclick="switchTab('cert', this)">📊 申請</div>
 </div>
 
 <div id="searchBar" style="padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);display:none;">
@@ -1273,6 +1274,56 @@ GH_CONFIG_END -->
         <button onclick="addExamSchedule()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">追加</button>
       </div>
     </div>
+
+    <!-- 専門医申請データ -->
+    <div class="section-divider" style="margin-top:14px;">📋 専門医申請データ</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5;">専門医機構への症例提出用データです。年月日は入院日が自動適用されます。</div>
+
+    <div class="form-group">
+      <label class="form-label">年齢</label>
+      <input type="number" class="form-input" id="f_age" placeholder="65" min="0" max="130" style="text-align:right;max-width:120px;">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">性別</label>
+        <select class="form-input" id="f_gender">
+          <option value="">—</option>
+          <option value="男">男性</option>
+          <option value="女">女性</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">外来・入院</label>
+        <select class="form-input" id="f_outInpatient">
+          <option value="">—</option>
+          <option value="入院">入院</option>
+          <option value="外来">外来</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">カルテ番号</label>
+      <input type="text" class="form-input" id="f_chartNo" placeholder="12345678">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">研修施設名</label>
+      <input type="text" class="form-input" id="f_facility" placeholder="○○大学病院 耳鼻咽喉科・頭頸部外科">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">指導医名</label>
+      <select class="form-input" id="f_supervisor" onchange="onSupervisorChange(this)">
+        <option value="">—（設定で指導医リストを登録してください）</option>
+      </select>
+    </div>
+    <div id="f_supervisorRegNoBox" style="display:none;margin-top:-8px;margin-bottom:12px;padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--text3);">
+      指導医登録番号: <span id="f_supervisorRegNo" style="color:var(--text);font-weight:700;"></span>
+    </div>
+    <!-- hidden field for storing selected supervisor reg no -->
+    <input type="hidden" id="f_supervisorRegNoVal">
 
     <input type="hidden" id="f_editId">
     <button class="btn-primary" onclick="saveCase()">保存</button>
@@ -2080,7 +2131,12 @@ let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || 
     { label: '昼', hour: 12, minute: 0 },
     { label: '夜', hour: 20, minute: 0 },
   ],
+  supervisors: [],       // [{name:'...', regNo:'...'}]
+  defaultFacility: '',   // 研修施設名デフォルト値
 };
+// 専門医申請データ 未設定なら初期値
+if (!appSettings.supervisors) appSettings.supervisors = [];
+if (appSettings.defaultFacility === undefined) appSettings.defaultFacility = '';
 // 3層チェックリスト 未設定なら初期値でシード
 if (!appSettings.defaultCheckItems || !appSettings.defaultCheckItems.length)
   appSettings.defaultCheckItems = JSON.parse(JSON.stringify(DEFAULT_CHECK_ITEMS_BUILTIN));
@@ -2570,6 +2626,7 @@ function render() {
   else if (currentTab === 'discharge_weekly') renderDischargeWeekly(el);
   else if (currentTab === 'calendar') renderCalendar(el);
   else if (currentTab === 'knowledge') renderKnowledge(el);
+  else if (currentTab === 'cert') renderCertExport(el);
   else if (currentTab === 'summary') renderSummary(el);
   else if (currentTab === 'import') renderImport(el);
   updatePendingBadge();
@@ -3058,6 +3115,134 @@ function knGradeLabel(g) {
   if (g === 'high') return '高';
   if (g === 'mid')  return '中';
   return '低';
+}
+
+// ========== 専門医申請エクスポート ==========
+function renderCertExport(el) {
+  var headers = ['疾患名','年月日','年齢','性別','カルテ番号','外来・入院','研修施設名','指導医名','指導医登録番号'];
+
+  // 申請データが少しでも入力されているケースのみ対象（全フィールド空でも表示）
+  var allCases = cases.slice().sort(function(a, b) {
+    var da = a.admDate || a.opDate || '';
+    var db = b.admDate || b.opDate || '';
+    return da > db ? 1 : da < db ? -1 : 0;
+  });
+
+  var html = '<div style="padding:14px;">';
+  html += '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">📊 専門医申請データ一覧</div>';
+  html += '<div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5;">「TSVコピー」を押してExcelに直接貼り付けできます。各症例の編集フォームから専門医申請データを入力してください。</div>';
+
+  // コピーボタン
+  html += '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">';
+  html += '<button onclick="copyCertTSV()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;" id="certCopyBtn">📋 TSVコピー（Excelに貼り付け）</button>';
+  html += '<button onclick="copyCertTSVWithHeader()" style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;" id="certCopyBtnH">📋 ヘッダー付きでコピー</button>';
+  html += '</div>';
+
+  if (allCases.length === 0) {
+    html += '<div style="text-align:center;padding:40px;color:var(--text3);">症例が登録されていません</div>';
+    html += '</div>';
+    el.innerHTML = html;
+    return;
+  }
+
+  // テーブル
+  html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:700px;">';
+  // ヘッダー行
+  html += '<thead><tr>';
+  html += '<th style="background:var(--surface2);border:1px solid var(--border);padding:7px 10px;color:var(--text3);font-weight:700;font-size:10px;white-space:nowrap;text-align:left;">No.</th>';
+  headers.forEach(function(h) {
+    html += '<th style="background:var(--surface2);border:1px solid var(--border);padding:7px 10px;color:var(--text3);font-weight:700;font-size:10px;white-space:nowrap;text-align:left;">' + h + '</th>';
+  });
+  html += '</tr></thead>';
+
+  // データ行
+  html += '<tbody>';
+  allCases.forEach(function(c, idx) {
+    var rowBg = idx % 2 === 0 ? 'var(--surface)' : 'var(--surface2)';
+    var certFilled = c.age || c.gender || c.chartNo || c.supervisorName;
+    var rowStyle = 'background:' + rowBg + ';' + (certFilled ? '' : 'opacity:0.55;');
+    html += '<tr style="' + rowStyle + '">';
+    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text3);text-align:center;">' + (idx + 1) + '</td>';
+    // 疾患名
+    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);white-space:nowrap;">' + esc(c.disease || c.surgery || '') + '</td>';
+    // 年月日
+    var dateStr = c.admDate || c.opDate || '';
+    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);white-space:nowrap;">' + esc(dateStr) + '</td>';
+    // 年齢
+    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);text-align:center;">' + esc(c.age || '') + '</td>';
+    // 性別
+    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);text-align:center;">' + esc(c.gender || '') + '</td>';
+    // カルテ番号
+    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);">' + esc(c.chartNo || '') + '</td>';
+    // 外来・入院
+    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);text-align:center;">' + esc(c.outInpatient || '') + '</td>';
+    // 研修施設名
+    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);">' + esc(c.facility || appSettings.defaultFacility || '') + '</td>';
+    // 指導医名
+    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);white-space:nowrap;">' + esc(c.supervisorName || '') + '</td>';
+    // 指導医登録番号
+    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);">' + esc(c.supervisorRegNo || '') + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  // 入力状況サマリー
+  var filled = allCases.filter(function(c) { return c.age || c.chartNo || c.supervisorName; }).length;
+  html += '<div style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--text3);">';
+  html += '申請データ入力済み: <span style="color:var(--accent);font-weight:700;">' + filled + '件</span> ／ 全症例: <span style="font-weight:700;">' + allCases.length + '件</span>';
+  html += '　<span style="color:var(--text3);">（薄く表示されている行は申請データ未入力）</span>';
+  html += '</div>';
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function buildCertRows(includeHeader) {
+  var headers = ['疾患名','年月日','年齢','性別','カルテ番号','外来・入院','研修施設名','指導医名','指導医登録番号'];
+  var allCases = cases.slice().sort(function(a, b) {
+    var da = a.admDate || a.opDate || '';
+    var db = b.admDate || b.opDate || '';
+    return da > db ? 1 : da < db ? -1 : 0;
+  });
+  var lines = [];
+  if (includeHeader) lines.push(headers.join('\t'));
+  allCases.forEach(function(c) {
+    var dateStr = c.admDate || c.opDate || '';
+    var row = [
+      c.disease || c.surgery || '',
+      dateStr,
+      c.age || '',
+      c.gender || '',
+      c.chartNo || '',
+      c.outInpatient || '',
+      c.facility || appSettings.defaultFacility || '',
+      c.supervisorName || '',
+      c.supervisorRegNo || '',
+    ];
+    lines.push(row.join('\t'));
+  });
+  return lines.join('\n');
+}
+
+function copyCertTSV() {
+  var text = buildCertRows(false);
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById('certCopyBtn');
+    if (btn) { btn.textContent = '✓ コピーしました！'; setTimeout(function() { btn.textContent = '📋 TSVコピー（Excelに貼り付け）'; }, 2500); }
+  }).catch(function() { alert('コピーに失敗しました。手動でコピーしてください。'); });
+}
+
+function copyCertTSVWithHeader() {
+  var text = buildCertRows(true);
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById('certCopyBtnH');
+    if (btn) { btn.textContent = '✓ コピーしました！'; setTimeout(function() { btn.textContent = '📋 ヘッダー付きでコピー'; }, 2500); }
+  }).catch(function() { alert('コピーに失敗しました。'); });
 }
 
 function renderKnowledge(el) {
@@ -4164,10 +4349,14 @@ function openAddModal() {
   document.getElementById('modalTitle').textContent = '症例を追加';
   document.getElementById('deleteBtn').style.display = 'none';
   clearForm();
-  // デフォルト担当者を自動入力
+  // デフォルト担当者・施設名を自動入力
   if (appSettings.defaultTeam) {
     document.getElementById('f_team').value = appSettings.defaultTeam;
   }
+  populateSupervisorSelect();
+  document.getElementById('f_facility').value = appSettings.defaultFacility || '';
+  document.getElementById('f_supervisorRegNoVal').value = '';
+  updateSupervisorRegDisplay('');
   selectedExamType = 'blood';
   buildChecklistForm({});
   renderFreeChecklistForm();
@@ -4210,6 +4399,16 @@ function openEditModal(id) {
   document.getElementById('f_memo').value = c.memo || '';
   document.getElementById('f_icu').checked = !!c.icu;
   document.getElementById('f_recon').checked = !!c.recon;
+  // 専門医申請データ
+  populateSupervisorSelect();
+  document.getElementById('f_age').value = c.age || '';
+  document.getElementById('f_gender').value = c.gender || '';
+  document.getElementById('f_outInpatient').value = c.outInpatient || (c.admDate ? '入院' : '');
+  document.getElementById('f_chartNo').value = c.chartNo || '';
+  document.getElementById('f_facility').value = c.facility || appSettings.defaultFacility || '';
+  document.getElementById('f_supervisor').value = c.supervisorName || '';
+  document.getElementById('f_supervisorRegNoVal').value = c.supervisorRegNo || '';
+  updateSupervisorRegDisplay(c.supervisorRegNo || '');
   const editMode = c.mode || detectCaseMode(c.surgery || '');
   const fMode = document.getElementById('f_mode');
   if (fMode) fMode.value = editMode;
@@ -4229,11 +4428,85 @@ function openEditModal(id) {
 }
 
 function clearForm() {
-  ['f_opDate','f_admDate','f_dischargeDate','f_pathology','f_courseNotes','f_name','f_disease','f_surgery','f_time','f_team','f_items','f_memo'].forEach(id => {
+  ['f_opDate','f_admDate','f_dischargeDate','f_pathology','f_courseNotes','f_name','f_disease','f_surgery','f_time','f_team','f_items','f_memo',
+   'f_age','f_chartNo','f_facility','f_supervisorRegNoVal'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('f_icu').checked = false;
   document.getElementById('f_recon').checked = false;
+  // セレクト系リセット
+  const gender = document.getElementById('f_gender');
+  if (gender) gender.value = '';
+  const outin = document.getElementById('f_outInpatient');
+  if (outin) outin.value = '';
+  updateSupervisorRegDisplay('');
+}
+
+// ========== 指導医セレクト ==========
+function populateSupervisorSelect() {
+  var sel = document.getElementById('f_supervisor');
+  if (!sel) return;
+  var currentVal = sel.value;
+  var sups = appSettings.supervisors || [];
+  sel.innerHTML = '<option value="">—</option>'
+    + sups.map(function(s) {
+        return '<option value="' + s.name.replace(/"/g, '&quot;') + '">' + s.name + '</option>';
+      }).join('');
+  sel.value = currentVal;
+}
+
+function onSupervisorChange(sel) {
+  var name = sel.value;
+  var sups = appSettings.supervisors || [];
+  var found = sups.find(function(s) { return s.name === name; });
+  var regNo = found ? (found.regNo || '') : '';
+  document.getElementById('f_supervisorRegNoVal').value = regNo;
+  updateSupervisorRegDisplay(regNo);
+}
+
+function updateSupervisorRegDisplay(regNo) {
+  var box = document.getElementById('f_supervisorRegNoBox');
+  var span = document.getElementById('f_supervisorRegNo');
+  if (!box || !span) return;
+  if (regNo) {
+    span.textContent = regNo;
+    box.style.display = 'block';
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+function addSupervisor() {
+  var nameEl = document.getElementById('s_newSupName');
+  var regEl  = document.getElementById('s_newSupRegNo');
+  if (!nameEl || !regEl) return;
+  var name = nameEl.value.trim();
+  var regNo = regEl.value.trim();
+  if (!name) { alert('指導医名を入力してください'); return; }
+  if (!appSettings.supervisors) appSettings.supervisors = [];
+  appSettings.supervisors.push({ name: name, regNo: regNo });
+  nameEl.value = ''; regEl.value = '';
+  save(); renderSettings();
+}
+
+function removeSupervisor(idx) {
+  if (!appSettings.supervisors) return;
+  appSettings.supervisors.splice(idx, 1);
+  save(); renderSettings();
+}
+
+function updateSupervisor(idx, key, val) {
+  if (!appSettings.supervisors || !appSettings.supervisors[idx]) return;
+  appSettings.supervisors[idx][key] = val;
+  save();
+}
+
+function saveDefaultFacility() {
+  var el = document.getElementById('s_defaultFacility');
+  if (!el) return;
+  appSettings.defaultFacility = el.value.trim();
+  save();
+  alert('研修施設名を保存しました');
 }
 
 let _fcReminderPresetIdx = -1; // -1=なし, 0-3=プリセット, 99=カスタム
@@ -4480,6 +4753,14 @@ function saveCase() {
     checks,
     freeChecks: JSON.parse(JSON.stringify(freeChecks)),
     examSchedules: JSON.parse(JSON.stringify(currentExamSchedules)),
+    // 専門医申請データ（年月日は admDate を使用）
+    age:            document.getElementById('f_age').value,
+    gender:         document.getElementById('f_gender').value,
+    outInpatient:   document.getElementById('f_outInpatient').value,
+    chartNo:        document.getElementById('f_chartNo').value.trim(),
+    facility:       document.getElementById('f_facility').value.trim(),
+    supervisorName: document.getElementById('f_supervisor').value,
+    supervisorRegNo:document.getElementById('f_supervisorRegNoVal').value,
   };
 
   if (editingId) {
@@ -5884,6 +6165,51 @@ function renderSettings() {
           <option value="crt">📡ケモラジ</option>
         </select>
         <button onclick="addRegimen()" style="background:rgba(79,140,255,0.15);color:var(--accent);border:1px solid rgba(79,140,255,0.35);border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">追加</button>
+      </div>
+    </div>
+
+    <!-- 研修施設名デフォルト -->
+    <div class="summary-block" style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;margin-bottom:4px;color:var(--text);">🏥 研修施設名（専門医申請用）</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5;">新規症例追加時に自動入力されます。</div>
+      <div class="form-group">
+        <input type="text" class="form-input" id="s_defaultFacility" value="${(appSettings.defaultFacility||'').replace(/"/g,'&quot;')}"
+          placeholder="例：○○大学病院 耳鼻咽喉科・頭頸部外科" style="font-size:12px;">
+      </div>
+      <button onclick="saveDefaultFacility()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;">保存</button>
+    </div>
+
+    <!-- 指導医リスト -->
+    <div class="summary-block" style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;margin-bottom:4px;color:var(--text);">👨‍⚕️ 指導医リスト（専門医申請用）</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5;">指導医名と登録番号を登録しておくと、症例入力時に選択できます。</div>
+      ${(() => {
+        var sups = appSettings.supervisors || [];
+        if (sups.length === 0) return '<div style="font-size:11px;color:var(--text3);padding:6px 0;margin-bottom:8px;">まだ登録されていません</div>';
+        return '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">'
+          + sups.map(function(s, i) {
+              return '<div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;">'
+                + '<input type="text" value="' + s.name.replace(/"/g,'&quot;') + '" oninput="updateSupervisor(' + i + ',\'name\',this.value)"'
+                + ' style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--text);font-family:inherit;" placeholder="指導医名">'
+                + '<input type="text" value="' + (s.regNo||'').replace(/"/g,'&quot;') + '" oninput="updateSupervisor(' + i + ',\'regNo\',this.value)"'
+                + ' style="width:120px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--text);font-family:inherit;" placeholder="登録番号">'
+                + '<button onclick="removeSupervisor(' + i + ')" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:0;line-height:1;">×</button>'
+                + '</div>';
+            }).join('')
+          + '</div>';
+      })()}
+      <div style="display:flex;gap:6px;align-items:flex-end;">
+        <div style="flex:1;">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px;">指導医名</div>
+          <input type="text" class="form-input" id="s_newSupName" placeholder="山田 太郎" style="font-size:12px;"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();addSupervisor();}">
+        </div>
+        <div style="width:130px;">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px;">登録番号</div>
+          <input type="text" class="form-input" id="s_newSupRegNo" placeholder="12345" style="font-size:12px;"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();addSupervisor();}">
+        </div>
+        <button onclick="addSupervisor()" style="background:rgba(79,140,255,0.15);color:var(--accent);border:1px solid rgba(79,140,255,0.35);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">追加</button>
       </div>
     </div>
 
