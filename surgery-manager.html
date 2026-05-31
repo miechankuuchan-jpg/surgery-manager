@@ -2200,7 +2200,7 @@ if (appSettings.supervisors.length === 0) {
     { name: '能田 淳平',  regNo: '01650' },
     { name: '三谷 壮平',  regNo: '01651' },
   ];
-  save();
+  localStorage.setItem('app_settings', JSON.stringify(appSettings));
 }
 // 3層チェックリスト 未設定なら初期値でシード
 if (!appSettings.defaultCheckItems || !appSettings.defaultCheckItems.length)
