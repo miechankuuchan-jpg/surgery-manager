@@ -2161,43 +2161,27 @@ let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || 
 // 専門医申請データ 未設定なら初期値
 if (!appSettings.supervisors) appSettings.supervisors = [];
 if (appSettings.defaultFacility === undefined) appSettings.defaultFacility = '';
-// 指導医リストが空の場合はデフォルトデータを登録
+// 指導医リストが空の場合はデフォルト35名を登録
+// (DEFAULT_SUPERVISORS は関数定義の中にあるため、ここでは直接定義)
 if (appSettings.supervisors.length === 0) {
   appSettings.supervisors = [
-    { name: '羽藤 直人',  regNo: '01143' },
-    { name: '鵜久森 徹',  regNo: '01144' },
-    { name: '岡田 昌浩',  regNo: '01145' },
-    { name: '田中 加緒里', regNo: '01146' },
-    { name: '西田 直哉',  regNo: '01147' },
-    { name: '白馬 伸洋',  regNo: '01148' },
-    { name: '山田 啓之',  regNo: '01149' },
-    { name: '吉田 正',   regNo: '01150' },
-    { name: '脇坂 浩之',  regNo: '01151' },
-    { name: '浅井 真紀',  regNo: '01152' },
-    { name: '有友 宏',   regNo: '01153' },
-    { name: '篠森 裕介',  regNo: '01154' },
-    { name: '田口 亜紀',  regNo: '01155' },
-    { name: '川田 晃弘',  regNo: '01156' },
-    { name: '宮本 佳人',  regNo: '01157' },
-    { name: '佐々木 康',  regNo: '01158' },
-    { name: '相原 隆一',  regNo: '01159' },
-    { name: '澤井 尚樹',  regNo: '01160' },
-    { name: '寺岡 正人',  regNo: '01161' },
-    { name: '富所 雄一',  regNo: '01162' },
-    { name: '中村 光士郎', regNo: '01163' },
-    { name: '本多 伸光',  regNo: '01164' },
-    { name: '兵頭 純',   regNo: '01165' },
-    { name: '高橋 宏尚',  regNo: '01166' },
-    { name: '横井 隆司',  regNo: '01167' },
-    { name: '大河内 喜久', regNo: '01168' },
-    { name: '佐伯 忠彦',  regNo: '01169' },
-    { name: '渡邊 太志',  regNo: '01170' },
-    { name: '松本 秀',   regNo: '01171' },
-    { name: '森 敏裕',   regNo: '01172' },
-    { name: '高木 大樹',  regNo: '01504' },
-    { name: '上田 哲平',  regNo: '01505' },
-    { name: '眞田 明昌',  regNo: '01649' },
-    { name: '能田 淳平',  regNo: '01650' },
+    { name: '羽藤 直人',  regNo: '01143' }, { name: '鵜久森 徹',  regNo: '01144' },
+    { name: '岡田 昌浩',  regNo: '01145' }, { name: '田中 加緒里', regNo: '01146' },
+    { name: '西田 直哉',  regNo: '01147' }, { name: '白馬 伸洋',  regNo: '01148' },
+    { name: '山田 啓之',  regNo: '01149' }, { name: '吉田 正',   regNo: '01150' },
+    { name: '脇坂 浩之',  regNo: '01151' }, { name: '浅井 真紀',  regNo: '01152' },
+    { name: '有友 宏',   regNo: '01153' }, { name: '篠森 裕介',  regNo: '01154' },
+    { name: '田口 亜紀',  regNo: '01155' }, { name: '川田 晃弘',  regNo: '01156' },
+    { name: '宮本 佳人',  regNo: '01157' }, { name: '佐々木 康',  regNo: '01158' },
+    { name: '相原 隆一',  regNo: '01159' }, { name: '澤井 尚樹',  regNo: '01160' },
+    { name: '寺岡 正人',  regNo: '01161' }, { name: '富所 雄一',  regNo: '01162' },
+    { name: '中村 光士郎', regNo: '01163' }, { name: '本多 伸光',  regNo: '01164' },
+    { name: '兵頭 純',   regNo: '01165' }, { name: '高橋 宏尚',  regNo: '01166' },
+    { name: '横井 隆司',  regNo: '01167' }, { name: '大河内 喜久', regNo: '01168' },
+    { name: '佐伯 忠彦',  regNo: '01169' }, { name: '渡邊 太志',  regNo: '01170' },
+    { name: '松本 秀',   regNo: '01171' }, { name: '森 敏裕',   regNo: '01172' },
+    { name: '高木 大樹',  regNo: '01504' }, { name: '上田 哲平',  regNo: '01505' },
+    { name: '眞田 明昌',  regNo: '01649' }, { name: '能田 淳平',  regNo: '01650' },
     { name: '三谷 壮平',  regNo: '01651' },
   ];
   localStorage.setItem('app_settings', JSON.stringify(appSettings));
@@ -3184,7 +3168,7 @@ function knGradeLabel(g) {
 
 // ========== 専門医申請エクスポート ==========
 function renderCertExport(el) {
-  var headers = ['疾患名','年月日','年齢','性別','カルテ番号','外来・入院','研修施設名','指導医名','指導医登録番号'];
+  var headers = ['疾患名','術式','年月日','年齢','性別','カルテ番号','外来・入院','研修施設名','指導医名','指導医登録番号'];
 
   // 申請データが少しでも入力されているケースのみ対象（全フィールド空でも表示）
   var allCases = cases.slice().sort(function(a, b) {
@@ -3230,7 +3214,10 @@ function renderCertExport(el) {
     html += '<tr style="' + rowStyle + '">';
     html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text3);text-align:center;">' + (idx + 1) + '</td>';
     // 疾患名
-    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);white-space:nowrap;">' + esc(c.disease || c.surgery || '') + '</td>';
+    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);white-space:nowrap;">' + esc(c.disease || '') + '</td>';
+    // 術式（オペ症例のみ）
+    var surgStr = (c.mode === 'ope') ? (c.surgery || '') : '';
+    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);white-space:nowrap;">' + esc(surgStr) + '</td>';
     // 年月日
     var dateStr = c.admDate || c.opDate || '';
     html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);white-space:nowrap;">' + esc(dateStr) + '</td>';
@@ -3268,7 +3255,7 @@ function esc(str) {
 }
 
 function buildCertRows(includeHeader) {
-  var headers = ['疾患名','年月日','年齢','性別','カルテ番号','外来・入院','研修施設名','指導医名','指導医登録番号'];
+  var headers = ['疾患名','術式','年月日','年齢','性別','カルテ番号','外来・入院','研修施設名','指導医名','指導医登録番号'];
   var allCases = cases.slice().sort(function(a, b) {
     var da = a.admDate || a.opDate || '';
     var db = b.admDate || b.opDate || '';
@@ -3278,8 +3265,10 @@ function buildCertRows(includeHeader) {
   if (includeHeader) lines.push(headers.join('\t'));
   allCases.forEach(function(c) {
     var dateStr = c.admDate || c.opDate || '';
+    var surgVal = (c.mode === 'ope') ? (c.surgery || '') : '';
     var row = [
-      c.disease || c.surgery || '',
+      c.disease || '',
+      surgVal,
       dateStr,
       c.age || '',
       c.gender || '',
@@ -4587,6 +4576,50 @@ function updateSupervisor(idx, key, val) {
   if (!appSettings.supervisors || !appSettings.supervisors[idx]) return;
   appSettings.supervisors[idx][key] = val;
   save();
+}
+
+var DEFAULT_SUPERVISORS = [
+  { name: '羽藤 直人',  regNo: '01143' },
+  { name: '鵜久森 徹',  regNo: '01144' },
+  { name: '岡田 昌浩',  regNo: '01145' },
+  { name: '田中 加緒里', regNo: '01146' },
+  { name: '西田 直哉',  regNo: '01147' },
+  { name: '白馬 伸洋',  regNo: '01148' },
+  { name: '山田 啓之',  regNo: '01149' },
+  { name: '吉田 正',   regNo: '01150' },
+  { name: '脇坂 浩之',  regNo: '01151' },
+  { name: '浅井 真紀',  regNo: '01152' },
+  { name: '有友 宏',   regNo: '01153' },
+  { name: '篠森 裕介',  regNo: '01154' },
+  { name: '田口 亜紀',  regNo: '01155' },
+  { name: '川田 晃弘',  regNo: '01156' },
+  { name: '宮本 佳人',  regNo: '01157' },
+  { name: '佐々木 康',  regNo: '01158' },
+  { name: '相原 隆一',  regNo: '01159' },
+  { name: '澤井 尚樹',  regNo: '01160' },
+  { name: '寺岡 正人',  regNo: '01161' },
+  { name: '富所 雄一',  regNo: '01162' },
+  { name: '中村 光士郎', regNo: '01163' },
+  { name: '本多 伸光',  regNo: '01164' },
+  { name: '兵頭 純',   regNo: '01165' },
+  { name: '高橋 宏尚',  regNo: '01166' },
+  { name: '横井 隆司',  regNo: '01167' },
+  { name: '大河内 喜久', regNo: '01168' },
+  { name: '佐伯 忠彦',  regNo: '01169' },
+  { name: '渡邊 太志',  regNo: '01170' },
+  { name: '松本 秀',   regNo: '01171' },
+  { name: '森 敏裕',   regNo: '01172' },
+  { name: '高木 大樹',  regNo: '01504' },
+  { name: '上田 哲平',  regNo: '01505' },
+  { name: '眞田 明昌',  regNo: '01649' },
+  { name: '能田 淳平',  regNo: '01650' },
+  { name: '三谷 壮平',  regNo: '01651' },
+];
+
+function resetSupervisors() {
+  if (!confirm('指導医リストをデフォルトの35名に戻しますか？\n（追加した指導医は削除されます）')) return;
+  appSettings.supervisors = JSON.parse(JSON.stringify(DEFAULT_SUPERVISORS));
+  save(); renderSettings();
 }
 
 function saveDefaultFacility() {
@@ -6299,6 +6332,7 @@ function renderSettings() {
         </div>
         <button onclick="addSupervisor()" style="background:rgba(79,140,255,0.15);color:var(--accent);border:1px solid rgba(79,140,255,0.35);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">追加</button>
       </div>
+      <button onclick="resetSupervisors()" style="margin-top:10px;width:100%;background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:7px 12px;font-size:11px;cursor:pointer;font-family:inherit;">🔄 デフォルトの35名に戻す</button>
     </div>
 
     <!-- データ管理 -->
