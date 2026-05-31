@@ -1125,6 +1125,22 @@ GH_CONFIG_END -->
     <div class="modal-handle"></div>
     <div class="modal-title" id="modalTitle">症例を追加</div>
 
+    <!-- フォーム内タブ -->
+    <div style="display:flex;gap:0;margin-bottom:16px;border-radius:10px;overflow:hidden;border:1px solid var(--border);">
+      <button type="button" id="formTabBtn_info" onclick="switchFormTab('info')"
+        style="flex:1;padding:10px 6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;border:none;transition:all 0.15s;
+               background:var(--accent);color:#fff;">
+        🏥 症例情報
+      </button>
+      <button type="button" id="formTabBtn_cert" onclick="switchFormTab('cert')"
+        style="flex:1;padding:10px 6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;border:none;border-left:1px solid var(--border);transition:all 0.15s;
+               background:var(--surface2);color:var(--text2);">
+        📋 専門医申請
+      </button>
+    </div>
+
+    <!-- タブ1: 症例情報 -->
+    <div id="formTab_info">
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">オペ日</label>
@@ -1275,16 +1291,19 @@ GH_CONFIG_END -->
       </div>
     </div>
 
-    <!-- 専門医申請データ -->
-    <div class="section-divider" style="margin-top:14px;">📋 専門医申請データ</div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5;">専門医機構への症例提出用データです。年月日は入院日が自動適用されます。</div>
+    </div><!-- /formTab_info -->
 
-    <div class="form-group">
-      <label class="form-label">年齢</label>
-      <input type="number" class="form-input" id="f_age" placeholder="65" min="0" max="130" style="text-align:right;max-width:120px;">
+    <!-- タブ2: 専門医申請データ -->
+    <div id="formTab_cert" style="display:none;">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);line-height:1.6;">
+      📌 専門医機構への症例提出用データです。<br>年月日は入院日が自動適用されます。
     </div>
 
     <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">年齢</label>
+        <input type="number" class="form-input" id="f_age" placeholder="65" min="0" max="130" style="text-align:right;">
+      </div>
       <div class="form-group">
         <label class="form-label">性別</label>
         <select class="form-input" id="f_gender">
@@ -1293,6 +1312,9 @@ GH_CONFIG_END -->
           <option value="女">女性</option>
         </select>
       </div>
+    </div>
+
+    <div class="form-row">
       <div class="form-group">
         <label class="form-label">外来・入院</label>
         <select class="form-input" id="f_outInpatient">
@@ -1301,11 +1323,10 @@ GH_CONFIG_END -->
           <option value="外来">外来</option>
         </select>
       </div>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">カルテ番号</label>
-      <input type="text" class="form-input" id="f_chartNo" placeholder="12345678">
+      <div class="form-group">
+        <label class="form-label">カルテ番号</label>
+        <input type="text" class="form-input" id="f_chartNo" placeholder="12345678">
+      </div>
     </div>
 
     <div class="form-group">
@@ -1315,15 +1336,18 @@ GH_CONFIG_END -->
 
     <div class="form-group">
       <label class="form-label">指導医名</label>
-      <select class="form-input" id="f_supervisor" onchange="onSupervisorChange(this)">
-        <option value="">—（設定で指導医リストを登録してください）</option>
+      <select class="form-input" id="f_supervisor" onchange="onSupervisorChange(this)" style="font-size:13px;">
+        <option value="">— 指導医を選択 —</option>
       </select>
     </div>
-    <div id="f_supervisorRegNoBox" style="display:none;margin-top:-8px;margin-bottom:12px;padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--text3);">
-      指導医登録番号: <span id="f_supervisorRegNo" style="color:var(--text);font-weight:700;"></span>
+    <div id="f_supervisorRegNoBox" style="display:none;margin-top:-8px;margin-bottom:12px;padding:10px 14px;background:rgba(79,140,255,0.08);border:1px solid rgba(79,140,255,0.3);border-radius:8px;">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:2px;">指導医登録番号</div>
+      <div id="f_supervisorRegNo" style="color:var(--accent);font-weight:700;font-size:16px;font-family:'IBM Plex Mono',monospace;"></div>
     </div>
     <!-- hidden field for storing selected supervisor reg no -->
     <input type="hidden" id="f_supervisorRegNoVal">
+
+    </div><!-- /formTab_cert -->
 
     <input type="hidden" id="f_editId">
     <button class="btn-primary" onclick="saveCase()">保存</button>
@@ -2137,6 +2161,47 @@ let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || 
 // 専門医申請データ 未設定なら初期値
 if (!appSettings.supervisors) appSettings.supervisors = [];
 if (appSettings.defaultFacility === undefined) appSettings.defaultFacility = '';
+// 指導医リストが空の場合はデフォルトデータを登録
+if (appSettings.supervisors.length === 0) {
+  appSettings.supervisors = [
+    { name: '羽藤 直人',  regNo: '01143' },
+    { name: '鵜久森 徹',  regNo: '01144' },
+    { name: '岡田 昌浩',  regNo: '01145' },
+    { name: '田中 加緒里', regNo: '01146' },
+    { name: '西田 直哉',  regNo: '01147' },
+    { name: '白馬 伸洋',  regNo: '01148' },
+    { name: '山田 啓之',  regNo: '01149' },
+    { name: '吉田 正',   regNo: '01150' },
+    { name: '脇坂 浩之',  regNo: '01151' },
+    { name: '浅井 真紀',  regNo: '01152' },
+    { name: '有友 宏',   regNo: '01153' },
+    { name: '篠森 裕介',  regNo: '01154' },
+    { name: '田口 亜紀',  regNo: '01155' },
+    { name: '川田 晃弘',  regNo: '01156' },
+    { name: '宮本 佳人',  regNo: '01157' },
+    { name: '佐々木 康',  regNo: '01158' },
+    { name: '相原 隆一',  regNo: '01159' },
+    { name: '澤井 尚樹',  regNo: '01160' },
+    { name: '寺岡 正人',  regNo: '01161' },
+    { name: '富所 雄一',  regNo: '01162' },
+    { name: '中村 光士郎', regNo: '01163' },
+    { name: '本多 伸光',  regNo: '01164' },
+    { name: '兵頭 純',   regNo: '01165' },
+    { name: '高橋 宏尚',  regNo: '01166' },
+    { name: '横井 隆司',  regNo: '01167' },
+    { name: '大河内 喜久', regNo: '01168' },
+    { name: '佐伯 忠彦',  regNo: '01169' },
+    { name: '渡邊 太志',  regNo: '01170' },
+    { name: '松本 秀',   regNo: '01171' },
+    { name: '森 敏裕',   regNo: '01172' },
+    { name: '高木 大樹',  regNo: '01504' },
+    { name: '上田 哲平',  regNo: '01505' },
+    { name: '眞田 明昌',  regNo: '01649' },
+    { name: '能田 淳平',  regNo: '01650' },
+    { name: '三谷 壮平',  regNo: '01651' },
+  ];
+  save();
+}
 // 3層チェックリスト 未設定なら初期値でシード
 if (!appSettings.defaultCheckItems || !appSettings.defaultCheckItems.length)
   appSettings.defaultCheckItems = JSON.parse(JSON.stringify(DEFAULT_CHECK_ITEMS_BUILTIN));
@@ -4374,6 +4439,7 @@ function openAddModal() {
   if (fMode) { fMode.value = 'ope'; setTimeout(() => selectFormMode('ope'), 0); }
   _fcReminderPresetIdx = -1;
   setTimeout(() => renderFcReminderPresets(), 0);
+  switchFormTab('info');
   document.getElementById('addModal').classList.add('open');
 }
 
@@ -4424,6 +4490,7 @@ function openEditModal(id) {
   }, 0);
   _fcReminderPresetIdx = -1;
   setTimeout(() => renderFcReminderPresets(), 0);
+  switchFormTab('info');
   document.getElementById('addModal').classList.add('open');
 }
 
@@ -4442,15 +4509,36 @@ function clearForm() {
   updateSupervisorRegDisplay('');
 }
 
+// ========== フォーム内タブ切り替え ==========
+function switchFormTab(tab) {
+  var infoDiv  = document.getElementById('formTab_info');
+  var certDiv  = document.getElementById('formTab_cert');
+  var infoBtn  = document.getElementById('formTabBtn_info');
+  var certBtn  = document.getElementById('formTabBtn_cert');
+  if (!infoDiv || !certDiv) return;
+  if (tab === 'cert') {
+    infoDiv.style.display = 'none';
+    certDiv.style.display = 'block';
+    if (infoBtn) { infoBtn.style.background = 'var(--surface2)'; infoBtn.style.color = 'var(--text2)'; }
+    if (certBtn) { certBtn.style.background = 'var(--accent)';   certBtn.style.color = '#fff'; }
+  } else {
+    infoDiv.style.display = 'block';
+    certDiv.style.display = 'none';
+    if (infoBtn) { infoBtn.style.background = 'var(--accent)';   infoBtn.style.color = '#fff'; }
+    if (certBtn) { certBtn.style.background = 'var(--surface2)'; certBtn.style.color = 'var(--text2)'; }
+  }
+}
+
 // ========== 指導医セレクト ==========
 function populateSupervisorSelect() {
   var sel = document.getElementById('f_supervisor');
   if (!sel) return;
   var currentVal = sel.value;
   var sups = appSettings.supervisors || [];
-  sel.innerHTML = '<option value="">—</option>'
+  sel.innerHTML = '<option value="">— 指導医を選択 —</option>'
     + sups.map(function(s) {
-        return '<option value="' + s.name.replace(/"/g, '&quot;') + '">' + s.name + '</option>';
+        return '<option value="' + s.name.replace(/"/g, '&quot;') + '">'
+          + s.name + '　(' + (s.regNo || '—') + ')</option>';
       }).join('');
   sel.value = currentVal;
 }
