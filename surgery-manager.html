@@ -4609,15 +4609,35 @@ function autoResizeTextarea(el) {
 }
 
 // ========== 同姓同名患者引き継ぎ提案 ==========
+// ひらがな⇔カタカナを統一・スペース除去して比較用に正規化
+function normalizeKana(str) {
+  return (str || '')
+    .replace(/[ァ-ヶ]/g, function(ch) {
+      return String.fromCharCode(ch.charCodeAt(0) - 0x60); // カタカナ→ひらがな
+    })
+    .replace(/\s+/g, ''); // スペース除去
+}
+
+function nameMatches(input, stored) {
+  var a = normalizeKana(input);
+  var b = normalizeKana(stored);
+  if (a.length < 2) return false; // 1文字では反応しない
+  // 前方一致（入力が登録名の先頭に含まれる、または登録名が入力の先頭に含まれる）
+  if (b.startsWith(a) || a.startsWith(b)) return true;
+  // 先頭3文字一致
+  if (a.length >= 3 && b.length >= 3 && a.slice(0, 3) === b.slice(0, 3)) return true;
+  return false;
+}
+
 function checkSameName(val) {
   var panel = document.getElementById('sameNameSuggest');
   if (!panel) return;
   var name = val.trim();
   if (!name) { panel.style.display = 'none'; return; }
 
-  // 現在編集中の症例を除いた同名リスト（最新入院日順）
+  // 現在編集中の症例を除いた類似名リスト（最新入院日順）
   var prev = cases
-    .filter(function(c) { return c.name === name && c.id !== editingId; })
+    .filter(function(c) { return nameMatches(name, c.name || '') && c.id !== editingId; })
     .sort(function(a, b) {
       var da = a.admDate || a.opDate || '';
       var db = b.admDate || b.opDate || '';
@@ -4628,17 +4648,19 @@ function checkSameName(val) {
 
   var modeLabel = { ope: '🔪 オペ', chemo: '💊 ケモ', crt: '📡 ケモラジ' };
   var html = '<div style="background:rgba(79,140,255,0.08);border:1px solid rgba(79,140,255,0.35);border-radius:10px;padding:10px 12px;">';
-  html += '<div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px;">🔁 同名の既存患者が見つかりました — 情報を引き継ぎますか？</div>';
+  html += '<div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px;">🔁 同名・類似名の既存患者が見つかりました — 情報を引き継ぎますか？</div>';
   html += '<div style="display:flex;flex-direction:column;gap:6px;">';
 
-  prev.slice(0, 3).forEach(function(c) {
+  prev.slice(0, 5).forEach(function(c) {
     var dateStr = c.admDate || c.opDate || '日付不明';
-    var label = (modeLabel[c.mode] || c.mode || '') + '　' + (c.disease || c.surgery || '疾患名不明');
-    if (c.surgery && c.disease) label += '（' + c.surgery + '）';
+    var mLabel = modeLabel[c.mode] || c.mode || '';
+    var disease = c.disease || c.surgery || '疾患名不明';
+    var detail = c.surgery && c.disease ? c.surgery : '';
     html += '<div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;">';
-    html += '<div style="flex:1;">';
-    html += '<div style="font-size:12px;font-weight:700;color:var(--text);">' + esc(label) + '</div>';
-    html += '<div style="font-size:10px;color:var(--text3);margin-top:2px;">' + esc(dateStr) + ' 入院</div>';
+    html += '<div style="flex:1;min-width:0;">';
+    html += '<div style="font-size:12px;font-weight:700;color:var(--text);">' + esc(c.name || '名前不明') + '</div>';
+    html += '<div style="font-size:11px;color:var(--text2);margin-top:2px;">' + esc(mLabel) + '　' + esc(disease) + (detail ? '（' + esc(detail) + '）' : '') + '</div>';
+    html += '<div style="font-size:10px;color:var(--text3);margin-top:1px;">' + esc(dateStr) + ' 入院</div>';
     html += '</div>';
     html += '<button onclick="inheritCaseData(\'' + c.id + '\')" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">引き継ぐ</button>';
     html += '</div>';
