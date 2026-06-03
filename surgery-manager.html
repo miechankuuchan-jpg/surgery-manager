@@ -201,24 +201,6 @@ GH_CONFIG_END -->
   .days-badge.soon   { background: rgba(255,209,102,0.15); color: var(--accent3); }
   .days-badge.normal { background: var(--surface2); color: var(--text3); }
 
-  /* Ring progress */
-  .ring-wrap {
-    position: relative;
-    width: 36px;
-    height: 36px;
-    flex-shrink: 0;
-  }
-  .ring-wrap svg { transform: rotate(-90deg); }
-  .ring-bg { fill: none; stroke: var(--border); stroke-width: 3; }
-  .ring-fill { fill: none; stroke: var(--green); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 0.4s; }
-  .ring-fill.warn { stroke: var(--accent3); }
-  .ring-fill.done { stroke: var(--green); }
-  .ring-text {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 8px; font-weight: 700; color: var(--text2);
-    font-family: 'IBM Plex Mono', monospace;
-  }
 
   /* Header stats */
   .header-stats {
@@ -1101,6 +1083,7 @@ GH_CONFIG_END -->
   <div class="tab" onclick="switchTab('summary_incomplete', this)">📋 サマリ未完了</div>
   <div class="tab" onclick="switchTab('discharge_weekly', this)">🏥 退院一覧</div>
   <div class="tab" onclick="switchTab('knowledge', this)">📚 知識</div>
+  <div class="tab" onclick="switchTab('cancer', this)">🎗 癌症例</div>
   <div class="tab" onclick="switchTab('cert', this)">📊 申請</div>
 </div>
 
@@ -1169,8 +1152,9 @@ GH_CONFIG_END -->
 
     <div class="form-group">
       <label class="form-label">患者名（ひらがな） *</label>
-      <input type="text" class="form-input" id="f_name" placeholder="やまだ たろう">
+      <input type="text" class="form-input" id="f_name" placeholder="やまだ たろう" oninput="checkSameName(this.value)">
     </div>
+    <div id="sameNameSuggest" style="display:none;margin-top:-10px;margin-bottom:12px;"></div>
 
     <div class="form-group" style="margin-bottom:16px;">
       <label class="form-label">治療モード *</label>
@@ -2675,6 +2659,7 @@ function render() {
   else if (currentTab === 'discharge_weekly') renderDischargeWeekly(el);
   else if (currentTab === 'calendar') renderCalendar(el);
   else if (currentTab === 'knowledge') renderKnowledge(el);
+  else if (currentTab === 'cancer') renderCancerCases(el);
   else if (currentTab === 'cert') renderCertExport(el);
   else if (currentTab === 'summary') renderSummary(el);
   else if (currentTab === 'import') renderImport(el);
@@ -2735,10 +2720,10 @@ function renderAdmitted(container) {
   const memoBanner = `
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;">
       <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;">📝 やることメモ</div>
-      <textarea id="dailyMemoInput" rows="3"
-        style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--text);font-family:inherit;resize:vertical;line-height:1.5;box-sizing:border-box;"
+      <textarea id="dailyMemoInput"
+        style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--text);font-family:inherit;resize:none;line-height:1.5;box-sizing:border-box;overflow:hidden;min-height:58px;"
         placeholder="今日のやること、申し送りなど..."
-        oninput="saveDailyMemo(this.value)">${memoVal}</textarea>
+        oninput="saveDailyMemo(this.value);autoResizeTextarea(this);">${memoVal}</textarea>
     </div>`;
 
   el.innerHTML = `
@@ -2748,6 +2733,9 @@ function renderAdmitted(container) {
       ${examBanner}
       ${admitted.map(c => renderCard(c)).join('')}
     </div>`;
+  // メモtextareaの高さを内容に合わせて初期化
+  const memo = document.getElementById('dailyMemoInput');
+  if (memo) autoResizeTextarea(memo);
 }
 
 function renderList(el) {
@@ -3164,6 +3152,137 @@ function knGradeLabel(g) {
   if (g === 'high') return '高';
   if (g === 'mid')  return '中';
   return '低';
+}
+
+// ========== 癌症例タブ ==========
+function isCancerCase(c) {
+  var target = ((c.disease || '') + ' ' + (c.surgery || '')).toLowerCase();
+  return /癌|がん|腫瘍|carcinoma|cancer|scc|悪性|リンパ腫|肉腫|melanoma/.test(target);
+}
+
+function renderCancerCases(el) {
+  var cancerCases = cases
+    .filter(isCancerCase)
+    .sort(function(a, b) {
+      var da = a.admDate || a.opDate || '';
+      var db = b.admDate || b.opDate || '';
+      return da > db ? -1 : da < db ? 1 : 0;
+    });
+
+  var modeLabel = { ope: '🔪 オペ', chemo: '💊 ケモ', crt: '📡 ケモラジ' };
+  var modeColor = { ope: 'var(--accent)', chemo: '#f59e0b', crt: 'var(--green)' };
+
+  var html = '<div style="padding:14px;">';
+  html += '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">🎗 頭頸部癌症例一覧</div>';
+  html += '<div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5;">';
+  html += '疾患名・術式に「癌・がん・腫瘍・悪性・リンパ腫・SCC」等が含まれる症例を自動抽出。<br>データベース入力用にコピーボタンも使えます。';
+  html += '</div>';
+
+  if (cancerCases.length === 0) {
+    html += '<div style="text-align:center;padding:48px 20px;color:var(--text3);">';
+    html += '<div style="font-size:32px;margin-bottom:12px;">🎗</div>';
+    html += '<div style="font-size:13px;">癌症例が登録されていません</div>';
+    html += '<div style="font-size:11px;margin-top:6px;">疾患名や術式に「癌・がん・SCC」等を含む症例が自動表示されます</div>';
+    html += '</div></div>';
+    el.innerHTML = html;
+    return;
+  }
+
+  // コピーボタン
+  html += '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">';
+  html += '<button onclick="copyCancerTSV()" id="cancerCopyBtn" style="background:rgba(255,87,87,0.15);color:var(--red);border:1px solid rgba(255,87,87,0.4);border-radius:8px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📋 TSVコピー（' + cancerCases.length + '件）</button>';
+  html += '</div>';
+
+  // 症例カード
+  cancerCases.forEach(function(c, idx) {
+    var mode = c.mode || 'ope';
+    var dateStr = c.admDate || c.opDate || '日付不明';
+    var mLabel = modeLabel[mode] || mode;
+    var mColor = modeColor[mode] || 'var(--text3)';
+    var admStatus = getAdmissionStatus(c);
+    var statusBadge = admStatus === 'admitted'
+      ? '<span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(79,140,255,0.12);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;">入院中</span>'
+      : admStatus === 'discharged'
+      ? '<span style="font-size:10px;font-weight:700;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;">退院済</span>'
+      : '<span style="font-size:10px;font-weight:700;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;">入院前</span>';
+
+    html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;border-left:3px solid ' + mColor + ';">';
+
+    // ヘッダー行
+    html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">';
+    html += '<div style="flex:1;">';
+    html += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">';
+    html += '<span style="font-size:14px;font-weight:700;color:var(--text);">' + esc(c.name || '患者名未設定') + '</span>';
+    html += statusBadge;
+    html += '<span style="font-size:10px;font-weight:700;color:' + mColor + ';background:rgba(0,0,0,0.15);border-radius:4px;padding:1px 6px;">' + mLabel + '</span>';
+    html += '</div>';
+    html += '<div style="font-size:12px;color:var(--text);font-weight:600;">' + esc(c.disease || '疾患名未設定') + '</div>';
+    if (c.surgery) html += '<div style="font-size:11px;color:var(--text3);margin-top:2px;">' + esc(c.surgery) + '</div>';
+    html += '</div>';
+    html += '<button onclick="openEditModal(\'' + c.id + '\')" style="background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;flex-shrink:0;">✏️ 編集</button>';
+    html += '</div>';
+
+    // 詳細情報グリッド
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:11px;">';
+    var fields = [
+      ['入院日', c.admDate || '—'],
+      ['退院日', c.dischargeDate || '—'],
+      ['年齢', c.age ? c.age + '歳' : '—'],
+      ['性別', c.gender || '—'],
+      ['カルテ番号', c.chartNo || '—'],
+      ['外来/入院', c.outInpatient || '—'],
+      ['指導医', c.supervisorName || '—'],
+      ['施設', c.facility || appSettings.defaultFacility || '—'],
+    ];
+    fields.forEach(function(f) {
+      html += '<div style="display:flex;gap:4px;">';
+      html += '<span style="color:var(--text3);flex-shrink:0;">' + f[0] + ':</span>';
+      html += '<span style="color:var(--text);font-weight:500;">' + esc(String(f[1])) + '</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+
+    // メモ
+    if (c.courseNotes) {
+      html += '<div style="margin-top:8px;padding:6px 10px;background:var(--surface2);border-radius:6px;font-size:11px;color:var(--text2);line-height:1.5;">' + esc(c.courseNotes) + '</div>';
+    }
+
+    html += '</div>';
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function copyCancerTSV() {
+  var headers = ['患者名','疾患名','術式','モード','入院日','退院日','年齢','性別','カルテ番号','外来/入院','指導医','指導医登録番号','施設'];
+  var cancerCases = cases.filter(isCancerCase).sort(function(a, b) {
+    return (a.admDate||a.opDate||'') > (b.admDate||b.opDate||'') ? -1 : 1;
+  });
+  var lines = [headers.join('\t')];
+  cancerCases.forEach(function(c) {
+    var surgVal = (c.mode === 'ope') ? (c.surgery || '') : '';
+    lines.push([
+      c.name || '',
+      c.disease || '',
+      surgVal,
+      c.mode || '',
+      c.admDate || c.opDate || '',
+      c.dischargeDate || '',
+      c.age || '',
+      c.gender || '',
+      c.chartNo || '',
+      c.outInpatient || '',
+      c.supervisorName || '',
+      c.supervisorRegNo || '',
+      c.facility || appSettings.defaultFacility || '',
+    ].join('\t'));
+  });
+  var text = lines.join('\n');
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById('cancerCopyBtn');
+    if (btn) { var orig = btn.textContent; btn.textContent = '✓ コピーしました！'; setTimeout(function() { btn.textContent = orig; }, 2500); }
+  }).catch(function() { alert('コピーに失敗しました。'); });
 }
 
 // ========== 専門医申請エクスポート ==========
@@ -3684,8 +3803,6 @@ function buildSummaryText(c) {
 
 function renderCard(c, expandByDefault=false) {
   const status = getDateStatus(c.opDate);
-  const prog = getCheckProgress(c);
-  const pct = Math.round(prog.done / prog.total * 100);
   const icu = c.icu ? `<span class="meta-tag icu">★ICU</span>` : '';
   const recon = c.recon ? `<span class="meta-tag recon">★再建</span>` : '';
   const admStr = c.admDate ? `IC:${toDateStr(c.admDate)}` : '';
@@ -3742,17 +3859,6 @@ function renderCard(c, expandByDefault=false) {
     }
   }
 
-  // リング進捗SVG
-  const r = 14, circ = 2 * Math.PI * r;
-  const offset = circ - (pct / 100) * circ;
-  const ringClass = pct === 100 ? 'done' : pct >= 50 ? '' : 'warn';
-  const ringHtml = '<div class="ring-wrap">'
-    + '<svg width="36" height="36" viewBox="0 0 36 36">'
-    + '<circle class="ring-bg" cx="18" cy="18" r="' + r + '"/>'
-    + '<circle class="ring-fill ' + ringClass + '" cx="18" cy="18" r="' + r + '" stroke-dasharray="' + circ.toFixed(1) + '" stroke-dashoffset="' + offset.toFixed(1) + '"/>'
-    + '</svg>'
-    + '<div class="ring-text">' + prog.done + '/' + prog.total + '</div>'
-    + '</div>';
 
   const checks = getDisplayedChecklistItems(c).map(item => renderCheckItemRow(c.id, item, c.checks)).join('');
 
@@ -3859,15 +3965,11 @@ function renderCard(c, expandByDefault=false) {
         ${upcomingExamsHtml}
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-        <div style="display:flex;align-items:center;gap:6px;">
-          ${ringHtml}
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-            <span class="op-date-badge ${status}">${isToday(c.opDate)?'TODAY':formatOpDate(c.opDate)}</span>
-            <div style="display:flex;gap:4px;align-items:center;">
-              ${isPastCase ? `<button class="icon-btn" style="width:28px;height:28px;font-size:11px;background:var(--green);color:#fff;border-color:transparent;" onclick="event.stopPropagation();completeAllTasks('${c.id}')" title="全完了">✅</button>` : ''}
-              <button class="icon-btn" style="width:28px;height:28px;font-size:14px;" onclick="event.stopPropagation();openCheckReminder('${c.id}')" title="リマインダー">🔔</button>
-              <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('${c.id}')">✏️</button>
-            </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <span class="op-date-badge ${status}">${isToday(c.opDate)?'TODAY':formatOpDate(c.opDate)}</span>
+          <div style="display:flex;gap:4px;align-items:center;">
+            ${isPastCase ? `<button class="icon-btn" style="width:28px;height:28px;font-size:11px;background:var(--green);color:#fff;border-color:transparent;" onclick="event.stopPropagation();completeAllTasks('${c.id}')" title="全完了">✅</button>` : ''}
+            <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('${c.id}')">✏️</button>
           </div>
         </div>
       </div>
@@ -4411,6 +4513,8 @@ function openAddModal() {
   document.getElementById('f_facility').value = appSettings.defaultFacility || '';
   document.getElementById('f_supervisorRegNoVal').value = '';
   updateSupervisorRegDisplay('');
+  var snp = document.getElementById('sameNameSuggest');
+  if (snp) snp.style.display = 'none';
   selectedExamType = 'blood';
   buildChecklistForm({});
   renderFreeChecklistForm();
@@ -4496,6 +4600,114 @@ function clearForm() {
   const outin = document.getElementById('f_outInpatient');
   if (outin) outin.value = '';
   updateSupervisorRegDisplay('');
+}
+
+// ========== テキストエリア自動リサイズ ==========
+function autoResizeTextarea(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+// ========== 同姓同名患者引き継ぎ提案 ==========
+function checkSameName(val) {
+  var panel = document.getElementById('sameNameSuggest');
+  if (!panel) return;
+  var name = val.trim();
+  if (!name) { panel.style.display = 'none'; return; }
+
+  // 現在編集中の症例を除いた同名リスト（最新入院日順）
+  var prev = cases
+    .filter(function(c) { return c.name === name && c.id !== editingId; })
+    .sort(function(a, b) {
+      var da = a.admDate || a.opDate || '';
+      var db = b.admDate || b.opDate || '';
+      return da > db ? -1 : da < db ? 1 : 0; // 新しい順
+    });
+
+  if (prev.length === 0) { panel.style.display = 'none'; return; }
+
+  var modeLabel = { ope: '🔪 オペ', chemo: '💊 ケモ', crt: '📡 ケモラジ' };
+  var html = '<div style="background:rgba(79,140,255,0.08);border:1px solid rgba(79,140,255,0.35);border-radius:10px;padding:10px 12px;">';
+  html += '<div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px;">🔁 同名の既存患者が見つかりました — 情報を引き継ぎますか？</div>';
+  html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+
+  prev.slice(0, 3).forEach(function(c) {
+    var dateStr = c.admDate || c.opDate || '日付不明';
+    var label = (modeLabel[c.mode] || c.mode || '') + '　' + (c.disease || c.surgery || '疾患名不明');
+    if (c.surgery && c.disease) label += '（' + c.surgery + '）';
+    html += '<div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;">';
+    html += '<div style="flex:1;">';
+    html += '<div style="font-size:12px;font-weight:700;color:var(--text);">' + esc(label) + '</div>';
+    html += '<div style="font-size:10px;color:var(--text3);margin-top:2px;">' + esc(dateStr) + ' 入院</div>';
+    html += '</div>';
+    html += '<button onclick="inheritCaseData(\'' + c.id + '\')" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">引き継ぐ</button>';
+    html += '</div>';
+  });
+
+  html += '</div>';
+  html += '<button onclick="document.getElementById(\'sameNameSuggest\').style.display=\'none\'" style="margin-top:8px;background:none;border:none;color:var(--text3);font-size:11px;cursor:pointer;font-family:inherit;padding:0;">✕ 閉じる</button>';
+  html += '</div>';
+
+  panel.innerHTML = html;
+  panel.style.display = 'block';
+}
+
+function inheritCaseData(caseId) {
+  var src = cases.find(function(c) { return c.id === caseId; });
+  if (!src) return;
+
+  // 引き継ぐフィールド（日付・経過記録系は除く）
+  var fields = {
+    f_disease:      src.disease || '',
+    f_surgery:      src.surgery || '',
+    f_time:         src.time || '',
+    f_team:         src.team || '',
+    f_items:        src.items || '',
+    f_memo:         src.memo || '',
+    f_chartNo:      src.chartNo || '',
+    f_facility:     src.facility || '',
+  };
+  Object.keys(fields).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = fields[id];
+  });
+
+  // モード
+  var mode = src.mode || 'ope';
+  var fMode = document.getElementById('f_mode');
+  if (fMode) { fMode.value = mode; selectFormMode(mode); }
+
+  // 性別・外来入院
+  var gender = document.getElementById('f_gender');
+  if (gender && src.gender) gender.value = src.gender;
+  var outin = document.getElementById('f_outInpatient');
+  if (outin && src.outInpatient) outin.value = src.outInpatient;
+
+  // 年齢
+  var age = document.getElementById('f_age');
+  if (age && src.age) age.value = src.age;
+
+  // 指導医
+  populateSupervisorSelect();
+  var supSel = document.getElementById('f_supervisor');
+  if (supSel && src.supervisorName) {
+    supSel.value = src.supervisorName;
+    document.getElementById('f_supervisorRegNoVal').value = src.supervisorRegNo || '';
+    updateSupervisorRegDisplay(src.supervisorRegNo || '');
+  }
+
+  // チェックリスト再構築
+  setTimeout(function() {
+    onDiseaseOrSurgeryChange();
+    buildChecklistForm({});
+  }, 0);
+
+  // 提案パネルを閉じて成功メッセージ表示
+  var panel = document.getElementById('sameNameSuggest');
+  if (panel) {
+    panel.innerHTML = '<div style="background:rgba(67,217,160,0.1);border:1px solid rgba(67,217,160,0.4);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--green);">✅ 情報を引き継ぎました。日付・経過記録は今回分を入力してください。</div>';
+    setTimeout(function() { panel.style.display = 'none'; }, 3000);
+  }
 }
 
 // ========== フォーム内タブ切り替え ==========
