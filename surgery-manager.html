@@ -24,1036 +24,964 @@ GH_CONFIG_END -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0d0f14;
-    --surface: #151820;
-    --surface2: #1c2030;
-    --border: #252a3a;
-    --accent: #4f8cff;
-    --accent2: #ff6b6b;
-    --accent3: #ffd166;
-    --text: #e8ecf4;
-    --text2: #8892a4;
-    --text3: #5a6478;
-    --green: #43d9a0;
-    --red: #ff5757;
-    --icu: #ff8c42;
-    --radius: 12px;
-    --radius-sm: 8px;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: 'Noto Sans JP', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* Header */
-  .header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: rgba(13,15,20,0.92);
-    backdrop-filter: blur(16px);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .header-title {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    color: var(--text);
-  }
-
-  .header-title span {
-    color: var(--accent);
-  }
-
-  .header-actions {
-    display: flex;
-    gap: 8px;
-  }
-
-  .icon-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.15s;
-  }
-
-  .icon-btn:active { transform: scale(0.94); background: var(--surface2); }
-  .icon-btn.primary { border-color: var(--accent); color: var(--accent); }
-
-  /* Tab bar */
-  .tab-bar {
-    display: flex;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 16px;
-    gap: 4px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .tab-bar::-webkit-scrollbar { display: none; }
-
-  .tab {
-    padding: 12px 16px;
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--text3);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    white-space: nowrap;
-    transition: all 0.15s;
-  }
-  .tab.active {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-  }
-
-  /* Content */
-  .content {
-    padding: 12px 14px;
-    max-width: 640px;
-    margin: 0 auto;
-  }
-
-  /* Surgery Card */
-  .surgery-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    margin-bottom: 8px;
-    overflow: hidden;
-    transition: border-color 0.15s;
-    display: flex;
-  }
-  .surgery-card:active { border-color: var(--accent); }
-
-  .card-status-bar {
-    width: 4px;
-    flex-shrink: 0;
-    border-radius: 0;
-    background: var(--border);
-    transition: background 0.2s;
-  }
-  .card-status-bar.pre    { background: var(--border); }
-  .card-status-bar.admitted { background: var(--accent); }
-  .card-status-bar.discharged { background: var(--text3); }
-  .card-status-bar.today  { background: var(--accent2); }
-
-  .card-inner {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .card-header {
-    padding: 10px 14px 9px;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    cursor: pointer;
-  }
-
-  .op-date-badge {
-    background: var(--accent);
-    color: #fff;
-    font-size: 9px;
-    font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 4px;
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-    font-family: 'IBM Plex Mono', monospace;
-  }
-
-  .op-date-badge.past { background: var(--text3); }
-  .op-date-badge.today { background: var(--accent2); animation: pulse 2s infinite; }
-  .op-date-badge.soon { background: var(--accent3); color: #111; }
-
-  /* Days-until badge */
-  .days-badge {
-    font-size: 10px;
-    font-weight: 700;
-    font-family: 'IBM Plex Mono', monospace;
-    padding: 2px 6px;
-    border-radius: 4px;
-    white-space: nowrap;
-  }
-  .days-badge.urgent { background: rgba(255,87,87,0.15); color: var(--red); }
-  .days-badge.soon   { background: rgba(255,209,102,0.15); color: var(--accent3); }
-  .days-badge.normal { background: var(--surface2); color: var(--text3); }
-
-
-  /* Header stats */
-  .header-stats {
-    display: flex;
-    gap: 6px;
-    margin-top: 4px;
-  }
-  .stat-chip {
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 10px;
-    font-family: 'IBM Plex Mono', monospace;
-  }
-  .stat-chip.today-chip { background: rgba(255,107,107,0.15); color: var(--accent2); }
-  .stat-chip.week-chip  { background: rgba(79,140,255,0.12); color: var(--accent); }
-  .stat-chip.pending-chip { background: rgba(255,209,102,0.12); color: var(--accent3); }
-
-  .card-main {
-    flex: 1;
-  }
-
-  .patient-name {
-    font-size: 13px;
-    font-weight: 700;
-    margin-bottom: 2px;
-    line-height: 1.3;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
-
-  .patient-meta {
-    font-size: 10px;
-    color: var(--text2);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
-  }
-
-  .meta-tag {
-    background: var(--surface2);
-    padding: 2px 7px;
-    border-radius: 4px;
-    font-size: 9px;
-    color: var(--text2);
-    border: 1px solid var(--border);
-  }
-  .meta-tag.icu { border-color: var(--icu); color: var(--icu); }
-  .meta-tag.recon { border-color: var(--green); color: var(--green); }
-
-  .card-expand {
-    font-size: 14px;
-    color: var(--text3);
-    transition: transform 0.2s;
-    padding-top: 2px;
-  }
-  .card-expand.open { transform: rotate(180deg); }
-
-  .card-body {
-    display: none;
-    padding: 0 14px 14px;
-    border-top: 1px solid var(--border);
-    padding-top: 12px;
-  }
-  .card-body.open { display: block; }
-
-  .info-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 10px;
-    align-items: flex-start;
-  }
-
-  .info-label {
-    font-size: 9px;
-    font-weight: 700;
-    color: var(--text3);
-    letter-spacing: 0.06em;
-    min-width: 52px;
-    padding-top: 1px;
-    text-transform: uppercase;
-  }
-
-  .info-value {
-    font-size: 11px;
-    color: var(--text);
-    flex: 1;
-    line-height: 1.5;
-  }
-
-  .team-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-  }
-
-  .team-chip {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 10px;
-    color: var(--text2);
-  }
-  .team-chip.me {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: rgba(79,140,255,0.08);
-  }
-
-  /* Checklist */
-  .checklist {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 4px;
-  }
-
-  .check-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 10px;
-    cursor: pointer;
-    padding: 3px 7px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--surface2);
-    transition: all 0.12s;
-    user-select: none;
-    -webkit-user-select: none;
-  }
-  .check-item:active { transform: scale(0.96); }
-
-  .check-item.done {
-    border-color: var(--green);
-    background: rgba(67,217,160,0.08);
-    color: var(--green);
-    text-decoration: line-through;
-    text-decoration-color: rgba(67,217,160,0.5);
-  }
-  .check-item.warn {
-    border-color: var(--accent3);
-    color: var(--accent3);
-    background: rgba(255,209,102,0.06);
-  }
-
-  .check-item .check-icon {
-    font-size: 12px;
-    line-height: 1;
-  }
-
-  /* Notes */
-  .note-box {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 10px 12px;
-    font-size: 11px;
-    color: var(--text2);
-    line-height: 1.5;
-    margin-top: 8px;
-    white-space: pre-wrap;
-  }
-
-  /* Progress indicator */
-  .progress-bar {
-    height: 3px;
-    background: var(--border);
-    border-radius: 2px;
-    margin: 12px 0 4px;
-    overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%;
-    background: var(--green);
-    border-radius: 2px;
-    transition: width 0.3s;
-  }
-
-  .progress-label {
-    font-size: 10px;
-    color: var(--text3);
-    display: flex;
-    justify-content: space-between;
-  }
-
-  /* Date separator */
-  .date-separator {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 20px 0 10px;
-  }
-  .date-separator-line { flex: 1; height: 1px; background: var(--border); }
-  .date-separator-text {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--text3);
-    letter-spacing: 0.08em;
-    font-family: 'IBM Plex Mono', monospace;
-    white-space: nowrap;
-  }
-
-  /* Add button */
-  .fab {
-    position: fixed;
-    bottom: 28px;
-    right: 20px;
-    width: 52px;
-    height: 52px;
-    background: var(--accent);
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    color: #fff;
-    cursor: pointer;
-    box-shadow: 0 4px 20px rgba(79,140,255,0.4);
-    transition: all 0.15s;
-    border: none;
-    z-index: 99;
-  }
-  .fab:active { transform: scale(0.92); }
-
-  /* Modal */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.75);
-    z-index: 200;
-    display: none;
-    align-items: flex-end;
-  }
-  .modal-overlay.open { display: flex; }
-
-  .modal {
-    background: var(--surface);
-    border-radius: 20px 20px 0 0;
-    padding: 20px 20px 40px;
-    width: 100%;
-    max-height: 92vh;
-    overflow-y: auto;
-    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  @keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-  }
-
-  .modal-handle {
-    width: 36px;
-    height: 4px;
-    background: var(--border);
-    border-radius: 2px;
-    margin: 0 auto 20px;
-  }
-
-  .modal-title {
-    font-size: 13px;
-    font-weight: 700;
-    margin-bottom: 16px;
-  }
-
-  .form-group {
-    margin-bottom: 16px;
-  }
-
-  .form-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text3);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-    display: block;
-  }
-
-  .form-input {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 10px 12px;
-    font-size: 12px;
-    color: var(--text);
-    font-family: 'Noto Sans JP', sans-serif;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  .form-input:focus { border-color: var(--accent); }
-
-  .form-input textarea { resize: vertical; min-height: 80px; }
-
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-
-  .btn-primary {
-    width: 100%;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: 14px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    margin-top: 8px;
-    font-family: 'Noto Sans JP', sans-serif;
-    transition: opacity 0.15s;
-  }
-  .btn-primary:active { opacity: 0.85; }
-
-  .btn-danger {
-    width: 100%;
-    background: transparent;
-    color: var(--red);
-    border: 1px solid rgba(255,87,87,0.3);
-    border-radius: var(--radius-sm);
-    padding: 12px;
-    font-size: 13px;
-    cursor: pointer;
-    margin-top: 8px;
-    font-family: 'Noto Sans JP', sans-serif;
-  }
-
-  /* Notification badge */
-  .notif-badge {
-    background: var(--accent2);
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 10px;
-    position: absolute;
-    top: -4px;
-    right: -4px;
-  }
-
-  .icon-btn-wrap { position: relative; }
-
-  /* Summary view */
-  .summary-block {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 12px;
-  }
-
-  .summary-block pre {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    color: var(--text2);
-    white-space: pre-wrap;
-    line-height: 1.6;
-  }
-
-  .summary-block pre strong {
-    color: var(--text);
-    font-weight: 600;
-  }
-
-  .copy-btn {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text2);
-    padding: 8px 14px;
-    border-radius: var(--radius-sm);
-    font-size: 11px;
-    cursor: pointer;
-    margin-top: 10px;
-    font-family: 'Noto Sans JP', sans-serif;
-    transition: all 0.15s;
-  }
-  .copy-btn:active { background: var(--border); }
-  .copy-btn.copied { color: var(--green); border-color: var(--green); }
-
-  /* Notification settings panel */
-  .notif-panel {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    margin-bottom: 16px;
-  }
-
-  .notif-panel-title {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text2);
-    margin-bottom: 8px;
-  }
-
-  .notif-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .notif-row:last-child { border-bottom: none; }
-
-  .toggle {
-    width: 42px;
-    height: 24px;
-    background: var(--border);
-    border-radius: 12px;
-    position: relative;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .toggle.on { background: var(--accent); }
-  .toggle::after {
-    content: '';
-    position: absolute;
-    width: 18px;
-    height: 18px;
-    background: #fff;
-    border-radius: 50%;
-    top: 3px;
-    left: 3px;
-    transition: transform 0.2s;
-  }
-  .toggle.on::after { transform: translateX(18px); }
-
-  /* Empty state */
-  .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--text3);
-  }
-  .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
-  .empty-state-text { font-size: 13px; line-height: 1.6; }
-
-  /* Swipe to delete hint */
-  .swipe-hint {
-    font-size: 10px;
-    color: var(--text3);
-    text-align: center;
-    padding: 4px 0 8px;
-  }
-
-  select.form-input {
-    appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235a6478' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 32px;
-  }
-
-  textarea.form-input {
-    resize: vertical;
-    min-height: 70px;
-  }
-
-  .section-divider {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--text3);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin: 14px 0 8px;
-  }
-
-  .checkbox-group {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .checkbox-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    cursor: pointer;
-  }
-  .checkbox-row input { accent-color: var(--accent); width: 16px; height: 16px; }
-
-  /* Upcoming alert */
-  .upcoming-alert {
-    background: rgba(79,140,255,0.08);
-    border: 1px solid rgba(79,140,255,0.25);
-    border-radius: var(--radius);
-    padding: 12px 16px;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .upcoming-alert-icon { font-size: 20px; }
-  .upcoming-alert-text { font-size: 12px; color: var(--text2); line-height: 1.5; }
-  .upcoming-alert-text strong { color: var(--accent); font-size: 13px; }
-
-  @media (prefers-color-scheme: light) {
-    /* keep dark for medical context */
-  }
-
-  /* AI Import */
-  .import-area {
-    background: var(--surface);
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 14px;
-    transition: border-color 0.2s;
-  }
-  .import-area:focus-within { border-color: var(--accent); }
-
-  .import-textarea {
-    width: 100%;
-    background: transparent;
-    border: none;
-    outline: none;
-    font-family: 'Noto Sans JP', sans-serif;
-    font-size: 13px;
-    color: var(--text);
-    resize: none;
-    min-height: 160px;
-    line-height: 1.7;
-  }
-  .import-textarea::placeholder { color: var(--text3); }
-
-  .import-preview {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    margin-bottom: 12px;
-    overflow: hidden;
-  }
-
-  .import-preview-header {
-    padding: 12px 16px;
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text2);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .import-case-row {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  .import-case-row:last-child { border-bottom: none; }
-
-  .import-check {
-    width: 20px;
-    height: 20px;
-    accent-color: var(--accent);
-    margin-top: 2px;
-    flex-shrink: 0;
-  }
-
-  .import-case-info { flex: 1; }
-  .import-case-name { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
-  .import-case-meta { font-size: 11px; color: var(--text2); line-height: 1.5; }
-
-  .import-status {
-    font-size: 12px;
-    padding: 10px 14px;
-    border-radius: var(--radius-sm);
-    margin-bottom: 12px;
-    line-height: 1.5;
-  }
-  .import-status.loading { background: rgba(79,140,255,0.08); color: var(--accent); border: 1px solid rgba(79,140,255,0.2); }
-  .import-status.error { background: rgba(255,87,87,0.08); color: var(--red); border: 1px solid rgba(255,87,87,0.2); }
-  .import-status.success { background: rgba(67,217,160,0.08); color: var(--green); border: 1px solid rgba(67,217,160,0.2); }
-
-  .api-key-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-  .api-key-input {
-    flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 9px 12px;
-    font-size: 12px;
-    color: var(--text);
-    font-family: 'IBM Plex Mono', monospace;
-    outline: none;
-  }
-  .api-key-input:focus { border-color: var(--accent); }
-
-  .import-hint {
-    font-size: 11px;
-    color: var(--text3);
-    line-height: 1.6;
-    margin-bottom: 14px;
-  }
-  .import-hint a { color: var(--accent); text-decoration: none; }
-
-  /* 術前準備 自動提案パネル */
-  .prep-cat-badge {
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: rgba(79,140,255,0.15);
-    color: var(--accent);
-    white-space: nowrap;
-  }
-  .prep-suggest-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    padding: 5px 8px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--surface2);
-    transition: border-color 0.12s;
-  }
-  .prep-suggest-row:has(input:checked) { border-color: rgba(79,140,255,0.4); }
-  .prep-note {
-    font-size: 11px;
-    color: var(--accent3);
-    margin-top: 6px;
-  }
-  .prep-apply-btn {
-    width: 100%;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: 10px;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: 'Noto Sans JP', sans-serif;
-    margin-top: 10px;
-    transition: opacity 0.15s;
-  }
-  .prep-apply-btn:active { opacity: 0.85; }
-
-  /* ========== CALENDAR ========== */
-  .cal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-  }
-  .cal-nav-btn {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 8px;
-    padding: 6px 16px;
-    font-size: 18px;
-    cursor: pointer;
-    font-family: inherit;
-    line-height: 1;
-  }
-  .cal-nav-btn:active { background: var(--border); }
-  .cal-month-label {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text);
-  }
-  .cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 3px;
-    margin-bottom: 14px;
-  }
-  .cal-weekday {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--text3);
-    text-align: center;
-    padding: 4px 0;
-  }
-  .cal-weekday.sun { color: #ff7070; }
-  .cal-weekday.sat { color: var(--accent); }
-  .cal-day {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    position: relative;
-    transition: background 0.12s;
-    min-height: 38px;
-    padding: 4px 2px 5px;
-    color: var(--text);
-  }
-  .cal-day-num {
-    line-height: 1.2;
-    margin-bottom: 2px;
-  }
-  .cal-day-op {
-    font-size: 8px;
-    font-weight: 600;
-    color: var(--accent3);
-    text-align: center;
-    line-height: 1.3;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    width: 100%;
-    padding: 0 2px;
-  }
-  .cal-day.today .cal-day-op { color: rgba(255,255,255,0.85); }
-  .cal-day.sun { color: #ff7070; }
-  .cal-day.sat { color: var(--accent); }
-  .cal-day:not(.empty):active { background: var(--surface2); }
-  .cal-day.empty { cursor: default; opacity: 0; }
-  .cal-day.future-day { opacity: 0.35; cursor: default; }
-  .cal-day.today { background: var(--accent); color: #fff !important; font-weight: 700; }
-  .cal-day.has-event::after {
-    content: '';
-    position: absolute;
-    bottom: 3px;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--accent3);
-  }
-  .cal-day.today.has-event::after { background: rgba(255,255,255,0.8); }
-  .cal-day.selected:not(.today) {
-    background: rgba(79,140,255,0.15);
-    border: 1px solid var(--accent);
-  }
-  .cal-day-detail {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-  .cal-day-detail-header {
-    padding: 10px 14px;
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text);
-  }
-  .cal-task-row {
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-    color: var(--text);
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    line-height: 1.4;
-  }
-  .cal-task-row:last-child { border-bottom: none; }
-  .cal-task-icon { font-size: 14px; flex-shrink: 0; }
-
-  /* ========== DAILY BRIEF POPUP ========== */
-  .daily-brief-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    z-index: 900;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-  }
-  .daily-brief-overlay.hidden { display: none; }
-  .daily-brief-modal {
-    background: var(--surface);
-    border-radius: var(--radius) var(--radius) 0 0;
-    padding: 20px 20px 36px;
-    width: 100%;
-    max-width: 640px;
-    max-height: 82vh;
-    overflow-y: auto;
-  }
-  .daily-brief-handle {
-    width: 36px;
-    height: 4px;
-    background: var(--border);
-    border-radius: 2px;
-    margin: 0 auto 16px;
-  }
-  .daily-brief-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 3px;
-  }
-  .daily-brief-subtitle {
-    font-size: 11px;
-    color: var(--text3);
-    margin-bottom: 16px;
-  }
-  .daily-brief-section { margin-bottom: 14px; }
-  .daily-brief-section-title {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.07em;
-    color: var(--text3);
-    text-transform: uppercase;
-    margin-bottom: 7px;
-  }
-  .daily-brief-row {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 9px 12px;
-    font-size: 12px;
-    color: var(--text);
-    margin-bottom: 5px;
-    line-height: 1.45;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .daily-brief-row.warn { border-color: rgba(255,87,87,0.4); background: rgba(255,87,87,0.05); }
-  .daily-brief-row.alert { border-color: rgba(255,209,102,0.4); background: rgba(255,209,102,0.05); }
-  .daily-brief-close-btn {
-    width: 100%;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: 13px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: inherit;
-    margin-top: 16px;
-  }
-  .daily-brief-close-btn:active { opacity: 0.85; }
+/* =====================================================
+   手術担当管理 — SURGICAL PRECISION v2
+   ===================================================== */
+
+/* ── Color Tokens (Dark default; overridden by applyTheme) ── */
+:root {
+  --bg:        #07090F;
+  --surface:   #0C1320;
+  --surface2:  #131F34;
+  --border:    #1B2D44;
+  --text:      #D8E8F4;
+  --text2:     #5E84A0;
+  --text3:     #2E4A60;
+
+  --accent:    #1AAEC8;
+  --accent2:   #D84040;
+  --accent3:   #C89620;
+  --green:     #18C478;
+  --red:       #D84040;
+  --icu:       #D07030;
+  --radius:    10px;
+  --radius-sm: 7px;
+  --radius-xs: 5px;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans JP', 'Hiragino Sans', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ── Header ── */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  line-height: 1.25;
+}
+.header-title span { color: var(--accent); }
+
+.header-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 15px;
+  transition: background 0.12s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.icon-btn:active { transform: scale(0.90); background: var(--border); }
+.icon-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 300;
+}
+.icon-btn.primary:active { opacity: 0.82; transform: scale(0.90); }
+
+/* ── Tab bar ── */
+.tab-bar {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 10px;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.tab-bar::-webkit-scrollbar { display: none; }
+
+.tab {
+  padding: 10px 13px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text3);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+  letter-spacing: 0.01em;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── Content ── */
+.content {
+  padding: 12px 14px 88px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* ── Surgery Card ── */
+.surgery-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  overflow: hidden;
+  display: flex;
+  transition: border-color 0.15s;
+}
+.surgery-card:active { border-color: var(--accent); }
+
+.card-status-bar {
+  width: 3px;
+  flex-shrink: 0;
+}
+.card-status-bar.pre        { background: var(--border); }
+.card-status-bar.admitted   { background: var(--accent); }
+.card-status-bar.discharged { background: var(--text3); }
+.card-status-bar.today      { background: var(--accent2); }
+
+.card-inner { flex: 1; min-width: 0; }
+
+.card-header {
+  padding: 11px 14px 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Badges ── */
+.op-date-badge {
+  background: var(--accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  flex-shrink: 0;
+}
+.op-date-badge.past  { background: var(--text3); }
+.op-date-badge.today { background: var(--accent2); animation: pulse 2.5s ease-in-out infinite; }
+.op-date-badge.soon  { background: var(--accent3); }
+
+.days-badge {
+  font-size: 9px;
+  font-weight: 700;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.days-badge.urgent { background: rgba(216,64,64,0.14); color: var(--red); }
+.days-badge.soon   { background: rgba(200,150,32,0.13); color: var(--accent3); }
+.days-badge.normal { background: var(--surface2); color: var(--text3); }
+
+/* ── Header stats ── */
+.header-stats {
+  display: flex;
+  gap: 5px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+.stat-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.stat-chip.today-chip   { background: rgba(216,64,64,0.13); color: var(--accent2); }
+.stat-chip.week-chip    { background: rgba(26,174,200,0.13); color: var(--accent); }
+.stat-chip.pending-chip { background: rgba(200,150,32,0.13); color: var(--accent3); }
+
+.card-main { flex: 1; min-width: 0; }
+
+.patient-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 3px;
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.patient-meta {
+  font-size: 10px;
+  color: var(--text2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.meta-tag {
+  background: var(--surface2);
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
+  font-size: 9px;
+  color: var(--text3);
+  border: 1px solid var(--border);
+}
+.meta-tag.icu   { border-color: var(--icu);   color: var(--icu); }
+.meta-tag.recon { border-color: var(--green);  color: var(--green); }
+
+.card-expand {
+  font-size: 13px;
+  color: var(--text3);
+  transition: transform 0.2s;
+  padding-top: 2px;
+  flex-shrink: 0;
+}
+.card-expand.open { transform: rotate(180deg); }
+
+.card-body {
+  display: none;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--border);
+}
+.card-body.open { display: block; }
+
+.info-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 9px;
+  align-items: flex-start;
+}
+.info-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text3);
+  letter-spacing: 0.07em;
+  min-width: 52px;
+  padding-top: 1px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.info-value {
+  font-size: 11px;
+  color: var(--text);
+  flex: 1;
+  line-height: 1.5;
+}
+
+.team-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.team-chip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  color: var(--text2);
+}
+.team-chip.me {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(26,174,200,0.10);
+}
+
+/* ── Checklist ── */
+.checklist {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+  margin-top: 4px;
+}
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  transition: transform 0.1s, border-color 0.1s;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.check-item:active { transform: scale(0.94); }
+.check-item.done {
+  border-color: var(--green);
+  background: rgba(24,196,120,0.09);
+  color: var(--green);
+  text-decoration: line-through;
+  text-decoration-color: rgba(24,196,120,0.4);
+}
+.check-item.warn {
+  border-color: var(--accent3);
+  color: var(--accent3);
+  background: rgba(200,150,32,0.09);
+}
+.check-item .check-icon { font-size: 12px; line-height: 1; }
+
+/* ── Notes ── */
+.note-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 11px;
+  color: var(--text2);
+  line-height: 1.6;
+  margin-top: 8px;
+  white-space: pre-wrap;
+}
+
+/* ── Progress ── */
+.progress-bar {
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+  margin: 10px 0 4px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 1px;
+  transition: width 0.3s;
+}
+.progress-label {
+  font-size: 10px;
+  color: var(--text3);
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ── Date separator ── */
+.date-separator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 10px;
+}
+.date-separator-line { flex: 1; height: 1px; background: var(--border); }
+.date-separator-text {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  letter-spacing: 0.08em;
+  font-family: 'IBM Plex Mono', monospace;
+  white-space: nowrap;
+}
+
+/* ── FAB ── */
+.fab {
+  position: fixed;
+  bottom: 28px;
+  right: 20px;
+  width: 52px;
+  height: 52px;
+  background: var(--accent);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(26,174,200,0.32), 0 1px 4px rgba(0,0,0,0.25);
+  transition: transform 0.12s, box-shadow 0.12s;
+  border: none;
+  z-index: 99;
+  -webkit-tap-highlight-color: transparent;
+}
+.fab:active {
+  transform: scale(0.88);
+  box-shadow: 0 2px 8px rgba(26,174,200,0.18);
+}
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 200;
+  display: none;
+  align-items: flex-end;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 20px 44px;
+  width: 100%;
+  max-height: 92vh;
+  overflow-y: auto;
+  animation: slideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.modal-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 20px;
+}
+
+.modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+/* ── Form ── */
+.form-group { margin-bottom: 14px; }
+.form-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  display: block;
+}
+.form-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: 'Noto Sans JP', sans-serif;
+  outline: none;
+  transition: border-color 0.15s;
+  -webkit-appearance: none;
+}
+.form-input:focus { border-color: var(--accent); }
+.form-input::placeholder { color: var(--text3); }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.btn-primary {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+  font-family: 'Noto Sans JP', sans-serif;
+  transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-primary:active { opacity: 0.82; }
+
+.btn-danger {
+  width: 100%;
+  background: transparent;
+  color: var(--red);
+  border: 1px solid rgba(216,64,64,0.25);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 8px;
+  font-family: 'Noto Sans JP', sans-serif;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-danger:active { background: rgba(216,64,64,0.07); }
+
+/* ── Notification badge ── */
+.notif-badge {
+  background: var(--accent2);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 8px;
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  line-height: 1.4;
+}
+.icon-btn-wrap { position: relative; }
+
+/* ── Summary block ── */
+.summary-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.summary-block pre {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  font-size: 11px;
+  color: var(--text2);
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+.summary-block pre strong { color: var(--text); font-weight: 600; }
+
+.copy-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 10px;
+  font-family: 'Noto Sans JP', sans-serif;
+  transition: background 0.12s;
+}
+.copy-btn:active { background: var(--border); }
+.copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+/* ── Notification panel ── */
+.notif-panel {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.notif-panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text2);
+  margin-bottom: 8px;
+}
+.notif-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.notif-row:last-child { border-bottom: none; }
+
+/* ── Toggle ── */
+.toggle {
+  width: 40px;
+  height: 22px;
+  background: var(--border);
+  border-radius: 11px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.toggle.on { background: var(--accent); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 17px;
+  height: 17px;
+  background: #fff;
+  border-radius: 50%;
+  top: 2.5px;
+  left: 2.5px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+.toggle.on::after { transform: translateX(18px); }
+
+/* ── Empty state ── */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
+.empty-state-icon { font-size: 44px; margin-bottom: 16px; opacity: 0.65; }
+.empty-state-text { font-size: 13px; line-height: 1.7; }
+
+.swipe-hint { font-size: 10px; color: var(--text3); text-align: center; padding: 4px 0 8px; }
+
+/* ── Select & Textarea ── */
+select.form-input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%235E84A0' d='M5 7L1 3h8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 30px;
+}
+
+textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
+
+.section-divider {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 14px 0 8px;
+}
+
+/* ── Checkboxes ── */
+.checkbox-group { display: flex; flex-direction: column; gap: 6px; }
+.checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.checkbox-row input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+/* ── Upcoming alert ── */
+.upcoming-alert {
+  background: rgba(26,174,200,0.08);
+  border: 1px solid rgba(26,174,200,0.22);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.upcoming-alert-icon { font-size: 18px; }
+.upcoming-alert-text { font-size: 12px; color: var(--text2); line-height: 1.5; }
+.upcoming-alert-text strong { color: var(--accent); font-size: 13px; }
+
+/* ── Import ── */
+.import-area {
+  background: var(--surface);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 14px;
+  transition: border-color 0.2s;
+}
+.import-area:focus-within { border-color: var(--accent); }
+.import-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  resize: none;
+  min-height: 160px;
+  line-height: 1.7;
+}
+.import-textarea::placeholder { color: var(--text3); }
+
+.import-preview {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.import-preview-header {
+  padding: 10px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.import-case-row {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.import-case-row:last-child { border-bottom: none; }
+.import-check { width: 18px; height: 18px; accent-color: var(--accent); margin-top: 2px; flex-shrink: 0; }
+.import-case-info { flex: 1; }
+.import-case-name { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+.import-case-meta { font-size: 11px; color: var(--text2); line-height: 1.5; }
+
+.import-status {
+  font-size: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.import-status.loading { background: rgba(26,174,200,0.09); color: var(--accent); border: 1px solid rgba(26,174,200,0.22); }
+.import-status.error   { background: rgba(216,64,64,0.09); color: var(--red); border: 1px solid rgba(216,64,64,0.22); }
+.import-status.success { background: rgba(24,196,120,0.09); color: var(--green); border: 1px solid rgba(24,196,120,0.22); }
+
+.api-key-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+.api-key-input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 12px;
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  outline: none;
+}
+.api-key-input:focus { border-color: var(--accent); }
+
+.import-hint { font-size: 11px; color: var(--text3); line-height: 1.6; margin-bottom: 14px; }
+.import-hint a { color: var(--accent); text-decoration: none; }
+
+/* ── Prep suggest ── */
+.prep-cat-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(26,174,200,0.13);
+  color: var(--accent);
+  white-space: nowrap;
+}
+.prep-suggest-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  transition: border-color 0.12s;
+}
+.prep-suggest-row:has(input:checked) { border-color: rgba(26,174,200,0.4); }
+.prep-note { font-size: 11px; color: var(--accent3); margin-top: 6px; }
+.prep-apply-btn {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  margin-top: 10px;
+  transition: opacity 0.15s;
+}
+.prep-apply-btn:active { opacity: 0.82; }
+
+/* ── Calendar ── */
+.cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cal-nav-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 6px 16px;
+  font-size: 18px;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1;
+  transition: background 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.cal-nav-btn:active { background: var(--border); }
+.cal-month-label { font-size: 15px; font-weight: 700; color: var(--text); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 14px; }
+.cal-weekday {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  text-align: center;
+  padding: 4px 0;
+  letter-spacing: 0.02em;
+}
+.cal-weekday.sun { color: var(--red); }
+.cal-weekday.sat { color: var(--accent); }
+.cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.12s;
+  min-height: 38px;
+  padding: 4px 2px 5px;
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+}
+.cal-day-num { line-height: 1.2; margin-bottom: 2px; }
+.cal-day-op {
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--accent3);
+  text-align: center;
+  line-height: 1.3;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  padding: 0 2px;
+}
+.cal-day.today .cal-day-op { color: rgba(255,255,255,0.9); }
+.cal-day.sun { color: var(--red); }
+.cal-day.sat { color: var(--accent); }
+.cal-day:not(.empty):active { background: var(--surface2); }
+.cal-day.empty { cursor: default; opacity: 0; }
+.cal-day.future-day { opacity: 0.35; cursor: default; }
+.cal-day.today { background: var(--accent); color: #fff !important; font-weight: 700; }
+.cal-day.has-event::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent3);
+}
+.cal-day.today.has-event::after { background: rgba(255,255,255,0.85); }
+.cal-day.selected:not(.today) {
+  background: rgba(26,174,200,0.13);
+  border: 1px solid var(--accent);
+}
+.cal-day-detail {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.cal-day-detail-header {
+  padding: 10px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+.cal-task-row {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
+}
+.cal-task-row:last-child { border-bottom: none; }
+.cal-task-icon { font-size: 14px; flex-shrink: 0; }
+
+/* ── Daily Brief ── */
+.daily-brief-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 900;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.daily-brief-overlay.hidden { display: none; }
+.daily-brief-modal {
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 20px 36px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 82vh;
+  overflow-y: auto;
+}
+.daily-brief-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+.daily-brief-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.daily-brief-subtitle { font-size: 11px; color: var(--text3); margin-bottom: 16px; }
+.daily-brief-section { margin-bottom: 14px; }
+.daily-brief-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 7px;
+}
+.daily-brief-row {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 5px;
+  line-height: 1.45;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.daily-brief-row.warn  { border-color: rgba(216,64,64,0.35); background: rgba(216,64,64,0.06); }
+.daily-brief-row.alert { border-color: rgba(200,150,32,0.35); background: rgba(200,150,32,0.06); }
+.daily-brief-close-btn {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 13px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  margin-top: 16px;
+}
+.daily-brief-close-btn:active { opacity: 0.82; }
 </style>
 </head>
 <body>
@@ -1162,7 +1090,7 @@ GH_CONFIG_END -->
       <label class="form-label">治療モード *</label>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px;">
         <button type="button" id="modeBtn_ope" onclick="selectFormMode('ope')"
-          style="background:rgba(79,140,255,0.15);border:2px solid var(--accent);color:var(--accent);border-radius:8px;padding:10px 6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
+          style="background:rgba(26,174,200,0.15);border:2px solid var(--accent);color:var(--accent);border-radius:8px;padding:10px 6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;">
           🔪 オペ
         </button>
         <button type="button" id="modeBtn_chemo" onclick="selectFormMode('chemo')"
@@ -1190,10 +1118,10 @@ GH_CONFIG_END -->
     </div>
 
     <!-- 術前準備 自動提案パネル -->
-    <div id="prepSuggestPanel" style="display:none;background:rgba(79,140,255,0.06);border:1px solid rgba(79,140,255,0.25);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;"></div>
+    <div id="prepSuggestPanel" style="display:none;background:rgba(26,174,200,0.06);border:1px solid rgba(26,174,200,0.25);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;"></div>
 
     <!-- 疾患別チェックリスト提案パネル -->
-    <div id="diseaseCheckSuggestPanel" style="display:none;background:rgba(67,217,160,0.06);border:1px solid rgba(67,217,160,0.25);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;"></div>
+    <div id="diseaseCheckSuggestPanel" style="display:none;background:rgba(24,196,120,0.06);border:1px solid rgba(24,196,120,0.25);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;"></div>
 
     <div class="form-row">
       <div class="form-group">
@@ -1326,7 +1254,7 @@ GH_CONFIG_END -->
         <option value="">— 指導医を選択 —</option>
       </select>
     </div>
-    <div id="f_supervisorRegNoBox" style="display:none;margin-top:-8px;margin-bottom:12px;padding:10px 14px;background:rgba(79,140,255,0.08);border:1px solid rgba(79,140,255,0.3);border-radius:8px;">
+    <div id="f_supervisorRegNoBox" style="display:none;margin-top:-8px;margin-bottom:12px;padding:10px 14px;background:rgba(26,174,200,0.08);border:1px solid rgba(26,174,200,0.3);border-radius:8px;">
       <div style="font-size:10px;color:var(--text3);margin-bottom:2px;">指導医登録番号</div>
       <div id="f_supervisorRegNo" style="color:var(--accent);font-weight:700;font-size:16px;font-family:'IBM Plex Mono',monospace;"></div>
     </div>
@@ -1421,7 +1349,7 @@ GH_CONFIG_END -->
     </div>
 
     <!-- Step 5: GitHub Token -->
-    <div class="notif-panel" style="margin-bottom:12px;border-color:rgba(79,140,255,0.4);">
+    <div class="notif-panel" style="margin-bottom:12px;border-color:rgba(26,174,200,0.4);">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
         <div style="background:var(--accent);color:#fff;font-size:12px;font-weight:700;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div>
         <div style="font-size:11px;font-weight:700;color:var(--text);">アプリ内から自動更新できるように設定</div>
@@ -1589,7 +1517,7 @@ GH_CONFIG_END -->
       <input type="datetime-local" id="qrCustomDt"
         style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 10px;font-size:12px;color:var(--text);font-family:inherit;">
       <button onclick="fireReminderCustom()"
-        style="padding:9px 14px;background:rgba(79,140,255,0.15);border:1px solid rgba(79,140,255,0.4);border-radius:8px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+        style="padding:9px 14px;background:rgba(26,174,200,0.15);border:1px solid rgba(26,174,200,0.4);border-radius:8px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
         ✓ 登録
       </button>
     </div>
@@ -2120,7 +2048,7 @@ let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || 
   doctorName: '山口',
   defaultTeam: '山口',
   theme: 'dark',
-  accentColor: '#4f8cff',
+  accentColor: '#1AAEC8',
   checklistItems: JSON.parse(JSON.stringify(CHECKLIST_DEFAULTS_BUILTIN)), // 後方互換用
   defaultCheckItems: JSON.parse(JSON.stringify(DEFAULT_CHECK_ITEMS_BUILTIN)),
   opeCheckItems:     JSON.parse(JSON.stringify(OPE_CHECK_ITEMS_BUILTIN)),
@@ -2254,8 +2182,8 @@ function renderRegimenSuggestions(text) {
     <div style="display:flex;flex-wrap:wrap;gap:5px;">
       ${candidates.map(r => `
         <button onclick="selectRegimen('${r.id}')"
-          style="background:${r.mode==='crt'?'rgba(67,217,160,0.1)':'rgba(245,158,11,0.08)'};
-                 border:1px solid ${r.mode==='crt'?'rgba(67,217,160,0.4)':'rgba(245,158,11,0.35)'};
+          style="background:${r.mode==='crt'?'rgba(24,196,120,0.1)':'rgba(200,150,32,0.08)'};
+                 border:1px solid ${r.mode==='crt'?'rgba(24,196,120,0.4)':'rgba(200,150,32,0.35)'};
                  color:${r.mode==='crt'?'var(--green)':'#f59e0b'};
                  border-radius:6px;padding:5px 11px;font-size:11px;font-weight:700;
                  cursor:pointer;font-family:inherit;line-height:1.4;">
@@ -2293,7 +2221,7 @@ function renderDiseaseCheckSuggestions(text) {
         ${r.items.map(i => `<div style="font-size:11px;color:var(--text2);padding:2px 0;">• ${i}</div>`).join('')}
       </div>
       <button onclick="addDiseaseCheckItemsToFreeChecks('${r.id}')"
-        style="background:rgba(67,217,160,0.15);color:var(--green);border:1px solid rgba(67,217,160,0.4);border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
+        style="background:rgba(24,196,120,0.15);color:var(--green);border:1px solid rgba(24,196,120,0.4);border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">
         ＋ フリーチェックリストに追加
       </button>
     </div>
@@ -2700,7 +2628,7 @@ function renderAdmitted(container) {
 
   // 今日の検査バナー（全患者分をまとめて）
   const examBanner = Object.keys(todayExams).length > 0
-    ? `<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:10px 14px;margin-bottom:14px;">
+    ? `<div style="background:rgba(200,150,32,0.08);border:1px solid rgba(200,150,32,0.3);border-radius:10px;padding:10px 14px;margin-bottom:14px;">
         <div style="font-size:11px;font-weight:700;color:#f59e0b;margin-bottom:8px;">🧪 本日の検査予定</div>
         <div style="display:flex;flex-direction:column;gap:5px;">
         ${Object.entries(todayExams).map(([cid, exams]) => {
@@ -2968,7 +2896,7 @@ function renderDischargeWeekly(el) {
     const rows = group.map(c => {
       const summaryDone = c.checks && c.checks['discharge_summary'];
       const summaryBadge = summaryDone
-        ? `<span style="font-size:10px;color:var(--green,#43d9a0);font-weight:700;">📋 完了</span>`
+        ? `<span style="font-size:10px;color:var(--green,#18C478);font-weight:700;">📋 完了</span>`
         : `<button onclick="event.stopPropagation();markDischargeSummaryDone('${c.id}')" style="font-size:10px;color:#fff;background:var(--accent2);border:none;border-radius:4px;padding:2px 8px;font-weight:700;cursor:pointer;font-family:inherit;">📋 未記載→完了</button>`;
       const pathBadge = c.pathology
         ? `<div style="display:flex;align-items:flex-start;gap:5px;margin-top:5px;">
@@ -3018,7 +2946,7 @@ const DRUG_TOXICITY_DATA = [
   {
     name: 'CDDP（シスプラチン）',
     icon: '💊',
-    color: '#4f8cff',
+    color: '#1AAEC8',
     items: [
       { grade: 'high', label: '腎障害（用量依存性・累積性）' },
       { grade: 'high', label: '高度悪心・嘔吐（HEC）' },
@@ -3032,7 +2960,7 @@ const DRUG_TOXICITY_DATA = [
   {
     name: 'CBDCA（カルボプラチン）',
     icon: '💊',
-    color: '#4f8cff',
+    color: '#1AAEC8',
     items: [
       { grade: 'high', label: '血小板減少（用量規定毒性）' },
       { grade: 'high', label: '汎血球減少・骨髄抑制' },
@@ -3044,7 +2972,7 @@ const DRUG_TOXICITY_DATA = [
   {
     name: '5-FU（フルオロウラシル）',
     icon: '💊',
-    color: '#4f8cff',
+    color: '#1AAEC8',
     items: [
       { grade: 'high', label: '口内炎・咽頭粘膜炎' },
       { grade: 'mid',  label: '下痢・腸管粘膜炎' },
@@ -3057,7 +2985,7 @@ const DRUG_TOXICITY_DATA = [
   {
     name: 'DTX（ドセタキセル）',
     icon: '💊',
-    color: '#4f8cff',
+    color: '#1AAEC8',
     items: [
       { grade: 'high', label: '好中球減少・FN（発熱性好中球減少症）' },
       { grade: 'mid',  label: '浮腫（累積性・胸水/腹水）' },
@@ -3070,7 +2998,7 @@ const DRUG_TOXICITY_DATA = [
   {
     name: 'PTX（パクリタキセル）',
     icon: '💊',
-    color: '#4f8cff',
+    color: '#1AAEC8',
     items: [
       { grade: 'high', label: '過敏反応（アナフィラキシー）' },
       { grade: 'high', label: '末梢神経障害（用量依存・累積性）' },
@@ -3083,7 +3011,7 @@ const DRUG_TOXICITY_DATA = [
   {
     name: 'Cmab（セツキシマブ）',
     icon: '💊',
-    color: '#ffd166',
+    color: '#C89620',
     items: [
       { grade: 'high', label: 'ざ瘡様皮疹（ほぼ全例・顔面/体幹）' },
       { grade: 'high', label: 'Infusion reaction（初回・Grade3-4あり）' },
@@ -3096,7 +3024,7 @@ const DRUG_TOXICITY_DATA = [
   {
     name: 'Pembrolizumab（ペムブロリズマブ）',
     icon: '🔬',
-    color: '#43d9a0',
+    color: '#18C478',
     items: [
       { grade: 'high', label: 'irAE：間質性肺炎（致死的）' },
       { grade: 'high', label: 'irAE：重症筋無力症・心筋炎' },
@@ -3110,7 +3038,7 @@ const DRUG_TOXICITY_DATA = [
   {
     name: 'Nivolumab（ニボルマブ）',
     icon: '🔬',
-    color: '#43d9a0',
+    color: '#18C478',
     items: [
       { grade: 'high', label: 'irAE：間質性肺炎' },
       { grade: 'high', label: 'irAE：大腸炎（重症下痢）' },
@@ -3123,7 +3051,7 @@ const DRUG_TOXICITY_DATA = [
   {
     name: '放射線（頭頸部照射）',
     icon: '📡',
-    color: '#ff6b6b',
+    color: '#D84040',
     items: [
       { grade: 'high', label: '放射線性粘膜炎（Grade3以上：疼痛・嚥下不可）' },
       { grade: 'high', label: '口腔乾燥（唾液腺障害・不可逆）' },
@@ -3151,7 +3079,7 @@ function toggleKnowledgeRegimen(id) {
 
 function knGradeColor(g) {
   if (g === 'high') return '#ff5757';
-  if (g === 'mid')  return '#ffd166';
+  if (g === 'mid')  return '#C89620';
   return '#8892a4';
 }
 function knGradeLabel(g) {
@@ -3341,7 +3269,7 @@ function renderSurgeryHistory(el) {
 
   // フィルター + 今月件数
   html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 14px 2px;">';
-  html += '<button onclick="histToggleFilter()" style="background:' + (histCalFilterMine && myName ? 'rgba(79,140,255,0.15)' : 'var(--surface2)') + ';border:1px solid ' + (histCalFilterMine && myName ? 'var(--accent)' : 'var(--border)') + ';color:' + (histCalFilterMine && myName ? 'var(--accent)' : 'var(--text3)') + ';border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">'
+  html += '<button onclick="histToggleFilter()" style="background:' + (histCalFilterMine && myName ? 'rgba(26,174,200,0.15)' : 'var(--surface2)') + ';border:1px solid ' + (histCalFilterMine && myName ? 'var(--accent)' : 'var(--border)') + ';color:' + (histCalFilterMine && myName ? 'var(--accent)' : 'var(--text3)') + ';border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">'
     + '👤 ' + filterLabel + '</button>';
   html += '<div style="font-size:11px;color:var(--text3);">今月 <span style="color:var(--accent);font-weight:700;">' + thisMonthOps.length + '件</span>'
     + (modeCount.ope ? '　🔪' + modeCount.ope : '')
@@ -3438,7 +3366,7 @@ function renderCancerCases(el) {
 
   // コピーボタン
   html += '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">';
-  html += '<button onclick="copyCancerTSV()" id="cancerCopyBtn" style="background:rgba(255,87,87,0.15);color:var(--red);border:1px solid rgba(255,87,87,0.4);border-radius:8px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📋 TSVコピー（' + cancerCases.length + '件）</button>';
+  html += '<button onclick="copyCancerTSV()" id="cancerCopyBtn" style="background:rgba(216,64,64,0.15);color:var(--red);border:1px solid rgba(216,64,64,0.4);border-radius:8px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📋 TSVコピー（' + cancerCases.length + '件）</button>';
   html += '</div>';
 
   // 症例カード
@@ -3449,7 +3377,7 @@ function renderCancerCases(el) {
     var mColor = modeColor[mode] || 'var(--text3)';
     var admStatus = getAdmissionStatus(c);
     var statusBadge = admStatus === 'admitted'
-      ? '<span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(79,140,255,0.12);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;">入院中</span>'
+      ? '<span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(26,174,200,0.12);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;">入院中</span>'
       : admStatus === 'discharged'
       ? '<span style="font-size:10px;font-weight:700;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;">退院済</span>'
       : '<span style="font-size:10px;font-weight:700;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;">入院前</span>';
@@ -3678,7 +3606,7 @@ function renderKnowledge(el) {
     var active = knowledgeTab === t.id;
     html += '<button onclick="setKnowledgeTab(\'' + t.id + '\')" style="padding:9px 4px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;font-family:inherit;'
       + 'border:1px solid ' + (active ? 'var(--accent)' : 'var(--border)') + ';'
-      + 'background:' + (active ? 'rgba(79,140,255,0.15)' : 'var(--surface2)') + ';'
+      + 'background:' + (active ? 'rgba(26,174,200,0.15)' : 'var(--surface2)') + ';'
       + 'color:' + (active ? 'var(--accent)' : 'var(--text2)') + ';">' + t.label + '</button>';
   }
   html += '</div>';
@@ -3707,7 +3635,7 @@ function renderKnowledge(el) {
         html += '<span style="font-size:13px;">' + modeIcon + '</span>';
         html += '<span style="font-size:12px;font-weight:700;color:var(--text);flex:1;">' + r.name + '</span>';
         if (highSe.length > 0) {
-          html += '<span style="font-size:9px;font-weight:700;color:#ff5757;background:rgba(255,87,87,0.12);border:1px solid rgba(255,87,87,0.3);border-radius:4px;padding:1px 5px;margin-left:4px;">重篤' + highSe.length + '</span>';
+          html += '<span style="font-size:9px;font-weight:700;color:var(--red);background:rgba(216,64,64,0.12);border:1px solid rgba(216,64,64,0.3);border-radius:4px;padding:1px 5px;margin-left:4px;">重篤' + highSe.length + '</span>';
         }
         html += '<span style="font-size:12px;color:var(--text3);">' + (expanded ? '∨' : '›') + '</span>';
         html += '</div>';
@@ -3780,7 +3708,7 @@ function renderKnowledge(el) {
         html += '</div>';
       }
       if (drug.notes) {
-        html += '<div style="margin-top:8px;padding:6px 10px;background:rgba(79,140,255,0.07);border:1px solid rgba(79,140,255,0.2);border-radius:6px;font-size:10px;color:var(--text2);line-height:1.6;">💡 ' + drug.notes + '</div>';
+        html += '<div style="margin-top:8px;padding:6px 10px;background:rgba(26,174,200,0.07);border:1px solid rgba(26,174,200,0.2);border-radius:6px;font-size:10px;color:var(--text2);line-height:1.6;">💡 ' + drug.notes + '</div>';
       }
       html += '</div>';
     }
@@ -3946,7 +3874,7 @@ function buildCalendarDayDetail(dateStr) {
   cases.forEach(c => {
     (c.examSchedules || []).filter(e => e.date === dateStr).forEach(e => {
       const icon = EXAM_ICONS_CAL[e.type] || '🧪';
-      rows.push(`<div class="cal-task-row" style="border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.04);">
+      rows.push(`<div class="cal-task-row" style="border-color:rgba(200,150,32,0.3);background:rgba(200,150,32,0.04);">
         <span class="cal-task-icon">${icon}</span>
         <div>
           <div style="font-weight:700;color:#f59e0b;">${c.name || '患者名未設定'} — ${e.label}</div>
@@ -3967,7 +3895,7 @@ function buildCalendarDayDetail(dateStr) {
   pendingChecks.forEach(c => {
     const pendingItems = CHECKLIST_DEFAULTS.filter(item => !(c.checks && c.checks[item.key])).map(i => i.label);
     if (pendingItems.length === 0) return;
-    rows.push(`<div class="cal-task-row" style="border-color:rgba(255,209,102,0.3);background:rgba(255,209,102,0.04);">
+    rows.push(`<div class="cal-task-row" style="border-color:rgba(200,150,32,0.3);background:rgba(200,150,32,0.04);">
       <span class="cal-task-icon">⚠️</span>
       <div>
         <div style="font-weight:700;color:var(--accent3);">${c.name} 未完了チェック</div>
@@ -3984,7 +3912,7 @@ function buildCalendarDayDetail(dateStr) {
       rows.push(`<div style="padding:6px 14px 2px;font-size:10px;font-weight:700;letter-spacing:0.07em;color:var(--text3);text-transform:uppercase;border-top:1px solid var(--border);background:var(--surface2);">病棟業務</div>`);
     }
     duties.forEach(duty => {
-      rows.push(`<div class="cal-task-row" style="border-color:rgba(79,140,255,0.2);background:rgba(79,140,255,0.03);">
+      rows.push(`<div class="cal-task-row" style="border-color:rgba(26,174,200,0.2);background:rgba(26,174,200,0.03);">
         <span class="cal-task-icon">${duty.icon}</span>
         <div>
           <div style="font-weight:700;color:var(--accent);">${duty.label}</div>
@@ -4064,12 +3992,12 @@ function renderCard(c, expandByDefault=false) {
   const cardBg = admStatus === 'discharged'
     ? 'background:var(--surface);opacity:0.5;'
     : admStatus === 'admitted'
-    ? 'background:var(--surface);box-shadow:0 0 0 2px rgba(79,140,255,0.16),inset 0 0 0 1000px rgba(79,140,255,0.06);'
+    ? 'background:var(--surface);box-shadow:0 0 0 2px rgba(26,174,200,0.16),inset 0 0 0 1000px rgba(26,174,200,0.06);'
     : 'background:var(--surface);';
   const admBadge = admStatus === 'discharged'
     ? `<span style="font-size:10px;font-weight:700;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;margin-left:6px;">退院済</span>`
     : admStatus === 'admitted'
-    ? `<span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(79,140,255,0.12);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;margin-left:6px;">入院中</span>`
+    ? `<span style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(26,174,200,0.12);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;margin-left:6px;">入院中</span>`
     : '';
   const dlStatus = getDeadlineStatus(c);
   let dlBadge = '';
@@ -4136,9 +4064,9 @@ function renderCard(c, expandByDefault=false) {
   // モードバッジ
   const caseMode = c.mode || detectCaseMode(c.surgery);
   const modeBadgeHtml = caseMode === 'crt'
-    ? `<span style="font-size:10px;font-weight:700;color:var(--green);background:rgba(67,217,160,0.12);border:1px solid rgba(67,217,160,0.35);border-radius:4px;padding:1px 6px;margin-left:4px;">📡ケモラジ</span>`
+    ? `<span style="font-size:10px;font-weight:700;color:var(--green);background:rgba(24,196,120,0.12);border:1px solid rgba(24,196,120,0.35);border-radius:4px;padding:1px 6px;margin-left:4px;">📡ケモラジ</span>`
     : caseMode === 'chemo'
-    ? `<span style="font-size:10px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:4px;padding:1px 6px;margin-left:4px;">💊ケモ</span>`
+    ? `<span style="font-size:10px;font-weight:700;color:#f59e0b;background:rgba(200,150,32,0.1);border:1px solid rgba(200,150,32,0.35);border-radius:4px;padding:1px 6px;margin-left:4px;">💊ケモ</span>`
     : '';
 
   // 副作用セクション
@@ -4174,9 +4102,9 @@ function renderCard(c, expandByDefault=false) {
           const icon = EXAM_ICONS_CARD[e.type] || '🧪';
           const isExamToday = e.date === todayStrCard;
           return `<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;
-            background:${isExamToday ? 'rgba(245,158,11,0.18)' : 'var(--surface2)'};
+            background:${isExamToday ? 'rgba(200,150,32,0.18)' : 'var(--surface2)'};
             color:${isExamToday ? '#f59e0b' : 'var(--text3)'};
-            border:1px solid ${isExamToday ? 'rgba(245,158,11,0.4)' : 'var(--border)'};"
+            border:1px solid ${isExamToday ? 'rgba(200,150,32,0.4)' : 'var(--border)'};"
           >${icon} ${isExamToday ? '今日' : toDateStr(e.date)} ${e.label}${e.note ? `<span style="font-weight:400;"> (${e.note})</span>` : ''}</span>`;
         }).join('')}
       </div>`
@@ -4227,7 +4155,7 @@ function renderCard(c, expandByDefault=false) {
       ${sf.items !== false ? `<div class="info-row"><span class="info-label">物品／注意</span><span class="info-value">${c.items || '特記事項なし'}</span></div>` : ''}
       ${sf.team !== false ? `<div class="info-row"><span class="info-label">担当</span><div class="team-chips">${teamChips || '<span style="color:var(--text3);font-size:12px">未設定</span>'}</div></div>` : ''}
       <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.06em;margin-top:10px;margin-bottom:6px;">チェックリスト</div>
-      <div class="checklist" style="flex-direction:column;gap:4px;">${checks}</div>
+      <div class="checklist">${checks}</div>
       ${freeCheckHtml}
       ${sideEffectsHtml}
       ${memoHtml}
@@ -4409,15 +4337,17 @@ function renderCheckItemRow(caseId, item, checks) {
   var done = checks && checks[item.key];
   var warn = item.warn;
   var cls = 'check-item' + (done ? ' done' : '') + (warn && !done ? ' warn' : '');
-  var row = '<div style="display:flex;align-items:center;gap:6px;">'
-    + '<span class="' + cls + '" onclick="toggleCheck(\'' + caseId + '\',\'' + item.key + '\')" style="flex:1;">'
+  var bellStyle = 'width:30px;height:24px;flex-shrink:0;border-radius:6px;font-size:11px;line-height:1;';
+  var bell = done
+    ? '<div style="' + bellStyle + 'background:none;border:none;"></div>'
+    : '<button onclick="event.stopPropagation();openCheckReminderForItem(\'' + caseId + '\',\'' + item.label.replace(/'/g, "\\'") + '\')"'
+      + ' style="' + bellStyle + 'background:none;border:1px solid var(--border);color:var(--text3);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;">🔔</button>';
+  var row = '<div style="display:flex;align-items:center;gap:5px;">'
+    + '<span class="' + cls + '" onclick="toggleCheck(\'' + caseId + '\',\'' + item.key + '\')" style="flex:1;min-width:0;">'
     + '<span class="check-icon">' + (done ? '☑' : '□') + '</span>' + item.label
-    + '</span>';
-  if (!done) {
-    row += '<button onclick="event.stopPropagation();openCheckReminderForItem(\'' + caseId + '\',\'' + item.label.replace(/'/g, "\\'") + '\')"'
-      + ' style="background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:2px 7px;font-size:11px;cursor:pointer;font-family:inherit;flex-shrink:0;line-height:1.4;">🔔</button>';
-  }
-  row += '</div>';
+    + '</span>'
+    + bell
+    + '</div>';
   return row;
 }
 
@@ -4556,7 +4486,7 @@ function crRenderTimePresets() {
     var isActive = _crSelectedTime === timeStr;
     return '<button onclick="crSelectTimePreset(' + i + ')" style="flex:1;padding:10px 4px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;font-family:inherit;'
       + 'border:1px solid ' + (isActive ? 'var(--accent3)' : 'var(--border)') + ';'
-      + 'background:' + (isActive ? 'rgba(255,209,102,0.2)' : 'var(--surface2)') + ';'
+      + 'background:' + (isActive ? 'rgba(200,150,32,0.2)' : 'var(--surface2)') + ';'
       + 'color:' + (isActive ? 'var(--accent3)' : 'var(--text2)') + ';">'
       + p.label + '<br><span style="font-size:10px;font-weight:400;">' + timeStr + '</span></button>';
   }).join('');
@@ -4664,9 +4594,9 @@ function setExamType(type) {
     const btn = document.getElementById('examTypeBtn_' + t);
     if (!btn) return;
     if (t === type) {
-      const colors = { blood:'rgba(239,68,68,0.2)', ct:'rgba(79,140,255,0.15)', xp:'rgba(67,217,160,0.12)', other:'rgba(245,158,11,0.12)' };
+      const colors = { blood:'rgba(239,68,68,0.2)', ct:'rgba(26,174,200,0.15)', xp:'rgba(24,196,120,0.12)', other:'rgba(200,150,32,0.12)' };
       const textColors = { blood:'#ef4444', ct:'var(--accent)', xp:'var(--green)', other:'#f59e0b' };
-      const borderColors = { blood:'rgba(239,68,68,0.6)', ct:'rgba(79,140,255,0.5)', xp:'rgba(67,217,160,0.5)', other:'rgba(245,158,11,0.5)' };
+      const borderColors = { blood:'rgba(239,68,68,0.6)', ct:'rgba(26,174,200,0.5)', xp:'rgba(24,196,120,0.5)', other:'rgba(200,150,32,0.5)' };
       btn.style.background = colors[t];
       btn.style.borderColor = borderColors[t];
       btn.style.color = textColors[t];
@@ -4711,8 +4641,8 @@ function removeExamSchedule(id) {
 }
 
 const EXAM_ICONS = { blood: '🩸', ct: '🔬', xp: '📷', other: '🧪' };
-const EXAM_COLORS = { blood: 'rgba(239,68,68,0.12)', ct: 'rgba(79,140,255,0.1)', xp: 'rgba(67,217,160,0.1)', other: 'rgba(245,158,11,0.1)' };
-const EXAM_BORDER_COLORS = { blood: 'rgba(239,68,68,0.3)', ct: 'rgba(79,140,255,0.3)', xp: 'rgba(67,217,160,0.3)', other: 'rgba(245,158,11,0.3)' };
+const EXAM_COLORS = { blood: 'rgba(239,68,68,0.12)', ct: 'rgba(26,174,200,0.1)', xp: 'rgba(24,196,120,0.1)', other: 'rgba(200,150,32,0.1)' };
+const EXAM_BORDER_COLORS = { blood: 'rgba(239,68,68,0.3)', ct: 'rgba(26,174,200,0.3)', xp: 'rgba(24,196,120,0.3)', other: 'rgba(200,150,32,0.3)' };
 
 function renderExamScheduleList() {
   const el = document.getElementById('examScheduleList');
@@ -4724,8 +4654,8 @@ function renderExamScheduleList() {
   const sorted = [...currentExamSchedules].sort((a,b) => a.date.localeCompare(b.date));
   el.innerHTML = sorted.map(e => {
     const icon = EXAM_ICONS[e.type] || '🧪';
-    const bg = EXAM_COLORS[e.type] || 'rgba(245,158,11,0.1)';
-    const border = EXAM_BORDER_COLORS[e.type] || 'rgba(245,158,11,0.3)';
+    const bg = EXAM_COLORS[e.type] || 'rgba(200,150,32,0.1)';
+    const border = EXAM_BORDER_COLORS[e.type] || 'rgba(200,150,32,0.3)';
     const dateLabel = formatDateShort(e.date);
     return `<div style="display:flex;align-items:center;gap:8px;background:${bg};border:1px solid ${border};border-radius:8px;padding:8px 10px;">
       <span style="font-size:16px;">${icon}</span>
@@ -4895,7 +4825,7 @@ function checkSameName(val) {
   if (prev.length === 0) { panel.style.display = 'none'; return; }
 
   var modeLabel = { ope: '🔪 オペ', chemo: '💊 ケモ', crt: '📡 ケモラジ' };
-  var html = '<div style="background:rgba(79,140,255,0.08);border:1px solid rgba(79,140,255,0.35);border-radius:10px;padding:10px 12px;">';
+  var html = '<div style="background:rgba(26,174,200,0.08);border:1px solid rgba(26,174,200,0.35);border-radius:10px;padding:10px 12px;">';
   html += '<div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px;">🔁 同名・類似名の既存患者が見つかりました — 情報を引き継ぎますか？</div>';
   html += '<div style="display:flex;flex-direction:column;gap:6px;">';
 
@@ -4975,7 +4905,7 @@ function inheritCaseData(caseId) {
   // 提案パネルを閉じて成功メッセージ表示
   var panel = document.getElementById('sameNameSuggest');
   if (panel) {
-    panel.innerHTML = '<div style="background:rgba(67,217,160,0.1);border:1px solid rgba(67,217,160,0.4);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--green);">✅ 情報を引き継ぎました。日付・経過記録は今回分を入力してください。</div>';
+    panel.innerHTML = '<div style="background:rgba(24,196,120,0.1);border:1px solid rgba(24,196,120,0.4);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--green);">✅ 情報を引き継ぎました。日付・経過記録は今回分を入力してください。</div>';
     setTimeout(function() { panel.style.display = 'none'; }, 3000);
   }
 }
@@ -5159,13 +5089,13 @@ function renderFcReminderPresets() {
     const dowName = DOW_NAMES[p.dayOfWeek] || '?';
     return '<button onclick="selectFcPreset(' + i + ')" style="padding:7px 4px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;font-family:inherit;line-height:1.4;'
       + 'border:1px solid ' + (active ? 'var(--accent3)' : 'var(--border)') + ';'
-      + 'background:' + (active ? 'rgba(255,209,102,0.18)' : 'var(--surface)') + ';'
+      + 'background:' + (active ? 'rgba(200,150,32,0.18)' : 'var(--surface)') + ';'
       + 'color:' + (active ? 'var(--accent3)' : 'var(--text2)') + ';">'
       + dowName + '曜<br><span style="font-size:10px;font-weight:400;">' + timeStr + '</span></button>';
   }).join('')
     + '<button onclick="selectFcPreset(99)" style="padding:7px 4px;font-size:11px;font-weight:700;border-radius:7px;cursor:pointer;font-family:inherit;'
     + 'border:1px solid ' + (_fcReminderPresetIdx === 99 ? 'var(--accent)' : 'var(--border)') + ';'
-    + 'background:' + (_fcReminderPresetIdx === 99 ? 'rgba(79,140,255,0.15)' : 'var(--surface)') + ';'
+    + 'background:' + (_fcReminderPresetIdx === 99 ? 'rgba(26,174,200,0.15)' : 'var(--surface)') + ';'
     + 'color:' + (_fcReminderPresetIdx === 99 ? 'var(--accent)' : 'var(--text3)') + ';">カスタム</button>';
 }
 
@@ -5257,9 +5187,9 @@ function renderFreeChecklistForm() {
 function selectFormMode(mode) {
   document.getElementById('f_mode').value = mode;
   const configs = {
-    ope:   { bg: 'rgba(79,140,255,0.15)',   border: 'var(--accent)',  color: 'var(--accent)',  label: '術式' },
-    chemo: { bg: 'rgba(245,158,11,0.12)',   border: '#f59e0b',        color: '#f59e0b',        label: 'レジメン名' },
-    crt:   { bg: 'rgba(67,217,160,0.12)',   border: 'var(--green)',   color: 'var(--green)',   label: 'レジメン名（RT含む）' },
+    ope:   { bg: 'rgba(26,174,200,0.15)',   border: 'var(--accent)',  color: 'var(--accent)',  label: '術式' },
+    chemo: { bg: 'rgba(200,150,32,0.12)',   border: '#f59e0b',        color: '#f59e0b',        label: 'レジメン名' },
+    crt:   { bg: 'rgba(24,196,120,0.12)',   border: 'var(--green)',   color: 'var(--green)',   label: 'レジメン名（RT含む）' },
   };
   ['ope','chemo','crt'].forEach(m => {
     const btn = document.getElementById('modeBtn_' + m);
@@ -5304,11 +5234,11 @@ function buildChecklistForm(checks, modeOverride) {
   let html = '';
   const regDetected = detectRegimen(surgeryVal);
   if (mode === 'crt') {
-    html += `<div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px;padding:4px 8px;background:rgba(67,217,160,0.08);border-radius:4px;border:1px solid rgba(67,217,160,0.2);">📡 ケモラジモード${regDetected?'（'+regDetected.name+'）':''} — RTスケジュール・放射線科連携含む</div>`;
+    html += `<div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px;padding:4px 8px;background:rgba(24,196,120,0.08);border-radius:4px;border:1px solid rgba(24,196,120,0.2);">📡 ケモラジモード${regDetected?'（'+regDetected.name+'）':''} — RTスケジュール・放射線科連携含む</div>`;
   } else if (mode === 'chemo') {
-    html += `<div style="font-size:10px;font-weight:700;color:#f59e0b;margin-bottom:6px;padding:4px 8px;background:rgba(245,158,11,0.06);border-radius:4px;border:1px solid rgba(245,158,11,0.25);">💊 ケモモード${regDetected?'（'+regDetected.name+'）':''} — 手術同意書・オペ入力等は非表示</div>`;
+    html += `<div style="font-size:10px;font-weight:700;color:#f59e0b;margin-bottom:6px;padding:4px 8px;background:rgba(200,150,32,0.06);border-radius:4px;border:1px solid rgba(200,150,32,0.25);">💊 ケモモード${regDetected?'（'+regDetected.name+'）':''} — 手術同意書・オペ入力等は非表示</div>`;
   } else {
-    html += `<div style="font-size:10px;font-weight:700;color:var(--accent);margin-bottom:6px;padding:4px 8px;background:rgba(79,140,255,0.06);border-radius:4px;border:1px solid rgba(79,140,255,0.2);">🔪 オペモード — 標準チェックリスト</div>`;
+    html += `<div style="font-size:10px;font-weight:700;color:var(--accent);margin-bottom:6px;padding:4px 8px;background:rgba(26,174,200,0.06);border-radius:4px;border:1px solid rgba(26,174,200,0.2);">🔪 オペモード — 標準チェックリスト</div>`;
   }
   html += items.map(item => `
     <label class="checkbox-row">
@@ -5452,10 +5382,10 @@ function showNotifSettings() {
       const granted = OneSignal.Notifications.permission;
       if (banner) {
         if (granted) {
-          banner.style.cssText = 'background:rgba(67,217,160,0.1);border:1px solid rgba(67,217,160,0.3);';
+          banner.style.cssText = 'background:rgba(24,196,120,0.1);border:1px solid rgba(24,196,120,0.3);';
           banner.innerHTML = '<span style="color:var(--green);font-weight:700;">✅ 通知は許可済みです（OneSignal）</span><br><span style="font-size:10px;color:var(--text2);">バックグラウンド通知が届きます。</span>';
         } else {
-          banner.style.cssText = 'background:rgba(255,87,87,0.08);border:1px solid rgba(255,87,87,0.2);';
+          banner.style.cssText = 'background:rgba(216,64,64,0.08);border:1px solid rgba(216,64,64,0.2);';
           banner.innerHTML = '<span style="color:var(--red);font-weight:700;">⚠️ 通知が許可されていません</span><br><span style="font-size:10px;color:var(--text2);">下の「通知を許可する」ボタンを押してください。</span>';
         }
       }
@@ -5464,13 +5394,13 @@ function showNotifSettings() {
     perm = Notification.permission;
     if (banner) {
       if (perm === 'granted') {
-        banner.style.cssText = 'background:rgba(67,217,160,0.1);border:1px solid rgba(67,217,160,0.3);';
+        banner.style.cssText = 'background:rgba(24,196,120,0.1);border:1px solid rgba(24,196,120,0.3);';
         banner.innerHTML = '<span style="color:var(--green);font-weight:700;">✅ 通知は許可済みです</span><br><span style="font-size:10px;color:var(--text2);">アプリ起動中のみ有効です（iOSの仕様）。</span>';
       } else if (perm === 'denied') {
-        banner.style.cssText = 'background:rgba(255,87,87,0.08);border:1px solid rgba(255,87,87,0.2);';
+        banner.style.cssText = 'background:rgba(216,64,64,0.08);border:1px solid rgba(216,64,64,0.2);';
         banner.innerHTML = '<span style="color:var(--red);font-weight:700;">🚫 通知が拒否されています</span><br><span style="font-size:10px;color:var(--text2);">設定アプリ → Safari → 通知 から許可してください。</span>';
       } else {
-        banner.style.cssText = 'background:rgba(79,140,255,0.08);border:1px solid rgba(79,140,255,0.2);';
+        banner.style.cssText = 'background:rgba(26,174,200,0.08);border:1px solid rgba(26,174,200,0.2);';
         banner.innerHTML = '<span style="color:var(--accent);font-weight:700;">🔔 通知が未設定です</span><br><span style="font-size:10px;color:var(--text2);">下のボタンを押して通知を有効にしてください。</span>';
       }
     }
@@ -5514,15 +5444,15 @@ function showNotifCenter() {
 
   sections.push(`
     <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <div style="flex:1;background:rgba(79,140,255,0.1);border:1px solid rgba(79,140,255,0.25);border-radius:10px;padding:10px 6px;text-align:center;">
+      <div style="flex:1;background:rgba(26,174,200,0.1);border:1px solid rgba(26,174,200,0.25);border-radius:10px;padding:10px 6px;text-align:center;">
         <div style="font-size:22px;font-weight:700;color:var(--accent);line-height:1;">${todayOps.length}</div>
         <div style="font-size:10px;color:var(--text3);margin-top:3px;">今日のオペ</div>
       </div>
-      <div style="flex:1;background:rgba(255,87,87,0.08);border:1px solid rgba(255,87,87,0.2);border-radius:10px;padding:10px 6px;text-align:center;">
+      <div style="flex:1;background:rgba(216,64,64,0.08);border:1px solid rgba(216,64,64,0.2);border-radius:10px;padding:10px 6px;text-align:center;">
         <div style="font-size:22px;font-weight:700;color:var(--red);line-height:1;">${urgentPending.length + overdueSummary.length}</div>
         <div style="font-size:10px;color:var(--text3);margin-top:3px;">要対応</div>
       </div>
-      <div style="flex:1;background:rgba(67,217,160,0.08);border:1px solid rgba(67,217,160,0.2);border-radius:10px;padding:10px 6px;text-align:center;">
+      <div style="flex:1;background:rgba(24,196,120,0.08);border:1px solid rgba(24,196,120,0.2);border-radius:10px;padding:10px 6px;text-align:center;">
         <div style="font-size:22px;font-weight:700;color:var(--green);line-height:1;">${allPending.length}</div>
         <div style="font-size:10px;color:var(--text3);margin-top:3px;">未完了総数</div>
       </div>
@@ -6416,16 +6346,16 @@ function confirmImport() {
 }
 
 const THEMES = {
-  dark:  { '--bg':'#0d0f14','--surface':'#151820','--surface2':'#1c2030','--border':'#252a3a','--text':'#e8ecf4','--text2':'#8892a4','--text3':'#5a6478' },
-  light: { '--bg':'#f4f6fb','--surface':'#ffffff','--surface2':'#f0f2f8','--border':'#dde2ee','--text':'#1a1d2e','--text2':'#5a6478','--text3':'#9aa3b8' },
-  warm:  { '--bg':'#12100e','--surface':'#1c1917','--surface2':'#262220','--border':'#333028','--text':'#f0ead8','--text2':'#a09070','--text3':'#60503a' },
+  dark:  { '--bg':'#07090F','--surface':'#0C1320','--surface2':'#131F34','--border':'#1B2D44','--text':'#D8E8F4','--text2':'#5E84A0','--text3':'#2E4A60' },
+  light: { '--bg':'#EFF4FB','--surface':'#FFFFFF','--surface2':'#E4EDF8','--border':'#C2D2E6','--text':'#0A1522','--text2':'#3B5368','--text3':'#7A92A8' },
+  warm:  { '--bg':'#100D09','--surface':'#1A1612','--surface2':'#241E18','--border':'#322A20','--text':'#EAE0CE','--text2':'#9A8060','--text3':'#584030' },
 };
 
 function applyTheme() {
   const t = THEMES[appSettings.theme] || THEMES.dark;
   const root = document.documentElement;
   Object.entries(t).forEach(([k,v]) => root.style.setProperty(k, v));
-  root.style.setProperty('--accent', appSettings.accentColor || '#4f8cff');
+  root.style.setProperty('--accent', appSettings.accentColor || '#1AAEC8');
 }
 
 // ========== SETTINGS ==========
@@ -6480,7 +6410,7 @@ function renderSettings() {
       <div class="form-group" style="margin-top:12px;">
         <label class="form-label">アクセントカラー</label>
         <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap;">
-          ${['#4f8cff','#ff6b6b','#43d9a0','#ffd166','#c77dff','#ff8c42'].map(c=>`
+          ${['#1AAEC8','#D84040','#18C478','#C89620','#9060CC','#D07030'].map(c=>`
             <div onclick="setAccentColor('${c}')" style="width:34px;height:34px;border-radius:50%;background:${c};cursor:pointer;border:3px solid ${appSettings.accentColor===c?'var(--text)':'transparent'};transition:all 0.15s;box-shadow:${appSettings.accentColor===c?'0 0 0 2px var(--accent)':'none'};"></div>
           `).join('')}
           <input type="color" value="${appSettings.accentColor}" onchange="setAccentColor(this.value)"
@@ -6540,7 +6470,7 @@ function renderSettings() {
                 <button onclick="moveDiseaseRuleDown('${r.id}')" ${ridx===(appSettings.diseaseCheckRules.length-1)?'disabled style="opacity:0.3;cursor:default;"':''} style="background:var(--surface);border:1px solid var(--border);color:var(--text2);border-radius:4px;padding:1px 7px;font-size:10px;cursor:pointer;line-height:1.5;">▼</button>
               </div>
               <input type="text" value="${r.keyword.replace(/"/g,'&quot;')}" onchange="updateDiseaseRuleKeyword('${r.id}',this.value)"
-                style="flex:1;background:var(--surface);border:1px solid rgba(67,217,160,0.4);border-radius:6px;padding:6px 10px;font-size:12px;font-weight:700;color:var(--green);font-family:inherit;outline:none;"
+                style="flex:1;background:var(--surface);border:1px solid rgba(24,196,120,0.4);border-radius:6px;padding:6px 10px;font-size:12px;font-weight:700;color:var(--green);font-family:inherit;outline:none;"
                 placeholder="キーワード（カンマ区切りで複数可）">
               <label style="display:flex;align-items:center;gap:3px;font-size:10px;color:${r.chemoMode?'var(--green)':'var(--text3)'};cursor:pointer;flex-shrink:0;white-space:nowrap;">
                 <input type="checkbox" ${r.chemoMode?'checked':''} onchange="toggleDiseaseRuleChemoMode('${r.id}',this.checked)" style="accent-color:var(--green);">💊ケモ
@@ -6583,7 +6513,7 @@ function renderSettings() {
           return `<button onclick="setChecklistTab('${m}')" id="ctab_${m}"
             style="padding:7px 2px;font-size:10px;font-weight:700;border-radius:6px;cursor:pointer;font-family:inherit;
               border:1px solid ${active?'var(--accent)':'var(--border)'};
-              background:${active?'rgba(79,140,255,0.15)':'var(--surface2)'};
+              background:${active?'rgba(26,174,200,0.15)':'var(--surface2)'};
               color:${active?'var(--accent)':'var(--text2)'};">
             ${labels[m]}
           </button>`;
@@ -6635,7 +6565,7 @@ function renderSettings() {
           </div>
           <div style="display:flex;gap:8px;">
             <input type="text" class="form-input" id="${cfg.inputId}" placeholder="チェック項目を追加..." style="flex:1;font-size:12px;" onkeydown="if(event.key==='Enter'){event.preventDefault();${cfg.addFn}();}">
-            <button onclick="${cfg.addFn}()" style="background:rgba(79,140,255,0.15);color:var(--accent);border:1px solid rgba(79,140,255,0.35);border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">追加</button>
+            <button onclick="${cfg.addFn}()" style="background:rgba(26,174,200,0.15);color:var(--accent);border:1px solid rgba(26,174,200,0.35);border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">追加</button>
           </div>
           <button onclick="${cfg.resetFn}()" style="margin-top:8px;background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;">初期値に戻す</button>
         `;
@@ -6767,7 +6697,7 @@ function renderSettings() {
           <option value="chemo">💊ケモ</option>
           <option value="crt">📡ケモラジ</option>
         </select>
-        <button onclick="addRegimen()" style="background:rgba(79,140,255,0.15);color:var(--accent);border:1px solid rgba(79,140,255,0.35);border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">追加</button>
+        <button onclick="addRegimen()" style="background:rgba(26,174,200,0.15);color:var(--accent);border:1px solid rgba(26,174,200,0.35);border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">追加</button>
       </div>
     </div>
 
@@ -6812,7 +6742,7 @@ function renderSettings() {
           <input type="text" class="form-input" id="s_newSupRegNo" placeholder="12345" style="font-size:12px;"
             onkeydown="if(event.key==='Enter'){event.preventDefault();addSupervisor();}">
         </div>
-        <button onclick="addSupervisor()" style="background:rgba(79,140,255,0.15);color:var(--accent);border:1px solid rgba(79,140,255,0.35);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">追加</button>
+        <button onclick="addSupervisor()" style="background:rgba(26,174,200,0.15);color:var(--accent);border:1px solid rgba(26,174,200,0.35);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">追加</button>
       </div>
       <button onclick="resetSupervisors()" style="margin-top:10px;width:100%;background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:7px 12px;font-size:11px;cursor:pointer;font-family:inherit;">🔄 デフォルトの35名に戻す</button>
     </div>
