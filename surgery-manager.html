@@ -1281,7 +1281,10 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
     <div id="notifCenterContent" style="margin-top:14px;">
       <!-- populated by showNotifCenter() -->
     </div>
-    <button class="btn-danger" onclick="closeNotifModal()" style="border-color:transparent;color:var(--text3);margin-top:14px;">閉じる</button>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn" onclick="dismissAllNotifs()" style="flex:1;background:rgba(26,174,200,0.12);border:1px solid rgba(26,174,200,0.3);color:var(--accent);font-size:12px;">✅ 全て既読</button>
+      <button class="btn-danger" onclick="closeNotifModal()" style="border-color:transparent;color:var(--text3);">閉じる</button>
+    </div>
   </div>
 </div>
 
@@ -2058,6 +2061,7 @@ let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || 
   diseaseCheckRules: JSON.parse(JSON.stringify(DISEASE_CHECK_RULES_BUILTIN)),
   regimenList: JSON.parse(JSON.stringify(REGIMEN_DEFAULTS_BUILTIN)),
   dailyMemo: '',
+  notifLastAck: null,
   reminderPresets: [
     { label: '月', dayOfWeek: 1, hour: 8,  minute: 0 },
     { label: '水', dayOfWeek: 3, hour: 8,  minute: 0 },
@@ -2857,40 +2861,35 @@ function markDischargeSummaryDone(id) {
 }
 
 function renderDischargeWeekly(el) {
-  // 退院日が入力されている症例を週ごとにグループ化
-  const discharged = cases.filter(c => c.dischargeDate)
-    .sort((a, b) => b.dischargeDate.localeCompare(a.dischargeDate)); // 新しい順
+  // 今日が属する木〜水曜の週を計算
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayDay = today.getDay();
+  const diffToThu = ((todayDay - 4) + 7) % 7;
+  const thuDate = new Date(today); thuDate.setDate(today.getDate() - diffToThu);
+  const wedDate = new Date(thuDate); wedDate.setDate(thuDate.getDate() + 6);
+  const thuStr = thuDate.toISOString().slice(0, 10);
+  const wedStr = wedDate.toISOString().slice(0, 10);
+
+  const dayNames = ['日','月','火','水','木','金','土'];
+  const fmt = d => `${d.getMonth()+1}/${d.getDate()}（${dayNames[d.getDay()]}）`;
+  const weekLabel = `${fmt(thuDate)} 〜 ${fmt(wedDate)}`;
+
+  const discharged = cases.filter(c => c.dischargeDate && c.dischargeDate >= thuStr && c.dischargeDate <= wedStr)
+    .sort((a, b) => b.dischargeDate.localeCompare(a.dischargeDate));
 
   if (discharged.length === 0) {
-    el.innerHTML = emptyState('🏥', '退院日が入力された症例がありません');
+    el.innerHTML = `<div style="text-align:center;padding:40px 20px;">
+      <div style="font-size:28px;margin-bottom:10px;">🏥</div>
+      <div style="font-size:12px;font-weight:700;color:var(--text2);">${weekLabel}</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:6px;">この週の退院症例はありません</div>
+    </div>`;
     return;
   }
 
-  // 週の木曜日（その週の開始）を取得 ── 木〜次週水曜でグルーピング
-  function getWeekThursday(dateStr) {
-    const d = new Date(dateStr + 'T00:00:00');
-    const day = d.getDay(); // 0=日,1=月,...,4=木,...
-    // 木曜(4)を週頭とするオフセット
-    const diff = ((day - 4) + 7) % 7; // 0〜6: その日から遡って木曜まで何日か
-    d.setDate(d.getDate() - diff);
-    return d.toISOString().slice(0, 10);
-  }
-
-  // 週ごとにグループ化
-  const weeks = {};
-  discharged.forEach(c => {
-    const thu = getWeekThursday(c.dischargeDate);
-    if (!weeks[thu]) weeks[thu] = [];
-    weeks[thu].push(c);
-  });
-
-  const dayNames = ['日','月','火','水','木','金','土'];
+  // 週ごとにグループ化（今週のみなので1グループ）
+  const weeks = { [thuStr]: discharged };
   let html = '';
   Object.keys(weeks).sort((a, b) => b.localeCompare(a)).forEach(thu => {
-    const thuDate = new Date(thu + 'T00:00:00');
-    const wed = new Date(thuDate); wed.setDate(wed.getDate() + 6);
-    const fmt = d => `${d.getMonth()+1}/${d.getDate()}（${dayNames[d.getDay()]}）`;
-    const weekLabel = `${fmt(thuDate)} 〜 ${fmt(wed)}`;
     const group = weeks[thu];
 
     const rows = group.map(c => {
@@ -6032,8 +6031,23 @@ function updatePendingBadge() {
     return prog.done < prog.total || hasIncompleteFree;
   }).length;
   const badge = document.getElementById('pendingBadge');
-  badge.style.display = count > 0 ? 'block' : 'none';
+  const ack = appSettings.notifLastAck;
+  const todayStr = toISODate(new Date());
+  const dismissed = ack && ack.date === todayStr && count <= ack.count;
+  badge.style.display = (count > 0 && !dismissed) ? 'block' : 'none';
   badge.textContent = count;
+}
+
+function dismissAllNotifs() {
+  const count = cases.filter(c => {
+    const prog = getCheckProgress(c);
+    const hasIncompleteFree = c.freeChecks && c.freeChecks.some(f => !f.done);
+    return prog.done < prog.total || hasIncompleteFree;
+  }).length;
+  appSettings.notifLastAck = { date: toISODate(new Date()), count };
+  save();
+  updatePendingBadge();
+  closeNotifModal();
 }
 
 function updateHeaderStats() {
