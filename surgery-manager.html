@@ -1004,8 +1004,6 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
   <div class="tab" onclick="switchTab('calendar', this)">📅 カレンダー</div>
   <div class="tab active" onclick="switchTab('admitted', this)">🏥 入院中</div>
   <div class="tab" onclick="switchTab('list', this)">症例一覧</div>
-  <div class="tab" onclick="switchTab('today', this)">今日のオペ</div>
-  <div class="tab" onclick="switchTab('pending', this)">未完了タスク</div>
   <div class="tab" onclick="switchTab('summary_incomplete', this)">📋 サマリ未完了</div>
   <div class="tab" onclick="switchTab('discharge_weekly', this)">🏥 退院一覧</div>
   <div class="tab" onclick="switchTab('knowledge', this)">📚 知識</div>
@@ -3300,14 +3298,36 @@ function isCancerCase(c) {
   return /癌|がん|腫瘍|carcinoma|cancer|scc|悪性|リンパ腫|肉腫|melanoma/.test(target);
 }
 
+function compareCancerByDischargeDesc(a, b) {
+  var dischargeA = a.dischargeDate || '';
+  var dischargeB = b.dischargeDate || '';
+  if (dischargeA && dischargeB && dischargeA !== dischargeB) {
+    return dischargeB.localeCompare(dischargeA);
+  }
+  if (dischargeA && !dischargeB) return -1;
+  if (!dischargeA && dischargeB) return 1;
+
+  // 退院日未入力同士は、直近の入院日・オペ日を上にする。
+  var fallbackA = a.admDate || a.opDate || '';
+  var fallbackB = b.admDate || b.opDate || '';
+  return fallbackB.localeCompare(fallbackA);
+}
+
+function setHeadNeckDbRegistered(id, checked) {
+  var c = cases.find(function(item) { return item.id === id; });
+  if (!c) return;
+  c.headNeckDbRegistered = !!checked;
+  save();
+  if (currentTab === 'cancer') {
+    var el = document.getElementById('mainContent');
+    if (el) renderCancerCases(el);
+  }
+}
+
 function renderCancerCases(el) {
   var cancerCases = cases
     .filter(isCancerCase)
-    .sort(function(a, b) {
-      var da = a.admDate || a.opDate || '';
-      var db = b.admDate || b.opDate || '';
-      return da > db ? -1 : da < db ? 1 : 0;
-    });
+    .sort(compareCancerByDischargeDesc);
 
   var modeLabel = { ope: '🔪 オペ', chemo: '💊 ケモ', crt: '📡 ケモラジ' };
   var modeColor = { ope: 'var(--accent)', chemo: '#f59e0b', crt: 'var(--green)' };
@@ -3362,6 +3382,18 @@ function renderCancerCases(el) {
     html += '<button onclick="openEditModal(\'' + c.id + '\')" style="background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;flex-shrink:0;">✏️ 編集</button>';
     html += '</div>';
 
+    // 頭頸部データベース登録状況（一覧上で直接変更）
+    var dbRegistered = !!c.headNeckDbRegistered;
+    var dbBg = dbRegistered ? 'rgba(24,196,120,0.10)' : 'rgba(245,158,11,0.10)';
+    var dbBorder = dbRegistered ? 'rgba(24,196,120,0.45)' : 'rgba(245,158,11,0.45)';
+    var dbColor = dbRegistered ? 'var(--green)' : '#f59e0b';
+    var dbStatus = dbRegistered ? '登録済み' : '未登録';
+    html += '<label style="display:flex;align-items:center;gap:9px;margin:0 0 10px;padding:9px 11px;background:' + dbBg + ';border:1px solid ' + dbBorder + ';border-radius:8px;cursor:pointer;">';
+    html += '<input type="checkbox" aria-label="頭頸部データベース登録済み" onchange="setHeadNeckDbRegistered(\'' + c.id + '\', this.checked)" ' + (dbRegistered ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:var(--green);flex-shrink:0;">';
+    html += '<span style="font-size:11px;font-weight:700;color:var(--text);">🗄️ 頭頸部データベース</span>';
+    html += '<span style="margin-left:auto;font-size:11px;font-weight:800;color:' + dbColor + ';">' + dbStatus + '</span>';
+    html += '</label>';
+
     // 詳細情報グリッド
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:11px;">';
     var fields = [
@@ -3395,10 +3427,8 @@ function renderCancerCases(el) {
 }
 
 function copyCancerTSV() {
-  var headers = ['患者名','疾患名','術式','モード','入院日','退院日','年齢','性別','カルテ番号','外来/入院','指導医','指導医登録番号','施設'];
-  var cancerCases = cases.filter(isCancerCase).sort(function(a, b) {
-    return (a.admDate||a.opDate||'') > (b.admDate||b.opDate||'') ? -1 : 1;
-  });
+  var headers = ['患者名','疾患名','術式','モード','入院日','退院日','頭頸部DB登録','年齢','性別','カルテ番号','外来/入院','指導医','指導医登録番号','施設'];
+  var cancerCases = cases.filter(isCancerCase).sort(compareCancerByDischargeDesc);
   var lines = [headers.join('\t')];
   cancerCases.forEach(function(c) {
     var surgVal = (c.mode === 'ope') ? (c.surgery || '') : '';
@@ -3409,6 +3439,7 @@ function copyCancerTSV() {
       c.mode || '',
       c.admDate || c.opDate || '',
       c.dischargeDate || '',
+      c.headNeckDbRegistered ? '済' : '未',
       c.age || '',
       c.gender || '',
       c.chartNo || '',
