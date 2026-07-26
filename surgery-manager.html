@@ -2,9 +2,6 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<!-- GH_CONFIG_START
-{"user":"","repo":"","path":"surgery-manager.html","token":""}
-GH_CONFIG_END -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1351,31 +1348,15 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
       </div>
     </div>
 
-    <!-- Step 5: GitHub Token -->
+    <!-- Step 5: GitHub auto sync -->
     <div class="notif-panel" style="margin-bottom:12px;border-color:rgba(26,174,200,0.4);">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
         <div style="background:var(--accent);color:#fff;font-size:12px;font-weight:700;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div>
-        <div style="font-size:11px;font-weight:700;color:var(--text);">アプリ内から自動更新できるように設定</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text);">GitHub自動更新</div>
       </div>
-      <div style="font-size:10px;color:var(--text2);line-height:1.8;margin-bottom:12px;margin-left:34px;">
-        入力しておくと⚙️設定内「🚀 GitHubへプッシュ」でアプリを自動更新できます。<br>
-        <a href="https://github.com/settings/tokens/new?scopes=repo&description=surgery-manager" target="_blank" style="color:var(--accent);">ここからToken発行</a>（repo権限にチェック）
-      </div>
-      <div class="form-group">
-        <label class="form-label">GitHubユーザー名</label>
-        <input type="text" class="form-input" id="setup_gh_user" placeholder="username" style="font-size:13px;">
-      </div>
-      <div class="form-group">
-        <label class="form-label">リポジトリ名</label>
-        <input type="text" class="form-input" id="setup_gh_repo" placeholder="surgery-manager" style="font-size:13px;">
-      </div>
-      <div class="form-group">
-        <label class="form-label">ファイル名</label>
-        <input type="text" class="form-input" id="setup_gh_path" placeholder="surgery-manager.html" style="font-size:13px;">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Personal Access Token（任意）</label>
-        <input type="password" class="form-input" id="setup_gh_token" placeholder="ghp_xxxxxxxxxxxx" style="font-family:'IBM Plex Mono',monospace;font-size:12px;">
+      <div style="font-size:10px;color:var(--text2);line-height:1.8;margin-left:34px;">
+        このMacでファイルを変更すると、安全な端末認証を使ってGitHubへ自動同期されます。<br>
+        アプリへのPersonal Access Token入力は不要です。
       </div>
     </div>
 
@@ -1430,34 +1411,13 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
       </div>
     </div>
 
-    <!-- GitHub自動バックアップ -->
+    <!-- GitHub自動同期 -->
     <div class="summary-block" style="margin-top:12px;">
-      <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:var(--text);">🐙 GitHub自動バックアップ</div>
-      <div style="font-size:10px;color:var(--text2);margin:0 0 12px;line-height:1.7;">
-        データをGitHubリポジトリに自動保存します。<br>
-        <a href="https://github.com/settings/tokens/new?scopes=repo&description=surgery-manager" target="_blank" style="color:var(--accent);">Personal Access Token（repo権限）</a>を発行して入力してください。
+      <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:var(--text);">🐙 GitHub自動同期</div>
+      <div style="font-size:10px;color:var(--text2);line-height:1.7;">
+        <strong style="color:var(--green);">✅ miechankuuchan-jpg/surgery-manager</strong><br>
+        このMacでHTMLが変更されると、自動的にGitHubへ保存されます。患者データはブラウザ内に保存され、GitHubへは送信されません。
       </div>
-      <div class="form-group">
-        <label class="form-label">GitHubユーザー名</label>
-        <input type="text" class="form-input" id="gh_user" placeholder="username" style="font-size:13px;" oninput="saveGhSettings()">
-      </div>
-      <div class="form-group">
-        <label class="form-label">リポジトリ名</label>
-        <input type="text" class="form-input" id="gh_repo" placeholder="surgery-manager" style="font-size:13px;" oninput="saveGhSettings()">
-      </div>
-      <div class="form-group">
-        <label class="form-label">ファイルパス（リポジトリ内）</label>
-        <input type="text" class="form-input" id="gh_path" placeholder="surgery-manager.html" style="font-size:13px;" oninput="saveGhSettings()">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Personal Access Token</label>
-        <input type="password" class="form-input" id="gh_token" placeholder="ghp_xxxxxxxxxxxx" style="font-family:'IBM Plex Mono',monospace;font-size:12px;" oninput="saveGhSettings()">
-      </div>
-      <button onclick="pushToGitHub()" id="ghPushBtn"
-        style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;">
-        🚀 GitHubへプッシュ
-      </button>
-      <div id="ghStatus" style="font-size:11px;margin-top:8px;min-height:16px;line-height:1.5;"></div>
     </div>
 
     <button class="btn-danger" onclick="closeSettingsModal()" style="border-color:transparent;color:var(--text3);margin-top:12px;">閉じる</button>
@@ -2875,7 +2835,9 @@ function renderDischargeWeekly(el) {
     const d = new Date(dateStr + 'T00:00:00');
     const diff = ((d.getDay() - 4) + 7) % 7;
     d.setDate(d.getDate() - diff);
-    return d.toISOString().slice(0, 10);
+    // UTCへ変換すると日本時間の0時は前日になり、木曜が水曜へずれる。
+    // アプリ共通のローカル日付フォーマットで週キーを保持する。
+    return toISODate(d);
   }
 
   const weeks = {};
@@ -5367,13 +5329,6 @@ function showNotifSettings() {
   document.getElementById('notifModal').classList.add('open');
   updateToggleUI();
 
-  // GitHub設定を復元
-  const gh = JSON.parse(localStorage.getItem('gh_settings') || '{}');
-  if (document.getElementById('gh_user')) document.getElementById('gh_user').value = gh.user || '';
-  if (document.getElementById('gh_repo')) document.getElementById('gh_repo').value = gh.repo || '';
-  if (document.getElementById('gh_path')) document.getElementById('gh_path').value = gh.path || 'surgery-manager.html';
-  if (document.getElementById('gh_token')) document.getElementById('gh_token').value = gh.token || '';
-
   // 通知バナー
   const banner = document.getElementById('notifBanner');
   const statusEl = document.getElementById('notifStatus');
@@ -5433,17 +5388,16 @@ function showNotifCenter() {
     return prog.done < prog.total;
   });
   const overdueSummary = cases.filter(c => getDischargeSummaryWarning(c));
-  const twoWeeksAgo = new Date(today); twoWeeksAgo.setDate(today.getDate() - 14);
   const allPending = cases.filter(c => {
     const prog = getCheckProgress(c);
     if (prog.done >= prog.total) return false;
-    if (c.opDate && new Date(c.opDate + 'T00:00:00') < twoWeeksAgo) return false;
+    if (!isWithinNotificationAge(c, today)) return false;
     return true;
   });
   const noRounds = cases.filter(c => {
     if (!isPast(c.opDate) || isToday(c.opDate)) return false;
     if (c.checks && c.checks['summary_rounds']) return false;
-    if (c.opDate && new Date(c.opDate + 'T00:00:00') < twoWeeksAgo) return false;
+    if (!isWithinNotificationAge(c, today)) return false;
     return true;
   });
 
@@ -5811,104 +5765,6 @@ function addRegimen() {
   nameEl.value = ''; save(); renderSettings();
 }
 
-function loadGhSettings() {
-  // HTMLに焼き込まれた設定を読んでlocalStorageに反映
-  try {
-    const src = document.documentElement.outerHTML;
-    const m = src.match(/GH_CONFIG_START\s*([\s\S]*?)\s*GH_CONFIG_END/);
-    if (m) {
-      const baked = JSON.parse(m[1].trim());
-      if (baked.user || baked.token) {
-        localStorage.setItem('gh_settings', JSON.stringify(baked));
-      }
-    }
-  } catch(e) {}
-}
-
-function saveGhSettings() {
-  const gh = {
-    user:  document.getElementById('gh_user')?.value.trim() || '',
-    repo:  document.getElementById('gh_repo')?.value.trim() || '',
-    path:  document.getElementById('gh_path')?.value.trim() || 'surgery-manager.html',
-    token: document.getElementById('gh_token')?.value.trim() || '',
-  };
-  localStorage.setItem('gh_settings', JSON.stringify(gh));
-}
-
-async function pushToGitHub() {
-  const gh = JSON.parse(localStorage.getItem('gh_settings') || '{}');
-  const { user, repo, path, token } = gh;
-  const statusEl = document.getElementById('ghStatus');
-  const btn = document.getElementById('ghPushBtn');
-
-  if (!user || !repo || !token) {
-    statusEl.style.color = 'var(--red)';
-    statusEl.textContent = '⚠️ ユーザー名・リポジトリ名・Tokenを入力してください';
-    return;
-  }
-
-  btn.textContent = '⏳ プッシュ中...';
-  btn.disabled = true;
-  statusEl.style.color = 'var(--text3)';
-  statusEl.textContent = 'GitHubに接続しています...';
-
-  try {
-    const apiBase = 'https://api.github.com/repos/' + user + '/' + repo + '/contents/' + path;
-    const headers = {
-      'Authorization': 'token ' + token,
-      'Content-Type': 'application/json',
-      'Accept': 'application/vnd.github.v3+json',
-    };
-
-    // 現在のファイルのSHAを取得（更新に必要）
-    let sha = null;
-    try {
-      const getRes = await fetch(apiBase, { headers });
-      if (getRes.ok) {
-        const data = await getRes.json();
-        sha = data.sha;
-      }
-    } catch(e) {}
-
-    // GitHub設定をHTMLに焼き込んでからアップロード
-    // → 次回このHTMLをダウンロードして開いても設定が残る
-    let htmlContent = document.documentElement.outerHTML;
-    const configJson = JSON.stringify({ user, repo, path, token });
-    htmlContent = htmlContent.replace(
-      /GH_CONFIG_START[\s\S]*?GH_CONFIG_END/,
-      'GH_CONFIG_START\n' + configJson + '\nGH_CONFIG_END'
-    );
-    const encoded = btoa(unescape(encodeURIComponent(htmlContent)));
-
-    const body = {
-      message: '📱 surgery-manager update ' + new Date().toISOString().slice(0,16).replace('T',' '),
-      content: encoded,
-      ...(sha ? { sha } : {})
-    };
-
-    const putRes = await fetch(apiBase, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify(body),
-    });
-
-    if (putRes.ok) {
-      statusEl.style.color = 'var(--green)';
-      statusEl.textContent = '✅ GitHubへのプッシュ完了！' + new Date().toLocaleTimeString('ja-JP');
-    } else {
-      const err = await putRes.json();
-      statusEl.style.color = 'var(--red)';
-      statusEl.textContent = '❌ エラー: ' + (err.message || putRes.status);
-    }
-  } catch(e) {
-    statusEl.style.color = 'var(--red)';
-    statusEl.textContent = '❌ 接続エラー: ' + e.message;
-  } finally {
-    btn.textContent = '🚀 GitHubへプッシュ';
-    btn.disabled = false;
-  }
-}
-
 function closeNotifModal() {
   document.getElementById('notifModal').classList.remove('open');
 }
@@ -6031,7 +5887,9 @@ function scheduleNotifications() {
 }
 
 function updatePendingBadge() {
+  const today = new Date(); today.setHours(0,0,0,0);
   const count = cases.filter(c => {
+    if (!isWithinNotificationAge(c, today)) return false;
     const prog = getCheckProgress(c);
     const hasIncompleteFree = c.freeChecks && c.freeChecks.some(f => !f.done);
     return prog.done < prog.total || hasIncompleteFree;
@@ -6045,7 +5903,9 @@ function updatePendingBadge() {
 }
 
 function dismissAllNotifs() {
+  const today = new Date(); today.setHours(0,0,0,0);
   const count = cases.filter(c => {
+    if (!isWithinNotificationAge(c, today)) return false;
     const prog = getCheckProgress(c);
     const hasIncompleteFree = c.freeChecks && c.freeChecks.some(f => !f.done);
     return prog.done < prog.total || hasIncompleteFree;
@@ -6054,6 +5914,16 @@ function dismissAllNotifs() {
   save();
   updatePendingBadge();
   closeNotifModal();
+}
+
+// オペ日から14日以上経過した症例は通知対象外。
+// オペ日がない入院・ケモ症例は日数を判定できないため通知を維持する。
+function isWithinNotificationAge(c, today = new Date()) {
+  if (!c.opDate) return true;
+  const cutoff = new Date(today);
+  cutoff.setHours(0,0,0,0);
+  cutoff.setDate(cutoff.getDate() - 14);
+  return new Date(c.opDate + 'T00:00:00') > cutoff;
 }
 
 function updateHeaderStats() {
@@ -6381,12 +6251,6 @@ function applyTheme() {
 // ========== SETTINGS ==========
 function openSettingsModal() {
   renderSettings();
-  // Load GitHub settings into static fields
-  const gh = JSON.parse(localStorage.getItem('gh_settings') || '{}');
-  if (document.getElementById('gh_user')) document.getElementById('gh_user').value = gh.user || '';
-  if (document.getElementById('gh_repo')) document.getElementById('gh_repo').value = gh.repo || '';
-  if (document.getElementById('gh_path')) document.getElementById('gh_path').value = gh.path || 'surgery-manager.html';
-  if (document.getElementById('gh_token')) document.getElementById('gh_token').value = gh.token || '';
   updateToggleUI();
   document.getElementById('settingsModal').classList.add('open');
 }
@@ -6940,13 +6804,6 @@ function showSetupIfNeeded() {
 }
 
 function completeSetup() {
-  const user  = document.getElementById('setup_gh_user')?.value.trim() || '';
-  const repo  = document.getElementById('setup_gh_repo')?.value.trim() || '';
-  const path  = document.getElementById('setup_gh_path')?.value.trim() || 'surgery-manager.html';
-  const token = document.getElementById('setup_gh_token')?.value.trim() || '';
-  if (user || repo || token) {
-    localStorage.setItem('gh_settings', JSON.stringify({ user, repo, path, token }));
-  }
   localStorage.setItem('setup_done', '1');
   document.getElementById('setupModal').classList.remove('open');
 }
@@ -7050,6 +6907,7 @@ function showDailyBriefIfNeeded() {
     const noRounds = cases.filter(c => {
       if (!isPast(c.opDate) || isToday(c.opDate)) return false;
       if (c.checks && c.checks['summary_rounds']) return false;
+      if (!isWithinNotificationAge(c, today)) return false;
       return true;
     });
     if (noRounds.length > 0) {
@@ -7102,7 +6960,6 @@ function showDailyBriefIfNeeded() {
 }
 
 // ========== INIT ==========
-loadGhSettings();
 seedIfEmpty();
 updateToggleUI();
 applyTheme();
