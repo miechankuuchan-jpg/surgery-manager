@@ -2830,6 +2830,47 @@ function markDischargeSummaryDone(id) {
   render();
 }
 
+const DISCHARGE_COMPLETION_ITEMS = [
+  { key: 'ope_input', label: 'オペレコ' },
+  { key: 'pathology_confirm', label: '病理確認' },
+  { key: 'discharge_summary', label: 'サマリ' },
+  { key: 'discharge_letter', label: '退院お手紙' },
+];
+
+function getDischargeCompletionStatus(c) {
+  const checks = c.checks || {};
+  const items = DISCHARGE_COMPLETION_ITEMS.map(item => ({
+    key: item.key,
+    label: item.label,
+    done: !!checks[item.key],
+  }));
+  const done = items.filter(item => item.done).length;
+  const automatic = done === items.length;
+  const manual = !!c.dischargeListManualComplete;
+  return { items, done, automatic, manual, complete: automatic || manual };
+}
+
+function toggleDischargeCompletionItem(id, key, checked) {
+  const c = cases.find(x => x.id === id);
+  if (!c || !DISCHARGE_COMPLETION_ITEMS.some(item => item.key === key)) return;
+  if (!c.checks) c.checks = {};
+  c.checks[key] = !!checked;
+  save();
+  const el = document.getElementById('mainContent');
+  if (el && currentTab === 'discharge_weekly') renderDischargeWeekly(el);
+  updatePendingBadge();
+  updateHeaderStats();
+}
+
+function setDischargeManualComplete(id, checked) {
+  const c = cases.find(x => x.id === id);
+  if (!c) return;
+  c.dischargeListManualComplete = !!checked;
+  save();
+  const el = document.getElementById('mainContent');
+  if (el && currentTab === 'discharge_weekly') renderDischargeWeekly(el);
+}
+
 function renderDischargeWeekly(el) {
   // 退院日が入力されている全症例を木〜水曜の週でグループ化
   const discharged = cases.filter(c => c.dischargeDate)
@@ -2871,10 +2912,16 @@ function renderDischargeWeekly(el) {
     const group = weeks[thu];
 
     const rows = group.map(c => {
-      const summaryDone = c.checks && c.checks['discharge_summary'];
-      const summaryBadge = summaryDone
-        ? `<span style="font-size:10px;color:var(--green,#18C478);font-weight:700;">📋 完了</span>`
-        : `<button onclick="event.stopPropagation();markDischargeSummaryDone('${c.id}')" style="font-size:10px;color:#fff;background:var(--accent2);border:none;border-radius:4px;padding:2px 8px;font-weight:700;cursor:pointer;font-family:inherit;">📋 未記載→完了</button>`;
+      const completion = getDischargeCompletionStatus(c);
+      const completionBadge = completion.complete
+        ? `<span style="font-size:10px;color:var(--green,#18C478);font-weight:700;white-space:nowrap;">${completion.automatic ? '✅ 完了' : '✅ 完了（手動）'}</span>`
+        : `<span style="font-size:10px;color:var(--accent2);font-weight:700;white-space:nowrap;">未完了 ${completion.done}/4</span>`;
+      const completionChecksHtml = `<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:8px;">
+        <span style="font-size:9px;font-weight:700;color:var(--text3);margin-right:2px;">完了条件</span>
+        ${completion.items.map(item => `<label style="display:flex;align-items:center;gap:3px;padding:3px 6px;border-radius:5px;border:1px solid ${item.done ? 'rgba(24,196,120,0.45)' : 'var(--border)'};background:${item.done ? 'rgba(24,196,120,0.10)' : 'var(--surface2)'};color:${item.done ? 'var(--green)' : 'var(--text3)'};font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap;">
+          <input type="checkbox" aria-label="${item.label}" onchange="toggleDischargeCompletionItem('${c.id}','${item.key}',this.checked)" ${item.done ? 'checked' : ''} style="width:13px;height:13px;accent-color:var(--green);">${item.label}
+        </label>`).join('')}
+      </div>`;
       const pathBadge = c.pathology
         ? `<div style="display:flex;align-items:flex-start;gap:5px;margin-top:5px;">
             <span style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:0.06em;white-space:nowrap;padding-top:1px;">🔬 病理</span>
@@ -2893,11 +2940,15 @@ function renderDischargeWeekly(el) {
             <div style="font-size:11px;font-weight:700;color:var(--text);">${c.name || '名前未設定'}</div>
             <div style="font-size:10px;color:var(--text2);margin-top:3px;"><span style="font-weight:700;color:var(--text3);">現疾患：</span>${c.disease || '—'}</div>
             <div style="font-size:10px;color:var(--text2);margin-top:2px;"><span style="font-weight:700;color:var(--text3);">術式：</span>${c.surgery || '—'} ／ 退院:${toDateStr(c.dischargeDate)}</div>
+            ${completionChecksHtml}
             ${pathBadge}
             ${courseHtml}
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
-            ${summaryBadge}
+            ${completionBadge}
+            <label style="display:flex;align-items:center;gap:4px;font-size:9px;font-weight:700;color:${completion.manual ? 'var(--green)' : 'var(--text3)'};cursor:pointer;white-space:nowrap;">
+              <input type="checkbox" aria-label="手動で完了" onchange="setDischargeManualComplete('${c.id}',this.checked)" ${completion.manual ? 'checked' : ''} style="width:13px;height:13px;accent-color:var(--green);">手動完了
+            </label>
             <button onclick="event.stopPropagation();openEditModal('${c.id}')" style="background:none;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:inherit;">✏️ 編集</button>
           </div>
         </div>
