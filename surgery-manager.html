@@ -2863,7 +2863,11 @@ function renderDischargeWeekly(el) {
   Object.keys(weeks).sort((a, b) => b.localeCompare(a)).forEach(thu => {
     const thuDate = new Date(thu + 'T00:00:00');
     const wedDate = new Date(thuDate); wedDate.setDate(thuDate.getDate() + 6);
+    // この木〜水の退院症例は、翌週の水曜日に発表する。
+    const presentationDate = new Date(wedDate);
+    presentationDate.setDate(wedDate.getDate() + 7);
     const weekLabel = `${fmt(thuDate)} 〜 ${fmt(wedDate)}`;
+    const presentationLabel = `（${fmt(presentationDate)}発表分）`;
     const group = weeks[thu];
 
     const rows = group.map(c => {
@@ -2902,7 +2906,10 @@ function renderDischargeWeekly(el) {
 
     html += `<div style="margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
       <div style="padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:12px;font-weight:700;color:var(--accent);">${weekLabel}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;">
+          <div style="font-size:12px;font-weight:700;color:var(--accent);">${weekLabel}</div>
+          <div style="font-size:10px;font-weight:700;color:var(--accent3);white-space:nowrap;">${presentationLabel}</div>
+        </div>
         <div style="font-size:11px;color:var(--text3);">${group.length}名退院</div>
       </div>
       ${rows}
