@@ -60,10 +60,14 @@ body {
 }
 
 /* ── Header ── */
-.header {
+.sticky-nav {
   position: sticky;
   top: 0;
   z-index: 100;
+  background: var(--surface);
+}
+
+.header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   padding: 12px 18px;
@@ -983,6 +987,7 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
 </head>
 <body>
 
+<div class="sticky-nav">
 <div class="header">
   <div>
     <div class="header-title"><span id="headerDoctorName">山口</span> <span>手術担当</span></div>
@@ -1010,6 +1015,7 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
   <div class="tab" onclick="switchTab('history', this)">🔪 手術歴</div>
   <div class="tab" onclick="switchTab('cancer', this)">🎗 癌症例</div>
   <div class="tab" onclick="switchTab('cert', this)">📊 申請</div>
+</div>
 </div>
 
 <div id="searchBar" style="padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);display:none;">
@@ -2646,22 +2652,28 @@ function renderList(el) {
       : emptyState('🏥', '症例がまだありません<br>右下の＋ボタンから追加してください');
     return;
   }
+  // 入院日の新しい症例を上に表示。入院日未入力は一覧の末尾へ送る。
   const sorted = [...filtered].sort((a,b) => {
-    const ka = a.opDate || a.admDate || '';
-    const kb = b.opDate || b.admDate || '';
-    return ka.localeCompare(kb);
+    const admA = a.admDate || '';
+    const admB = b.admDate || '';
+    if (admA && admB && admA !== admB) return admB.localeCompare(admA);
+    if (admA && !admB) return -1;
+    if (!admA && admB) return 1;
+    return (b.opDate || '').localeCompare(a.opDate || '');
   });
-  const groups = groupByOpDate(sorted);
+  const groups = {};
+  sorted.forEach(c => {
+    const key = c.admDate || '';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(c);
+  });
   let html = '';
-  Object.keys(groups).sort().forEach(date => {
-    let label;
-    if (!date) label = '入院中（手術なし）';
-    else if (isToday(date)) label = '今日のオペ ▼';
-    else {
-      // Determine if this date is an opDate or admDate for the cases in this group
-      const hasOp = groups[date].some(c => c.opDate === date);
-      label = hasOp ? `オペ日 ${formatOpDate(date)}` : `入院日 ${formatOpDate(date)}`;
-    }
+  Object.keys(groups).sort((a, b) => {
+    if (!a) return 1;
+    if (!b) return -1;
+    return b.localeCompare(a);
+  }).forEach(date => {
+    const label = date ? `入院日 ${formatOpDate(date)}` : '入院日未入力';
     html += `<div class="date-separator"><div class="date-separator-line"></div><div class="date-separator-text">${label}</div><div class="date-separator-line"></div></div>`;
     groups[date].forEach(c => { html += renderCard(c); });
   });
