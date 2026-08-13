@@ -30,6 +30,9 @@ export default {
     if (!userId || !apiKey || !subscriptionId || jobs.length > 300) {
       return Response.json({ error: "invalid_request" }, { status: 400, headers: corsHeaders() });
     }
+    if (!/^[0-9a-f-]{36}$/i.test(subscriptionId)) {
+      return Response.json({ error: "invalid_subscription" }, { status: 400, headers: corsHeaders() });
+    }
 
     const { data: existing } = await ctx.supabaseAdmin
       .from("notification_jobs")
