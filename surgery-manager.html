@@ -4311,9 +4311,12 @@ function openCheckReminder(caseId) {
   // 患者情報
   var nameEl = document.getElementById('crPatientName');
   var subEl  = document.getElementById('crStep1') && document.getElementById('crPatientSub');
-  if (nameEl) nameEl.textContent = c.name || '患者名未設定';
+  var editingName = (_crCaseId === editingId ? document.getElementById('f_name')?.value?.trim() : '') || c.name || '患者名未設定';
+  var editingDisease = (_crCaseId === editingId ? document.getElementById('f_disease')?.value?.trim() : '') || c.disease || '';
+  var editingSurgery = (_crCaseId === editingId ? document.getElementById('f_surgery')?.value?.trim() : '') || c.surgery || '';
+  if (nameEl) nameEl.textContent = editingName;
   var sub = document.getElementById('crPatientSub');
-  if (sub) sub.textContent = (c.disease || '') + (c.surgery ? '　' + c.surgery : '');
+  if (sub) sub.textContent = editingDisease + (editingSurgery ? '　' + editingSurgery : '');
 
   // チェック項目リスト（default + mode + regimen + freeCheck）
   var displayItems = getDisplayedChecklistItems(c);
@@ -4379,9 +4382,12 @@ function openCheckReminderForItem(caseId, key, label) {
 
   // 患者情報
   var nameEl = document.getElementById('crPatientName');
-  if (nameEl) nameEl.textContent = c.name || '患者名未設定';
+  var editingName = (_crCaseId === editingId ? document.getElementById('f_name')?.value?.trim() : '') || c.name || '患者名未設定';
+  var editingDisease = (_crCaseId === editingId ? document.getElementById('f_disease')?.value?.trim() : '') || c.disease || '';
+  var editingSurgery = (_crCaseId === editingId ? document.getElementById('f_surgery')?.value?.trim() : '') || c.surgery || '';
+  if (nameEl) nameEl.textContent = editingName;
   var sub = document.getElementById('crPatientSub');
-  if (sub) sub.textContent = (c.disease || '') + (c.surgery ? '　' + c.surgery : '');
+  if (sub) sub.textContent = editingDisease + (editingSurgery ? '　' + editingSurgery : '');
 
   // Step1非表示、Step2表示
   var s1 = document.getElementById('crStep1');
