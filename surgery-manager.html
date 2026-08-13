@@ -1368,51 +1368,9 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
     <div class="modal-title">⚙️ 設定</div>
     <div id="settingsContent"></div>
 
-    <!-- 通知設定 -->
     <div class="summary-block" style="margin-top:12px;">
-      <div style="font-size:11px;font-weight:700;margin-bottom:12px;color:var(--text);">🔔 通知設定</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.6;">ホーム画面のアプリから許可すると、アプリを閉じていてもプッシュ通知を受け取れます。</div>
-      <div class="notif-row">
-        <div>
-          <div style="font-size:13px;">術前日（20:00）</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px;">手術前日の夜にリマインド</div>
-        </div>
-        <div class="toggle" id="tog1" onclick="toggleNotif(this,'prev_day')"></div>
-      </div>
-      <div class="notif-row">
-        <div>
-          <div style="font-size:13px;">手術当日朝（7:00）</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px;">当日朝にチェック状況を通知</div>
-        </div>
-        <div class="toggle" id="tog2" onclick="toggleNotif(this,'op_morning')"></div>
-      </div>
-      <div class="notif-row">
-        <div>
-          <div style="font-size:13px;">未完了タスクあり（8:00）</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px;">毎朝8時に未完了件数を通知</div>
-        </div>
-        <div class="toggle" id="tog3" onclick="toggleNotif(this,'pending_tasks')"></div>
-      </div>
-      <button class="btn-primary" onclick="requestNotifPermission()" style="margin-top:10px;">iPhoneの通知を許可する</button>
-      <button onclick="repairPushSubscription()" style="width:100%;margin-top:8px;padding:11px;background:rgba(200,150,32,0.12);border:1px solid rgba(200,150,32,0.45);border-radius:9px;color:var(--accent3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🛠 通知を再登録して90秒後にテスト</button>
-      <div id="notifStatus" style="font-size:12px;color:var(--text3);margin:8px 0 4px;line-height:1.6;"></div>
-      <div class="notif-panel" style="margin-top:12px;">
-        <div class="notif-panel-title">⌚ Apple Watchで振動させる設定</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.7;">
-          iPhoneの<strong style="color:var(--text);">Watchアプリ → マイウォッチ → 通知</strong>で、このWebアプリの通知をミラーリングしてください。<br>
-          Watchの<strong style="color:var(--text);">設定 → サウンドと触覚 → 触覚</strong>を「はっきり」にすると強めに振動します。iPhoneがロック中で、Watchを装着・ロック解除している時にWatchへ通知されます。
-        </div>
-      </div>
-      <div class="notif-panel" style="margin-top:12px;">
-        <div class="notif-panel-title">🧪 端末内テスト</div>
-        <div style="font-size:11px;color:var(--text3);margin:6px 0 10px;line-height:1.6;">この画面を開いている間の通知表示を確認します。バックグラウンド配信のテストとは別です。</div>
-        <div style="display:flex;gap:8px;">
-          <button onclick="sendTestNotif('now')" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">⚡️ 今すぐ</button>
-          <button onclick="sendTestNotif('5sec')" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">⏱ 5秒後</button>
-          <button onclick="sendTestNotif('1min')" style="flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">🕐 1分後</button>
-        </div>
-        <div id="testNotifStatus" style="font-size:11px;color:var(--green);margin-top:8px;min-height:16px;"></div>
-      </div>
+      <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:var(--text);">✅ Appleリマインダー連携</div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.7;">症例カードや患者情報編集画面の「リマインダーに追加」から登録できます。</div>
     </div>
 
     <!-- GitHub自動同期 -->
@@ -1457,19 +1415,10 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
           style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--text);font-family:inherit;width:100px;flex-shrink:0;">
       </div>
       <div id="crSelectedSummary" style="font-size:11px;color:var(--accent3);min-height:16px;margin-bottom:12px;text-align:center;font-weight:700;"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <button onclick="registerCheckReminder('app')"
-          style="width:100%;padding:14px 8px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
-          🔔 アプリ通知
-        </button>
-        <button onclick="registerCheckReminder('reminder')"
-          style="width:100%;padding:14px 8px;background:rgba(200,150,32,0.15);color:var(--accent3);border:1px solid var(--accent3);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
-          ✅ リマインダー
-        </button>
-      </div>
-      <div style="font-size:10px;line-height:1.55;color:var(--text3);margin-top:8px;text-align:center;">
-        アプリ通知はiPhone／Apple Watchへ配信。リマインダーはカレンダーファイルを開いて追加します。
-      </div>
+      <button onclick="registerCheckReminder()"
+        style="width:100%;padding:14px 8px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
+        ✅ リマインダーに追加
+      </button>
       <button id="crBackBtn" onclick="crBackToStep1()"
         style="width:100%;padding:10px;background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit;margin-top:6px;">
         ← 項目選択に戻る
