@@ -4482,7 +4482,12 @@ function openCheckReminder(caseId) {
 
   // 今日の日付をデフォルトに
   var dateEl = document.getElementById('crDate');
-  if (dateEl) dateEl.value = toISODate(new Date());
+  var existingAt = key.indexOf('__free_') === 0
+    ? ((c.freeChecks || [])[parseInt(key.slice(7), 10)] || {}).remindAt
+    : ((c.checkReminders || {})[key] || '');
+  if (dateEl) dateEl.value = existingAt ? existingAt.slice(0, 10) : toISODate(new Date());
+  var timeEl = document.getElementById('crCustomTime');
+  if (timeEl) timeEl.value = existingAt ? existingAt.slice(11, 16) : '';
 
   // 時間プリセットを描画
   crRenderTimePresets();
@@ -5451,13 +5456,12 @@ function buildCloudNotificationJobs(now = new Date()) {
   };
 
   cases.forEach(c => {
-    if (!c.opDate || isPast(c.opDate)) return;
-    if (notifSettings.prev_day) {
+    if (c.opDate && !isPast(c.opDate) && notifSettings.prev_day) {
       const prev = new Date(c.opDate + 'T20:00:00');
       prev.setDate(prev.getDate() - 1);
       addJob(`case:${c.id}:prev_day`, 'prev_day', prev);
     }
-    if (notifSettings.op_morning) {
+    if (c.opDate && !isPast(c.opDate) && notifSettings.op_morning) {
       addJob(`case:${c.id}:op_morning`, 'op_morning', new Date(c.opDate + 'T07:00:00'));
     }
     (c.freeChecks || []).forEach((fc, index) => {
@@ -6096,8 +6100,7 @@ function scheduleNotifications() {
 
   // 画面を開いたままの時だけ使う補助通知。バックグラウンド通知はクラウド予約が担当する。
   cases.forEach(c => {
-    if (!c.freeChecks) return;
-    c.freeChecks.forEach(fc => {
+    (c.freeChecks || []).forEach(fc => {
       if (fc.done || !fc.remindAt) return;
       const remindTime = new Date(fc.remindAt);
       const ms = remindTime - now;
