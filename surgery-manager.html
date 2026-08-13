@@ -1450,7 +1450,7 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
     </div>
     <!-- Step1: チェック項目選択 -->
     <div id="crStep1">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.06em;margin-bottom:8px;">① アプリ通知を設定する項目を選択</div>
+      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.06em;margin-bottom:8px;">① 通知する項目を選択</div>
       <div id="crItemList" style="display:flex;flex-direction:column;gap:5px;"></div>
     </div>
     <!-- Step2: 日付・時間設定 -->
@@ -1465,10 +1465,19 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
           style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--text);font-family:inherit;width:100px;flex-shrink:0;">
       </div>
       <div id="crSelectedSummary" style="font-size:11px;color:var(--accent3);min-height:16px;margin-bottom:12px;text-align:center;font-weight:700;"></div>
-      <button onclick="registerCheckReminder()"
-        style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
-        🔔 アプリ通知を予約
-      </button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button onclick="registerCheckReminder('app')"
+          style="width:100%;padding:14px 8px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🔔 アプリ通知
+        </button>
+        <button onclick="registerCheckReminder('reminder')"
+          style="width:100%;padding:14px 8px;background:rgba(200,150,32,0.15);color:var(--accent3);border:1px solid var(--accent3);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
+          ✅ リマインダー
+        </button>
+      </div>
+      <div style="font-size:10px;line-height:1.55;color:var(--text3);margin-top:8px;text-align:center;">
+        アプリ通知はiPhone／Apple Watchへ配信。リマインダーはカレンダーファイルを開いて追加します。
+      </div>
       <button id="crBackBtn" onclick="crBackToStep1()"
         style="width:100%;padding:10px;background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit;margin-top:6px;">
         ← 項目選択に戻る
