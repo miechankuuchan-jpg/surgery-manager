@@ -5489,28 +5489,35 @@ async function ensureCloudNotificationSession() {
 
 function buildCloudNotificationJobs(now = new Date()) {
   const jobs = [];
-  const addJob = (clientKey, kind, date) => {
+  const addJob = (clientKey, kind, date, patientName = '', itemLabel = '') => {
     const ms = date - now;
     if (ms < 60000 || ms > 30 * 86400000) return;
-    jobs.push({ client_key: clientKey, kind, notify_at: date.toISOString() });
+    jobs.push({
+      client_key: clientKey,
+      kind,
+      notify_at: date.toISOString(),
+      patient_name: String(patientName || '').slice(0, 80),
+      item_label: String(itemLabel || '').slice(0, 120)
+    });
   };
 
   cases.forEach(c => {
     if (c.opDate && !isPast(c.opDate) && notifSettings.prev_day) {
       const prev = new Date(c.opDate + 'T20:00:00');
       prev.setDate(prev.getDate() - 1);
-      addJob(`case:${c.id}:prev_day`, 'prev_day', prev);
+      addJob(`case:${c.id}:prev_day`, 'prev_day', prev, c.name, c.surgery || '手術前日の確認');
     }
     if (c.opDate && !isPast(c.opDate) && notifSettings.op_morning) {
-      addJob(`case:${c.id}:op_morning`, 'op_morning', new Date(c.opDate + 'T07:00:00'));
+      addJob(`case:${c.id}:op_morning`, 'op_morning', new Date(c.opDate + 'T07:00:00'), c.name, c.surgery || '手術当日の確認');
     }
     (c.freeChecks || []).forEach((fc, index) => {
       if (fc.done || !fc.remindAt) return;
-      addJob(`case:${c.id}:check:${index}:${fc.remindAt}`, 'checklist', new Date(fc.remindAt));
+      addJob(`case:${c.id}:check:${index}:${fc.remindAt}`, 'checklist', new Date(fc.remindAt), c.name, fc.label);
     });
     Object.entries(c.checkReminders || {}).forEach(([key, remindAt]) => {
       if ((c.checks || {})[key] || !remindAt) return;
-      addJob(`case:${c.id}:item:${key}:${remindAt}`, 'checklist', new Date(remindAt));
+      const item = getDisplayedChecklistItems(c).find(entry => entry.key === key);
+      addJob(`case:${c.id}:item:${key}:${remindAt}`, 'checklist', new Date(remindAt), c.name, item ? item.label : 'チェック項目');
     });
   });
 
