@@ -78,8 +78,8 @@ export default {
       const delay = notifyAt.getTime() - now;
       if (!clientKey || clientKey.length > 180 || !KINDS.includes(kind)) continue;
       if (!Number.isFinite(notifyAt.getTime()) || delay < 60000 || delay > 2592000000) continue;
-      const personalBody = [patientName, itemLabel].filter(Boolean).join("　");
-      const notificationBody = personalBody || bodies[kind];
+      const notificationTitle = patientName ? `${patientName}｜${titles[kind]}` : titles[kind];
+      const notificationBody = itemLabel || bodies[kind];
 
       const response = await fetch("https://api.onesignal.com/notifications", {
         method: "POST",
@@ -88,7 +88,7 @@ export default {
           app_id: APP_ID,
           include_subscription_ids: [subscriptionId],
           target_channel: "push",
-          headings: { ja: titles[kind], en: titles[kind] },
+          headings: { ja: notificationTitle, en: notificationTitle },
           contents: { ja: notificationBody, en: notificationBody },
           send_after: notifyAt.toISOString(),
           web_url: APP_URL,
