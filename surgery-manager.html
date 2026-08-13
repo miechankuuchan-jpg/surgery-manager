@@ -4394,7 +4394,13 @@ function openCheckReminderForItem(caseId, key, label) {
   var existingAt = key.indexOf('__free_') === 0
     ? ((c.freeChecks || [])[parseInt(key.slice(7), 10)] || {}).remindAt
     : ((c.checkReminders || {})[key] || '');
-  if (dateEl) dateEl.value = existingAt ? existingAt.slice(0, 10) : toISODate(new Date());
+  var examDate = '';
+  if (key.indexOf('__exam_') === 0) {
+    var examIdx = parseInt(key.slice(7), 10);
+    var reminderExams = (_crCaseId === editingId) ? currentExamSchedules : (c.examSchedules || []);
+    examDate = (reminderExams[examIdx] || {}).date || '';
+  }
+  if (dateEl) dateEl.value = existingAt ? existingAt.slice(0, 10) : (examDate || toISODate(new Date()));
   var timeEl = document.getElementById('crCustomTime');
   if (timeEl) timeEl.value = existingAt ? existingAt.slice(11, 16) : '';
   _crSelectedTime = timeEl ? timeEl.value : null;
