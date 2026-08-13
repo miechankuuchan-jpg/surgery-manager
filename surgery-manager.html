@@ -5677,7 +5677,7 @@ async function repairPushSubscription() {
         }])
       }
     });
-    if (error || !data?.ok || data.scheduled !== 1) throw error || new Error('test_schedule_failed');
+    if (error || !data?.ok || data.scheduled < 1) throw error || new Error('test_schedule_failed');
     el.textContent = '✅ 再登録完了。アプリを閉じてiPhoneをロックし、90秒お待ちください。';
     el.style.color = 'var(--green)';
   } catch (err) {
