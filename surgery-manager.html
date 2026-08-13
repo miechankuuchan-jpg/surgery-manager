@@ -4257,6 +4257,7 @@ function toggleCheck(id, key) {
   if (!c) return;
   if (!c.checks) c.checks = {};
   c.checks[key] = !c.checks[key];
+  if (c.checks[key] && c.checkReminders) delete c.checkReminders[key];
   save();
   // カード内部のみ更新（全再描画を避けて開閉状態を保持）
   const body = document.getElementById('body_' + id);
@@ -4285,6 +4286,7 @@ function toggleFreeCheckCard(id, idx) {
   const c = cases.find(x => x.id === id);
   if (!c || !c.freeChecks || !c.freeChecks[idx]) return;
   c.freeChecks[idx].done = !c.freeChecks[idx].done;
+  if (c.freeChecks[idx].done) c.freeChecks[idx].remindAt = '';
   save();
   // カード内部のみ更新
   const body = document.getElementById('body_' + id);
