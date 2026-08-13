@@ -10,6 +10,7 @@
 <title>手術担当管理</title>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -2516,6 +2517,7 @@ function save() {
   localStorage.setItem('notif_settings', JSON.stringify(notifSettings));
   localStorage.setItem('app_settings', JSON.stringify(appSettings));
   applyTheme();
+  queueCloudNotificationSync();
 }
 
 function saveDailyMemo(val) {
@@ -5426,6 +5428,91 @@ function waitForOneSignal(timeoutMs = 10000) {
   });
 }
 
+const SUPABASE_URL = 'https://eooskehlbrskotxgizrg.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable__-Pp4_uFVjv7bdRV8H8TZg_qVsy5Utc';
+let cloudNotifClient = null;
+let cloudNotifSyncTimer = null;
+
+function getCloudNotificationClient() {
+  if (cloudNotifClient) return cloudNotifClient;
+  if (!window.supabase?.createClient) return null;
+  cloudNotifClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+  });
+  return cloudNotifClient;
+}
+
+async function ensureCloudNotificationSession() {
+  const client = getCloudNotificationClient();
+  if (!client) throw new Error('Supabase unavailable');
+  const { data } = await client.auth.getSession();
+  if (data.session) return data.session;
+  const { data: signedIn, error } = await client.auth.signInAnonymously();
+  if (error) throw error;
+  return signedIn.session;
+}
+
+function buildCloudNotificationJobs(now = new Date()) {
+  const jobs = [];
+  const addJob = (clientKey, kind, date) => {
+    const ms = date - now;
+    if (ms < 60000 || ms > 30 * 86400000) return;
+    jobs.push({ client_key: clientKey, kind, notify_at: date.toISOString() });
+  };
+
+  cases.forEach(c => {
+    if (!c.opDate || isPast(c.opDate)) return;
+    if (notifSettings.prev_day) {
+      const prev = new Date(c.opDate + 'T20:00:00');
+      prev.setDate(prev.getDate() - 1);
+      addJob(`case:${c.id}:prev_day`, 'prev_day', prev);
+    }
+    if (notifSettings.op_morning) {
+      addJob(`case:${c.id}:op_morning`, 'op_morning', new Date(c.opDate + 'T07:00:00'));
+    }
+    (c.freeChecks || []).forEach((fc, index) => {
+      if (fc.done || !fc.remindAt) return;
+      addJob(`case:${c.id}:check:${index}:${fc.remindAt}`, 'checklist', new Date(fc.remindAt));
+    });
+  });
+
+  if (notifSettings.pending_tasks) {
+    const pendingCount = cases.filter(c => {
+      if (isPast(c.opDate)) return false;
+      const prog = getCheckProgress(c);
+      return prog.done < prog.total;
+    }).length;
+    if (pendingCount > 0) {
+      const morning = new Date(now);
+      morning.setHours(8, 0, 0, 0);
+      if (morning <= now) morning.setDate(morning.getDate() + 1);
+      addJob(`pending:${toISODate(morning)}`, 'pending_tasks', morning);
+    }
+  }
+  return jobs;
+}
+
+async function syncCloudNotifications() {
+  const OneSignal = getOneSignal();
+  if (!OneSignal?.Notifications.permission || !OneSignal.User.PushSubscription.optedIn) return;
+  const subscriptionId = OneSignal.User.PushSubscription.id;
+  if (!subscriptionId) return;
+  await ensureCloudNotificationSession();
+  const client = getCloudNotificationClient();
+  const { data, error } = await client.functions.invoke('schedule-notifications', {
+    body: { subscription_id: subscriptionId, jobs: buildCloudNotificationJobs() }
+  });
+  if (error || !data?.ok) throw error || new Error(data?.error || 'Notification sync failed');
+  return data;
+}
+
+function queueCloudNotificationSync(delay = 700) {
+  clearTimeout(cloudNotifSyncTimer);
+  cloudNotifSyncTimer = setTimeout(() => {
+    syncCloudNotifications().catch(err => console.error('Cloud notification sync failed', err));
+  }, delay);
+}
+
 async function requestNotifPermission() {
   const el = document.getElementById('notifStatus');
   if (!isStandaloneWebApp() && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
@@ -5450,6 +5537,14 @@ async function requestNotifPermission() {
       el.textContent = '✅ プッシュ通知を許可しました。バックグラウンド通知を受信できます。';
       el.style.color = 'var(--green)';
       scheduleNotifications();
+      try {
+        const result = await syncCloudNotifications();
+        if (result) el.textContent = `✅ プッシュ通知を有効化しました（${result.scheduled}件を予約）`;
+      } catch (syncError) {
+        console.error('Initial cloud notification sync failed', syncError);
+        el.textContent = '⚠️ 通知の許可は完了しましたが、サーバー予約の設定が未完了です。';
+        el.style.color = 'var(--accent3)';
+      }
     } else {
       el.textContent = '⚠️ 通知が許可されていません。iPhoneの設定 → 通知 → 手術担当 から許可してください。';
       el.style.color = 'var(--red)';
@@ -5945,6 +6040,7 @@ function sendTestNotif(timing) {
 }
 
 function scheduleNotifications() {
+  queueCloudNotificationSync();
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
   // Clear existing scheduled (use serviceWorker if available, else simple setTimeout)
