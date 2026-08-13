@@ -23,6 +23,7 @@
       autoResubscribe: true,
     });
     window.surgeryOneSignal = OneSignal;
+    if (typeof installPushSubscriptionListener === 'function') installPushSubscriptionListener(OneSignal);
     window.dispatchEvent(new CustomEvent('surgery-onesignal-ready'));
   });
 </script>
@@ -5583,6 +5584,7 @@ function waitForPushSubscriptionId(OneSignal, timeoutMs = 20000) {
   if (currentId) return Promise.resolve(currentId);
   return new Promise(resolve => {
     let finished = false;
+    let timer = null;
     const listener = event => {
       const id = event?.current?.id || OneSignal.User.PushSubscription.id;
       if (id && !finished) finish(id);
@@ -5595,7 +5597,7 @@ function waitForPushSubscriptionId(OneSignal, timeoutMs = 20000) {
       resolve(id || null);
     };
     OneSignal.User.PushSubscription.addEventListener('change', listener);
-    const timer = setTimeout(() => finish(OneSignal.User.PushSubscription.id), timeoutMs);
+    timer = setTimeout(() => finish(OneSignal.User.PushSubscription.id), timeoutMs);
   });
 }
 
@@ -5666,13 +5668,13 @@ async function repairPushSubscription() {
     const { data, error } = await client.functions.invoke('schedule-notifications', {
       body: {
         subscription_id: subscriptionId,
-        jobs: [{
+        jobs: buildCloudNotificationJobs().concat([{
           client_key: 'device-test:' + testAt.toISOString(),
           kind: 'checklist',
           notify_at: testAt.toISOString(),
           patient_name: '通知テスト',
           item_label: 'この通知が届けば設定完了です'
-        }]
+        }])
       }
     });
     if (error || !data?.ok || data.scheduled !== 1) throw error || new Error('test_schedule_failed');
