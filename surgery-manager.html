@@ -4482,12 +4482,7 @@ function openCheckReminder(caseId) {
 
   // 今日の日付をデフォルトに
   var dateEl = document.getElementById('crDate');
-  var existingAt = key.indexOf('__free_') === 0
-    ? ((c.freeChecks || [])[parseInt(key.slice(7), 10)] || {}).remindAt
-    : ((c.checkReminders || {})[key] || '');
-  if (dateEl) dateEl.value = existingAt ? existingAt.slice(0, 10) : toISODate(new Date());
-  var timeEl = document.getElementById('crCustomTime');
-  if (timeEl) timeEl.value = existingAt ? existingAt.slice(11, 16) : '';
+  if (dateEl) dateEl.value = toISODate(new Date());
 
   // 時間プリセットを描画
   crRenderTimePresets();
@@ -4517,7 +4512,13 @@ function openCheckReminderForItem(caseId, key, label) {
 
   // 今日の日付をデフォルトに
   var dateEl = document.getElementById('crDate');
-  if (dateEl) dateEl.value = toISODate(new Date());
+  var existingAt = key.indexOf('__free_') === 0
+    ? ((c.freeChecks || [])[parseInt(key.slice(7), 10)] || {}).remindAt
+    : ((c.checkReminders || {})[key] || '');
+  if (dateEl) dateEl.value = existingAt ? existingAt.slice(0, 10) : toISODate(new Date());
+  var timeEl = document.getElementById('crCustomTime');
+  if (timeEl) timeEl.value = existingAt ? existingAt.slice(11, 16) : '';
+  _crSelectedTime = timeEl ? timeEl.value : null;
 
   // 時間プリセットを描画・サマリー更新
   crRenderTimePresets();
