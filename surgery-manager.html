@@ -2467,7 +2467,6 @@ function save() {
   localStorage.setItem('notif_settings', JSON.stringify(notifSettings));
   localStorage.setItem('app_settings', JSON.stringify(appSettings));
   applyTheme();
-  queueCloudNotificationSync();
 }
 
 function saveDailyMemo(val) {
@@ -4559,7 +4558,7 @@ function crUpdateSummary() {
   }
 }
 
-function registerCheckReminder(destination) {
+function registerCheckReminder() {
   if (!_crSelectedItem) { alert('項目を選択してください'); return; }
   var dateEl = document.getElementById('crDate');
   var timeEl = document.getElementById('crCustomTime');
@@ -4570,31 +4569,15 @@ function registerCheckReminder(destination) {
   var dt = new Date(date + 'T' + time + ':00');
   var c = cases.find(function(x) { return x.id === _crCaseId; });
   if (!c || !Number.isFinite(dt.getTime())) { alert('日時を確認してください'); return; }
-  if (destination === 'reminder') {
-    var itemLabel = _crSelectedItem.label;
-    var title = encodeURIComponent(itemLabel + '（' + (c.name || '患者') + '）');
-    var notes = encodeURIComponent(
-      '患者: ' + (c.name || '') +
-      (c.disease ? '\n疾患: ' + c.disease : '') +
-      (c.surgery ? '\n術式/レジメン: ' + c.surgery : '') +
-      '\nタスク: ' + itemLabel
-    );
-    openReminderOrCalendar(title, notes, dt, c);
-    var reminderOv = document.getElementById('checkReminderOverlay');
-    if (reminderOv) reminderOv.style.display = 'none';
-    return;
-  }
-  var remindAt = date + 'T' + time;
-  if (_crSelectedItem.key.indexOf('__free_') === 0) {
-    var freeIdx = parseInt(_crSelectedItem.key.slice(7), 10);
-    if (!c.freeChecks || !c.freeChecks[freeIdx]) { alert('項目が見つかりません'); return; }
-    c.freeChecks[freeIdx].remindAt = remindAt;
-  } else {
-    if (!c.checkReminders) c.checkReminders = {};
-    c.checkReminders[_crSelectedItem.key] = remindAt;
-  }
-  save();
-  render();
+  var itemLabel = _crSelectedItem.label;
+  var title = encodeURIComponent(itemLabel + '（' + (c.name || '患者') + '）');
+  var notes = encodeURIComponent(
+    '患者: ' + (c.name || '') +
+    (c.disease ? '\n疾患: ' + c.disease : '') +
+    (c.surgery ? '\n術式/レジメン: ' + c.surgery : '') +
+    '\nタスク: ' + itemLabel
+  );
+  openReminderOrCalendar(title, notes, dt, c);
   var ov = document.getElementById('checkReminderOverlay');
   if (ov) ov.style.display = 'none';
 }
@@ -5194,6 +5177,10 @@ function addFreeCheck() {
   freeChecks.push({ label: val, done: false, remindAt });
   input.value = '';
 
+  if (remindAt) {
+    addEditingFreeCheckToReminder(freeChecks.length - 1);
+  }
+
   // リセット
   _fcReminderPresetIdx = -1;
   const customRow = document.getElementById('fcCustomRow');
@@ -5228,9 +5215,21 @@ function renderFreeChecklistForm() {
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;${fc.done?'text-decoration:line-through;color:var(--text3)':''}">${fc.label}${remindLabel}</div>
       </div>
+      ${fc.remindAt ? `<button onclick="addEditingFreeCheckToReminder(${i})" style="background:rgba(200,150,32,0.12);border:1px solid rgba(200,150,32,0.4);color:var(--accent3);border-radius:6px;padding:4px 7px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;">✅ リマインダー</button>` : ''}
       <button onclick="removeFreeCheck(${i})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:0;line-height:1;flex-shrink:0;">×</button>
     </div>`;
   }).join('');
+}
+
+function addEditingFreeCheckToReminder(i) {
+  const fc = freeChecks[i];
+  if (!fc || !fc.remindAt) { alert('先にリマインダー日時を設定してください'); return; }
+  const name = document.getElementById('f_name')?.value?.trim() || '患者';
+  const disease = document.getElementById('f_disease')?.value?.trim() || '';
+  const surgery = document.getElementById('f_surgery')?.value?.trim() || '';
+  const title = encodeURIComponent(fc.label + '（' + name + '）');
+  const notes = encodeURIComponent('患者: ' + name + (disease ? '\n疾患: ' + disease : '') + (surgery ? '\n術式/レジメン: ' + surgery : '') + '\nタスク: ' + fc.label);
+  openReminderOrCalendar(title, notes, new Date(fc.remindAt), null);
 }
 
 function selectFormMode(mode) {
