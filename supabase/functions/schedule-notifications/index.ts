@@ -72,10 +72,14 @@ export default {
     for (const job of jobs) {
       const clientKey = String(job.client_key || "");
       const kind = String(job.kind || "");
+      const patientName = String(job.patient_name || "").trim().slice(0, 80);
+      const itemLabel = String(job.item_label || "").trim().slice(0, 120);
       const notifyAt = new Date(String(job.notify_at || ""));
       const delay = notifyAt.getTime() - now;
       if (!clientKey || clientKey.length > 180 || !KINDS.includes(kind)) continue;
       if (!Number.isFinite(notifyAt.getTime()) || delay < 60000 || delay > 2592000000) continue;
+      const personalBody = [patientName, itemLabel].filter(Boolean).join("　");
+      const notificationBody = personalBody || bodies[kind];
 
       const response = await fetch("https://api.onesignal.com/notifications", {
         method: "POST",
@@ -85,7 +89,7 @@ export default {
           include_subscription_ids: [subscriptionId],
           target_channel: "push",
           headings: { ja: titles[kind], en: titles[kind] },
-          contents: { ja: bodies[kind], en: bodies[kind] },
+          contents: { ja: notificationBody, en: notificationBody },
           send_after: notifyAt.toISOString(),
           web_url: APP_URL,
           chrome_web_icon: ICON_URL,
