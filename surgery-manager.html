@@ -4121,7 +4121,7 @@ function renderCard(c, expandByDefault=false) {
             ? `<span style="font-size:9px;color:var(--accent3);margin-left:4px;">🔔${fc.remindAt.replace('T',' ').slice(5,16)}</span>`
             : '';
           const remindBtn = !fc.done
-            ? `<button onclick="event.stopPropagation();openCheckReminderForItem('${c.id}','${fc.label.replace(/'/g,"\\'")}');" style="background:none;border:1px solid var(--border);color:var(--text3);border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;font-family:inherit;flex-shrink:0;line-height:1.2;">🔔</button>`
+            ? `<button onclick="event.stopPropagation();openCheckReminderForItem('${c.id}','__free_${i}','${fc.label.replace(/'/g,"\\'")}');" style="background:${fc.remindAt?'rgba(200,150,32,0.15)':'none'};border:1px solid ${fc.remindAt?'var(--accent3)':'var(--border)'};color:${fc.remindAt?'var(--accent3)':'var(--text3)'};border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;font-family:inherit;flex-shrink:0;line-height:1.2;">🔔</button>`
             : '';
           return `<div style="display:flex;align-items:center;gap:6px;">
             <span class="check-item${fc.done?' done':''}" onclick="toggleFreeCheckCard('${c.id}',${i})" style="flex:1;">
@@ -4344,7 +4344,9 @@ function _fireReminder(dt) {
   if (!c) return;
   const fc = (c.freeChecks || []).find(x => x.label === _qrContext.label && !x.done);
   if (!fc) return;
-  fc.remindAt = toLocalDateTimeValue(dt);
+  const pad = n => String(n).padStart(2, '0');
+  fc.remindAt = dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate())
+    + 'T' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
   save();
   render();
   const ov = document.getElementById('quickReminderOverlay');
@@ -5207,15 +5209,6 @@ function addFreeCheck() {
   freeChecks.push({ label: val, done: false, remindAt });
   input.value = '';
 
-  // リマインダーが設定されていたら即座に.icsダウンロード
-  if (remindAt) {
-    const patName = document.getElementById('f_name')?.value?.trim() || '患者';
-    const dt = new Date(remindAt);
-    const title = encodeURIComponent(val + '（' + patName + '）');
-    const notes = encodeURIComponent('患者: ' + patName + '\nタスク: ' + val);
-    openReminderOrCalendar(title, notes, dt, null);
-  }
-
   // リセット
   _fcReminderPresetIdx = -1;
   const customRow = document.getElementById('fcCustomRow');
@@ -5354,6 +5347,7 @@ function saveCase() {
     recon: document.getElementById('f_recon').checked,
     mode: document.getElementById('f_mode')?.value || 'ope',
     checks,
+    checkReminders: JSON.parse(JSON.stringify(existingCase?.checkReminders || {})),
     freeChecks: JSON.parse(JSON.stringify(freeChecks)),
     examSchedules: JSON.parse(JSON.stringify(currentExamSchedules)),
     // 専門医申請データ（年月日は admDate を使用）
@@ -5469,6 +5463,10 @@ function buildCloudNotificationJobs(now = new Date()) {
     (c.freeChecks || []).forEach((fc, index) => {
       if (fc.done || !fc.remindAt) return;
       addJob(`case:${c.id}:check:${index}:${fc.remindAt}`, 'checklist', new Date(fc.remindAt));
+    });
+    Object.entries(c.checkReminders || {}).forEach(([key, remindAt]) => {
+      if ((c.checks || {})[key] || !remindAt) return;
+      addJob(`case:${c.id}:item:${key}:${remindAt}`, 'checklist', new Date(remindAt));
     });
   });
 
@@ -6096,7 +6094,7 @@ function scheduleNotifications() {
     }
   }
 
-  // フリーチェックリストのリマインダー
+  // 画面を開いたままの時だけ使う補助通知。バックグラウンド通知はクラウド予約が担当する。
   cases.forEach(c => {
     if (!c.freeChecks) return;
     c.freeChecks.forEach(fc => {
@@ -6105,9 +6103,18 @@ function scheduleNotifications() {
       const ms = remindTime - now;
       if (ms > 0 && ms < 86400000 * 30) { // 30日以内のものだけ登録
         setTimeout(() => {
-          new Notification(`🔔 ${c.name} チェックリスト`, {
-            body: fc.label,
+          new Notification('🔔 チェックリスト', {
+            body: '設定した確認時刻になりました',
           });
+        }, ms);
+      }
+    });
+    Object.entries(c.checkReminders || {}).forEach(([key, remindAt]) => {
+      if ((c.checks || {})[key] || !remindAt) return;
+      const ms = new Date(remindAt) - now;
+      if (ms > 0 && ms < 86400000 * 30) {
+        setTimeout(() => {
+          new Notification('🔔 チェックリスト', { body: '設定した確認時刻になりました' });
         }, ms);
       }
     });
