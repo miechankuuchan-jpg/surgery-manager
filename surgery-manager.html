@@ -4618,7 +4618,7 @@ function crUpdateSummary() {
   }
 }
 
-function registerCheckReminder() {
+function registerCheckReminder(destination) {
   if (!_crSelectedItem) { alert('項目を選択してください'); return; }
   var dateEl = document.getElementById('crDate');
   var timeEl = document.getElementById('crCustomTime');
@@ -4629,6 +4629,20 @@ function registerCheckReminder() {
   var dt = new Date(date + 'T' + time + ':00');
   var c = cases.find(function(x) { return x.id === _crCaseId; });
   if (!c || !Number.isFinite(dt.getTime())) { alert('日時を確認してください'); return; }
+  if (destination === 'reminder') {
+    var itemLabel = _crSelectedItem.label;
+    var title = encodeURIComponent(itemLabel + '（' + (c.name || '患者') + '）');
+    var notes = encodeURIComponent(
+      '患者: ' + (c.name || '') +
+      (c.disease ? '\n疾患: ' + c.disease : '') +
+      (c.surgery ? '\n術式/レジメン: ' + c.surgery : '') +
+      '\nタスク: ' + itemLabel
+    );
+    openReminderOrCalendar(title, notes, dt, c);
+    var reminderOv = document.getElementById('checkReminderOverlay');
+    if (reminderOv) reminderOv.style.display = 'none';
+    return;
+  }
   var remindAt = date + 'T' + time;
   if (_crSelectedItem.key.indexOf('__free_') === 0) {
     var freeIdx = parseInt(_crSelectedItem.key.slice(7), 10);
