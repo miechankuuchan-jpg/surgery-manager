@@ -2727,7 +2727,8 @@ function completeAllTasks(id) {
     if (!c.checks) c.checks = {};
     c.checks[item.key] = true;
   });
-  if (c.freeChecks) c.freeChecks.forEach(f => f.done = true);
+  if (c.freeChecks) c.freeChecks.forEach(f => { f.done = true; f.remindAt = ''; });
+  c.checkReminders = {};
   save();
   render();
 }
@@ -5241,6 +5242,7 @@ function addFreeCheck() {
 
 function toggleFreeCheckDone(i) {
   freeChecks[i].done = !freeChecks[i].done;
+  if (freeChecks[i].done) freeChecks[i].remindAt = '';
   renderFreeChecklistForm();
 }
 
