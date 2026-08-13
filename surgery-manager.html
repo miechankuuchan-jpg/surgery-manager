@@ -4509,11 +4509,14 @@ function registerCheckReminder() {
   var c = cases.find(function(x) { return x.id === _crCaseId; });
   if (!c || !Number.isFinite(dt.getTime())) { alert('日時を確認してください'); return; }
   var itemLabel = _crSelectedItem.label;
-  var title = encodeURIComponent(itemLabel + '（' + (c.name || '患者') + '）');
+  var name = (_crCaseId === editingId ? document.getElementById('f_name')?.value?.trim() : '') || c.name || '患者';
+  var disease = (_crCaseId === editingId ? document.getElementById('f_disease')?.value?.trim() : '') || c.disease || '';
+  var surgery = (_crCaseId === editingId ? document.getElementById('f_surgery')?.value?.trim() : '') || c.surgery || '';
+  var title = encodeURIComponent(itemLabel + '（' + name + '）');
   var notes = encodeURIComponent(
-    '患者: ' + (c.name || '') +
-    (c.disease ? '\n疾患: ' + c.disease : '') +
-    (c.surgery ? '\n術式/レジメン: ' + c.surgery : '') +
+    '患者: ' + name +
+    (disease ? '\n疾患: ' + disease : '') +
+    (surgery ? '\n術式/レジメン: ' + surgery : '') +
     '\nタスク: ' + itemLabel
   );
   openReminderOrCalendar(title, notes, dt, c);
