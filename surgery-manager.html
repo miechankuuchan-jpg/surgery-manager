@@ -5378,6 +5378,8 @@ function closeModalOnBg(e) {
   }
 }
 
+/* プッシュ通知連携は廃止。以下の旧コードは互換性確認用に無効化。 */
+/*
 // ========== NOTIFICATIONS ==========
 function isStandaloneWebApp() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
@@ -5660,6 +5662,8 @@ function showNotifSettings() {
     }
   }
 }
+
+*/
 
 function showNotifCenter() {
   const today = new Date(); today.setHours(0,0,0,0);
@@ -6062,6 +6066,7 @@ function closeNotifModal() {
   document.getElementById('notifModal').classList.remove('open');
 }
 
+/*
 function toggleNotif(el, key) {
   notifSettings[key] = !notifSettings[key];
   el.classList.toggle('on', notifSettings[key]);
@@ -6187,6 +6192,8 @@ function scheduleNotifications() {
     });
   });
 }
+
+*/
 
 function updatePendingBadge() {
   const today = new Date(); today.setHours(0,0,0,0);
@@ -7263,10 +7270,8 @@ function showDailyBriefIfNeeded() {
 
 // ========== INIT ==========
 seedIfEmpty();
-updateToggleUI();
 applyTheme();
 render();
-scheduleNotifications();
 showSetupIfNeeded();
 showDailyBriefIfNeeded();
 </script>
