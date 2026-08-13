@@ -4602,6 +4602,22 @@ function addExamSchedule() {
     note,
   });
 
+  if (editingId) {
+    const reminderTime = new Date(date + 'T08:00:00');
+    const name = document.getElementById('f_name')?.value?.trim() || '患者';
+    const disease = document.getElementById('f_disease')?.value?.trim() || '';
+    const surgery = document.getElementById('f_surgery')?.value?.trim() || '';
+    const title = encodeURIComponent(label + '（' + name + '）');
+    const notes = encodeURIComponent(
+      '患者: ' + name
+      + (disease ? '\n疾患: ' + disease : '')
+      + (surgery ? '\n術式/レジメン: ' + surgery : '')
+      + '\n検査: ' + label
+      + (note ? '\nメモ: ' + note : '')
+    );
+    openReminderOrCalendar(title, notes, reminderTime, null);
+  }
+
   if (document.getElementById('examOtherName')) document.getElementById('examOtherName').value = '';
   if (document.getElementById('examNote')) document.getElementById('examNote').value = '';
   renderExamScheduleList();
