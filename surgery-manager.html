@@ -4534,6 +4534,18 @@ function openCheckReminderForItem(caseId, key, label) {
 
 function crSelectItem(key, label) {
   _crSelectedItem = { key: key, label: label };
+  var c = cases.find(function(x) { return x.id === _crCaseId; });
+  var existingAt = '';
+  if (c) {
+    existingAt = key.indexOf('__free_') === 0
+      ? ((c.freeChecks || [])[parseInt(key.slice(7), 10)] || {}).remindAt
+      : ((c.checkReminders || {})[key] || '');
+  }
+  var dateEl = document.getElementById('crDate');
+  var timeEl = document.getElementById('crCustomTime');
+  if (dateEl) dateEl.value = existingAt ? existingAt.slice(0, 10) : toISODate(new Date());
+  if (timeEl) timeEl.value = existingAt ? existingAt.slice(11, 16) : '';
+  _crSelectedTime = timeEl ? timeEl.value : null;
   var s1 = document.getElementById('crStep1');
   var s2 = document.getElementById('crStep2');
   if (s1) s1.style.display = 'none';
