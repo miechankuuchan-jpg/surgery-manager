@@ -24,7 +24,7 @@ export default {
     const input = await req.json();
     const subscriptionId = String(input.subscription_id || "");
     const jobs = Array.isArray(input.jobs) ? input.jobs : [];
-    const userId = String(ctx.userClaims?.sub || "");
+    const userId = String(ctx.userClaims?.id || ctx.userClaims?.sub || "");
     const apiKey = Deno.env.get("ONESIGNAL_REST_API_KEY");
 
     if (!userId || !apiKey || !subscriptionId || jobs.length > 300) {
