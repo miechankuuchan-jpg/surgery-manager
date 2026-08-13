@@ -10,23 +10,6 @@
 <title>手術担当管理</title>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-<script>
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-      appId: "bf995411-c2b4-4541-a292-955b6682cbb6",
-      notifyButton: { enable: false },
-      serviceWorkerPath: "/surgery-manager/OneSignalSDKWorker.js",
-      serviceWorkerParam: { scope: "/surgery-manager/" },
-      autoResubscribe: true,
-    });
-    window.surgeryOneSignal = OneSignal;
-    if (typeof installPushSubscriptionListener === 'function') installPushSubscriptionListener(OneSignal);
-    window.dispatchEvent(new CustomEvent('surgery-onesignal-ready'));
-  });
-</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
