@@ -4324,6 +4324,11 @@ function openCheckReminder(caseId) {
       if (!fc.done) allItems.push({ key: '__free_' + i, label: fc.label, isFree: true, freeIdx: i });
     });
   }
+  (c.examSchedules || []).forEach(function(exam, i) {
+    var examLabel = (EXAM_ICONS[exam.type] || '🧪') + ' ' + exam.label
+      + (exam.date ? ' ' + formatDateShort(exam.date) : '');
+    allItems.push({ key: '__exam_' + i, label: examLabel, isExam: true, examIdx: i });
+  });
 
   var itemListEl = document.getElementById('crItemList');
   if (itemListEl) {
@@ -4331,7 +4336,7 @@ function openCheckReminder(caseId) {
       var done = !item.isFree && c.checks && c.checks[item.key];
       return '<button onclick="crSelectItem(\'' + item.key.replace(/'/g,"\\'") + '\',\'' + item.label.replace(/'/g,"\\'") + '\')"'
         + ' style="display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-family:inherit;">'
-        + '<span style="font-size:13px;">' + (item.isFree ? '📝' : (done ? '☑' : '□')) + '</span>'
+        + '<span style="font-size:13px;">' + (item.isExam ? '🧪' : (item.isFree ? '📝' : (done ? '☑' : '□'))) + '</span>'
         + '<span style="font-size:12px;color:' + (done ? 'var(--text3)' : 'var(--text)') + ';flex:1;">' + item.label + '</span>'
         + '<span style="font-size:12px;color:var(--text3);">›</span>'
         + '</button>';
