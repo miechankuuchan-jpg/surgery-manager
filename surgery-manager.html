@@ -4235,76 +4235,6 @@ function toggleFreeCheckCard(id, idx) {
 }
 
 // ========== REMINDERS ==========
-// ========== クイックリマインダー ==========
-let _qrContext = null; // { caseId, label }
-
-function openReminderQuick(caseId, label) {
-  _qrContext = { caseId, label };
-  const c = cases.find(x => x.id === caseId);
-  const titleEl = document.getElementById('qrTitle');
-  const subEl   = document.getElementById('qrSubtitle');
-  if (titleEl) titleEl.textContent = '🔔 ' + label;
-  if (subEl)   subEl.textContent   = c ? c.name + (c.surgery ? '（' + c.surgery + '）' : '') : '';
-  // プリセットボタンを動的生成
-  const btnCont = document.getElementById('qrPresetButtons');
-  if (btnCont) {
-    const presets = getReminderPresets();
-    const emojis = ['🌙','🌅','🌆','📅'];
-    btnCont.innerHTML = presets.map((p, i) => {
-      const timeStr = String(p.hour).padStart(2,'0') + ':' + String(p.minute||0).padStart(2,'0');
-      return '<button onclick="fireReminderPreset(' + i + ')" style="padding:12px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">'
-        + (emojis[i]||'📅') + ' ' + p.label + ' ' + timeStr + '</button>';
-    }).join('');
-  }
-  // カスタム日時のデフォルト（明日8時）
-  const defDt = new Date(); defDt.setDate(defDt.getDate() + 1);
-  const pad = n => String(n).padStart(2,'0');
-  const dtStr = defDt.getFullYear() + '-' + pad(defDt.getMonth()+1) + '-' + pad(defDt.getDate()) + 'T08:00';
-  const inp = document.getElementById('qrCustomDt');
-  if (inp) inp.value = dtStr;
-  const ov = document.getElementById('quickReminderOverlay');
-  if (ov) { ov.style.display = 'flex'; }
-}
-
-function closeQuickReminder(e) {
-  if (e && e.target !== document.getElementById('quickReminderOverlay')) return;
-  const ov = document.getElementById('quickReminderOverlay');
-  if (ov) ov.style.display = 'none';
-}
-
-function _fireReminder(dt) {
-  if (!_qrContext) return;
-  const c = cases.find(x => x.id === _qrContext.caseId);
-  if (!c) return;
-  const fc = (c.freeChecks || []).find(x => x.label === _qrContext.label && !x.done);
-  if (!fc) return;
-  const pad = n => String(n).padStart(2, '0');
-  fc.remindAt = dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate())
-    + 'T' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
-  save();
-  render();
-  const ov = document.getElementById('quickReminderOverlay');
-  if (ov) ov.style.display = 'none';
-}
-
-function fireReminderPreset(idxOrKey) {
-  const dt = new Date();
-  dt.setSeconds(0, 0);
-  const presets = getReminderPresets();
-  const idx = parseInt(idxOrKey, 10);
-  if (!isNaN(idx) && presets[idx]) {
-    const p = presets[idx];
-    dt.setDate(dt.getDate() + (p.offsetDays || 0));
-    dt.setHours(p.hour || 0, p.minute || 0, 0, 0);
-  }
-  _fireReminder(dt);
-}
-
-function fireReminderCustom() {
-  const val = document.getElementById('qrCustomDt')?.value;
-  if (!val) { alert('日時を選択してください'); return; }
-  _fireReminder(new Date(val));
-}
 
 function addFreeCheckReminder(caseId, idx) {
   const c = cases.find(x => x.id === caseId);
@@ -4423,6 +4353,14 @@ function openCheckReminder(caseId) {
 
   var ov = document.getElementById('checkReminderOverlay');
   if (ov) ov.style.display = 'flex';
+}
+
+function openEditingChecklistReminder() {
+  if (!editingId) {
+    alert('先に症例を保存してからリマインダーを追加してください');
+    return;
+  }
+  openCheckReminder(editingId);
 }
 
 function openCheckReminderForItem(caseId, key, label) {
