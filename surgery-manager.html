@@ -1450,7 +1450,7 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
     </div>
     <!-- Step1: チェック項目選択 -->
     <div id="crStep1">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.06em;margin-bottom:8px;">① リマインダーを設定する項目を選択</div>
+      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.06em;margin-bottom:8px;">① アプリ通知を設定する項目を選択</div>
       <div id="crItemList" style="display:flex;flex-direction:column;gap:5px;"></div>
     </div>
     <!-- Step2: 日付・時間設定 -->
@@ -1467,7 +1467,7 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
       <div id="crSelectedSummary" style="font-size:11px;color:var(--accent3);min-height:16px;margin-bottom:12px;text-align:center;font-weight:700;"></div>
       <button onclick="registerCheckReminder()"
         style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
-        🔔 リマインダー登録
+        🔔 アプリ通知を予約
       </button>
       <button id="crBackBtn" onclick="crBackToStep1()"
         style="width:100%;padding:10px;background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit;margin-top:6px;">
@@ -1483,7 +1483,7 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
   <div id="quickReminderSheet"
     style="background:var(--surface);border-radius:20px 20px 0 0;padding:20px 18px 36px;width:100%;max-width:480px;border-top:1px solid var(--border);">
     <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;"></div>
-    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;" id="qrTitle">リマインダー登録</div>
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;" id="qrTitle">アプリ通知を予約</div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:16px;" id="qrSubtitle"></div>
     <!-- プリセットボタン（settings から動的生成） -->
     <div id="qrPresetButtons" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"></div>
@@ -4341,14 +4341,12 @@ function closeQuickReminder(e) {
 function _fireReminder(dt) {
   if (!_qrContext) return;
   const c = cases.find(x => x.id === _qrContext.caseId);
-  const label = _qrContext.label;
-  const patName = c ? c.name : '';
-  const title = encodeURIComponent(label + '（' + patName + '）');
-  const notes = encodeURIComponent(
-    '患者: ' + patName + (c && c.surgery ? '（' + c.surgery + '）' : '') +
-    (c && c.admDate ? '\n入院日: ' + c.admDate : '')
-  );
-  openReminderOrCalendar(title, notes, dt, c);
+  if (!c) return;
+  const fc = (c.freeChecks || []).find(x => x.label === _qrContext.label && !x.done);
+  if (!fc) return;
+  fc.remindAt = toLocalDateTimeValue(dt);
+  save();
+  render();
   const ov = document.getElementById('quickReminderOverlay');
   if (ov) ov.style.display = 'none';
 }
@@ -4373,18 +4371,9 @@ function fireReminderCustom() {
 }
 
 function addFreeCheckReminder(caseId, idx) {
-  // 後方互換：remindAt が設定済みの場合はそのまま使う
   const c = cases.find(x => x.id === caseId);
   if (!c || !c.freeChecks || !c.freeChecks[idx]) return;
-  const fc = c.freeChecks[idx];
-  if (fc.remindAt) {
-    const dt = new Date(fc.remindAt);
-    const title = encodeURIComponent(fc.label + '（' + c.name + '）');
-    const notes = encodeURIComponent('患者: ' + c.name + (c.surgery ? '（' + c.surgery + '）' : ''));
-    openReminderOrCalendar(title, notes, dt, c);
-  } else {
-    openReminderQuick(caseId, fc.label);
-  }
+  openCheckReminderForItem(caseId, '__free_' + idx, c.freeChecks[idx].label);
 }
 
 function addReminderPrevDay(id) {
@@ -4408,17 +4397,22 @@ function addReminderOpDay(id) {
 
 // ========== チェック項目行レンダリング ==========
 function renderCheckItemRow(caseId, item, checks) {
+  var c = cases.find(function(x) { return x.id === caseId; });
   var done = checks && checks[item.key];
+  var remindAt = c && c.checkReminders ? c.checkReminders[item.key] : '';
+  var remindBadge = remindAt && !done
+    ? '<span style="font-size:9px;color:var(--accent3);margin-left:4px;">🔔' + remindAt.replace('T',' ').slice(5,16) + '</span>'
+    : '';
   var warn = item.warn;
   var cls = 'check-item' + (done ? ' done' : '') + (warn && !done ? ' warn' : '');
   var bellStyle = 'width:30px;height:24px;flex-shrink:0;border-radius:6px;font-size:11px;line-height:1;';
   var bell = done
     ? '<div style="' + bellStyle + 'background:none;border:none;"></div>'
-    : '<button onclick="event.stopPropagation();openCheckReminderForItem(\'' + caseId + '\',\'' + item.label.replace(/'/g, "\\'") + '\')"'
-      + ' style="' + bellStyle + 'background:none;border:1px solid var(--border);color:var(--text3);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;">🔔</button>';
+    : '<button onclick="event.stopPropagation();openCheckReminderForItem(\'' + caseId + '\',\'' + item.key.replace(/'/g, "\\'") + '\',\'' + item.label.replace(/'/g, "\\'") + '\')"'
+      + ' style="' + bellStyle + 'background:' + (remindAt ? 'rgba(200,150,32,0.15)' : 'none') + ';border:1px solid ' + (remindAt ? 'var(--accent3)' : 'var(--border)') + ';color:' + (remindAt ? 'var(--accent3)' : 'var(--text3)') + ';cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;">🔔</button>';
   var row = '<div style="display:flex;align-items:center;gap:5px;">'
     + '<span class="' + cls + '" onclick="toggleCheck(\'' + caseId + '\',\'' + item.key + '\')" style="flex:1;min-width:0;">'
-    + '<span class="check-icon">' + (done ? '☑' : '□') + '</span>' + item.label
+    + '<span class="check-icon">' + (done ? '☑' : '□') + '</span>' + item.label + remindBadge
     + '</span>'
     + bell
     + '</div>';
@@ -4495,9 +4489,9 @@ function openCheckReminder(caseId) {
   if (ov) ov.style.display = 'flex';
 }
 
-function openCheckReminderForItem(caseId, label) {
+function openCheckReminderForItem(caseId, key, label) {
   _crCaseId = caseId;
-  _crSelectedItem = { key: '__direct', label: label };
+  _crSelectedItem = { key: key, label: label };
   _crSelectedTime = null;
   var c = cases.find(function(x) { return x.id === caseId; });
   if (!c) return;
@@ -4602,16 +4596,18 @@ function registerCheckReminder() {
   if (!time) { alert('時間を選択してください'); return; }
   var dt = new Date(date + 'T' + time + ':00');
   var c = cases.find(function(x) { return x.id === _crCaseId; });
-  var patName = c ? c.name : '患者';
-  var itemLabel = _crSelectedItem.label;
-  var title = encodeURIComponent(itemLabel + '（' + patName + '）');
-  var notes = encodeURIComponent(
-    '患者: ' + patName +
-    (c && c.disease ? '\n疾患: ' + c.disease : '') +
-    (c && c.surgery ? '\n術式/レジメン: ' + c.surgery : '') +
-    '\nタスク: ' + itemLabel
-  );
-  openReminderOrCalendar(title, notes, dt, c);
+  if (!c || !Number.isFinite(dt.getTime())) { alert('日時を確認してください'); return; }
+  var remindAt = date + 'T' + time;
+  if (_crSelectedItem.key.indexOf('__free_') === 0) {
+    var freeIdx = parseInt(_crSelectedItem.key.slice(7), 10);
+    if (!c.freeChecks || !c.freeChecks[freeIdx]) { alert('項目が見つかりません'); return; }
+    c.freeChecks[freeIdx].remindAt = remindAt;
+  } else {
+    if (!c.checkReminders) c.checkReminders = {};
+    c.checkReminders[_crSelectedItem.key] = remindAt;
+  }
+  save();
+  render();
   var ov = document.getElementById('checkReminderOverlay');
   if (ov) ov.style.display = 'none';
 }
