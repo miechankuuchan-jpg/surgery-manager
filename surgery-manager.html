@@ -1410,6 +1410,7 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
         <div class="toggle" id="tog3" onclick="toggleNotif(this,'pending_tasks')"></div>
       </div>
       <button class="btn-primary" onclick="requestNotifPermission()" style="margin-top:10px;">iPhoneの通知を許可する</button>
+      <button onclick="repairPushSubscription()" style="width:100%;margin-top:8px;padding:11px;background:rgba(200,150,32,0.12);border:1px solid rgba(200,150,32,0.45);border-radius:9px;color:var(--accent3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🛠 通知を再登録して90秒後にテスト</button>
       <div id="notifStatus" style="font-size:12px;color:var(--text3);margin:8px 0 4px;line-height:1.6;"></div>
       <div class="notif-panel" style="margin-top:12px;">
         <div class="notif-panel-title">⌚ Apple Watchで振動させる設定</div>
@@ -5474,6 +5475,7 @@ const SUPABASE_URL = 'https://eooskehlbrskotxgizrg.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable__-Pp4_uFVjv7bdRV8H8TZg_qVsy5Utc';
 let cloudNotifClient = null;
 let cloudNotifSyncTimer = null;
+let cloudNotifListenerInstalled = false;
 
 function getCloudNotificationClient() {
   if (cloudNotifClient) return cloudNotifClient;
@@ -5546,9 +5548,11 @@ function buildCloudNotificationJobs(now = new Date()) {
 
 async function syncCloudNotifications() {
   const OneSignal = getOneSignal();
-  if (!OneSignal?.Notifications.permission || !OneSignal.User.PushSubscription.optedIn) return;
+  if (!OneSignal?.Notifications.permission || !OneSignal.User.PushSubscription.optedIn) {
+    return { ok: false, reason: 'not_opted_in', scheduled: 0 };
+  }
   const subscriptionId = OneSignal.User.PushSubscription.id;
-  if (!subscriptionId) return;
+  if (!subscriptionId) return { ok: false, reason: 'missing_subscription_id', scheduled: 0 };
   await ensureCloudNotificationSession();
   const client = getCloudNotificationClient();
   const { data, error } = await client.functions.invoke('schedule-notifications', {
@@ -5565,6 +5569,36 @@ function queueCloudNotificationSync(delay = 700) {
   }, delay);
 }
 
+function installPushSubscriptionListener(OneSignal) {
+  if (cloudNotifListenerInstalled || !OneSignal?.User?.PushSubscription) return;
+  cloudNotifListenerInstalled = true;
+  OneSignal.User.PushSubscription.addEventListener('change', function(event) {
+    const current = event && event.current ? event.current : {};
+    if (current.optedIn && current.id) queueCloudNotificationSync(300);
+  });
+}
+
+function waitForPushSubscriptionId(OneSignal, timeoutMs = 20000) {
+  const currentId = OneSignal?.User?.PushSubscription?.id;
+  if (currentId) return Promise.resolve(currentId);
+  return new Promise(resolve => {
+    let finished = false;
+    const listener = event => {
+      const id = event?.current?.id || OneSignal.User.PushSubscription.id;
+      if (id && !finished) finish(id);
+    };
+    const finish = id => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      OneSignal.User.PushSubscription.removeEventListener('change', listener);
+      resolve(id || null);
+    };
+    OneSignal.User.PushSubscription.addEventListener('change', listener);
+    const timer = setTimeout(() => finish(OneSignal.User.PushSubscription.id), timeoutMs);
+  });
+}
+
 async function requestNotifPermission() {
   const el = document.getElementById('notifStatus');
   if (!isStandaloneWebApp() && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
@@ -5575,6 +5609,7 @@ async function requestNotifPermission() {
   try {
     const OneSignal = await waitForOneSignal();
     if (!OneSignal) throw new Error('OneSignal unavailable');
+    installPushSubscriptionListener(OneSignal);
     const supported = await OneSignal.Notifications.isPushSupported();
     if (!supported) {
       el.textContent = '⚠️ この端末ではWebプッシュ通知を利用できません。iOS 16.4以降か確認してください。';
@@ -5583,15 +5618,20 @@ async function requestNotifPermission() {
     }
     await OneSignal.Notifications.requestPermission();
     const granted = OneSignal.Notifications.permission;
-    const optedIn = OneSignal.User.PushSubscription.optedIn;
-    if (granted && !optedIn) await OneSignal.User.PushSubscription.optIn();
+    if (granted && !OneSignal.User.PushSubscription.optedIn) await OneSignal.User.PushSubscription.optIn();
     if (granted) {
-      el.textContent = '✅ プッシュ通知を許可しました。バックグラウンド通知を受信できます。';
+      el.textContent = '⏳ 通知端末を登録しています…';
       el.style.color = 'var(--green)';
+      const subscriptionId = await waitForPushSubscriptionId(OneSignal);
+      if (!subscriptionId) {
+        el.textContent = '⚠️ 通知は許可済みですが、端末登録が完了していません。「通知を再登録」を押してください。';
+        el.style.color = 'var(--accent3)';
+        return;
+      }
       scheduleNotifications();
       try {
         const result = await syncCloudNotifications();
-        if (result) el.textContent = `✅ プッシュ通知を有効化しました（${result.scheduled}件を予約）`;
+        if (result?.ok) el.textContent = `✅ 通知端末を登録しました（${result.scheduled}件を予約）`;
       } catch (syncError) {
         console.error('Initial cloud notification sync failed', syncError);
         el.textContent = '⚠️ 通知の許可は完了しましたが、サーバー予約の設定が未完了です。';
@@ -5604,6 +5644,43 @@ async function requestNotifPermission() {
   } catch (err) {
     console.error('Push notification setup failed', err);
     el.textContent = '⚠️ プッシュ通知の準備に失敗しました。通信状態を確認して、アプリを開き直してください。';
+    el.style.color = 'var(--red)';
+  }
+}
+
+async function repairPushSubscription() {
+  const el = document.getElementById('notifStatus');
+  el.textContent = '⏳ 通知端末を再登録しています…';
+  el.style.color = 'var(--accent3)';
+  try {
+    const OneSignal = await waitForOneSignal();
+    installPushSubscriptionListener(OneSignal);
+    if (!OneSignal.Notifications.permission) await OneSignal.Notifications.requestPermission();
+    if (!OneSignal.Notifications.permission) throw new Error('permission_denied');
+    if (!OneSignal.User.PushSubscription.optedIn) await OneSignal.User.PushSubscription.optIn();
+    const subscriptionId = await waitForPushSubscriptionId(OneSignal, 25000);
+    if (!subscriptionId) throw new Error('subscription_missing');
+    const testAt = new Date(Date.now() + 90000);
+    await ensureCloudNotificationSession();
+    const client = getCloudNotificationClient();
+    const { data, error } = await client.functions.invoke('schedule-notifications', {
+      body: {
+        subscription_id: subscriptionId,
+        jobs: [{
+          client_key: 'device-test:' + testAt.toISOString(),
+          kind: 'checklist',
+          notify_at: testAt.toISOString(),
+          patient_name: '通知テスト',
+          item_label: 'この通知が届けば設定完了です'
+        }]
+      }
+    });
+    if (error || !data?.ok || data.scheduled !== 1) throw error || new Error('test_schedule_failed');
+    el.textContent = '✅ 再登録完了。アプリを閉じてiPhoneをロックし、90秒お待ちください。';
+    el.style.color = 'var(--green)';
+  } catch (err) {
+    console.error('Push subscription repair failed', err);
+    el.textContent = '⚠️ 再登録できませんでした。ホーム画面の古いアイコンを削除し、Safariからもう一度「ホーム画面に追加」してください。';
     el.style.color = 'var(--red)';
   }
 }
