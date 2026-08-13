@@ -1412,6 +1412,13 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
       <button class="btn-primary" onclick="requestNotifPermission()" style="margin-top:10px;">iPhoneの通知を許可する</button>
       <div id="notifStatus" style="font-size:12px;color:var(--text3);margin:8px 0 4px;line-height:1.6;"></div>
       <div class="notif-panel" style="margin-top:12px;">
+        <div class="notif-panel-title">⌚ Apple Watchで振動させる設定</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.7;">
+          iPhoneの<strong style="color:var(--text);">Watchアプリ → マイウォッチ → 通知</strong>で、このWebアプリの通知をミラーリングしてください。<br>
+          Watchの<strong style="color:var(--text);">設定 → サウンドと触覚 → 触覚</strong>を「はっきり」にすると強めに振動します。iPhoneがロック中で、Watchを装着・ロック解除している時にWatchへ通知されます。
+        </div>
+      </div>
+      <div class="notif-panel" style="margin-top:12px;">
         <div class="notif-panel-title">🧪 端末内テスト</div>
         <div style="font-size:11px;color:var(--text3);margin:6px 0 10px;line-height:1.6;">この画面を開いている間の通知表示を確認します。バックグラウンド配信のテストとは別です。</div>
         <div style="display:flex;gap:8px;">
