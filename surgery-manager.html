@@ -2338,6 +2338,9 @@ let histCalSelectedDate = null;    // 手術履歴カレンダーの選択日
 let histCalFilterMine = true;      // true=自分が参加した手術のみ
 let currentExamSchedules = []; // 編集中の検査スケジュール
 let selectedExamType = 'blood'; // 現在選択中の検査タイプ
+let certDateFrom = '';          // 専門医申請一覧の開始日
+let certDateTo = '';            // 専門医申請一覧の終了日
+let certExcludedIds = new Set();// 専門医申請から手動で外した症例ID
 
 // ========== 病棟業務 週間スケジュール ==========
 // dow: 0=日, 1=月, 2=火, 3=水, 4=木, 5=金, 6=土
@@ -3499,28 +3502,116 @@ function copyCancerTSV() {
 }
 
 // ========== 専門医申請エクスポート ==========
-function renderCertExport(el) {
-  var headers = ['疾患名','術式','年月日','年齢','性別','カルテ番号','外来・入院','研修施設名','指導医名','指導医登録番号'];
+function getCertCaseDate(c) {
+  return c.admDate || c.opDate || '';
+}
 
-  // 申請データが少しでも入力されているケースのみ対象（全フィールド空でも表示）
-  var allCases = cases.slice().sort(function(a, b) {
-    var da = a.admDate || a.opDate || '';
-    var db = b.admDate || b.opDate || '';
+function getCertCasesInRange() {
+  return cases.filter(function(c) {
+    var date = getCertCaseDate(c);
+    if ((certDateFrom || certDateTo) && !date) return false;
+    if (certDateFrom && date < certDateFrom) return false;
+    if (certDateTo && date > certDateTo) return false;
+    return true;
+  }).sort(function(a, b) {
+    var da = getCertCaseDate(a);
+    var db = getCertCaseDate(b);
     return da > db ? 1 : da < db ? -1 : 0;
   });
+}
+
+function getSelectedCertCases() {
+  return getCertCasesInRange().filter(function(c) {
+    return !certExcludedIds.has(String(c.id));
+  });
+}
+
+function setCertDateRange() {
+  var fromEl = document.getElementById('certDateFrom');
+  var toEl = document.getElementById('certDateTo');
+  var from = fromEl ? fromEl.value : '';
+  var to = toEl ? toEl.value : '';
+  if (from && to && from > to) {
+    alert('開始日は終了日以前にしてください');
+    renderCertExport(document.getElementById('mainContent'));
+    return;
+  }
+  certDateFrom = from;
+  certDateTo = to;
+  renderCertExport(document.getElementById('mainContent'));
+}
+
+function clearCertDateRange() {
+  certDateFrom = '';
+  certDateTo = '';
+  renderCertExport(document.getElementById('mainContent'));
+}
+
+function toggleCertCaseSelection(id, checked) {
+  if (checked) certExcludedIds.delete(id);
+  else certExcludedIds.add(id);
+  updateCertSelectionSummary();
+}
+
+function setAllVisibleCertCases(checked) {
+  getCertCasesInRange().forEach(function(c) {
+    var id = String(c.id);
+    if (checked) certExcludedIds.delete(id);
+    else certExcludedIds.add(id);
+  });
+  renderCertExport(document.getElementById('mainContent'));
+}
+
+function updateCertSelectionSummary() {
+  var visible = getCertCasesInRange();
+  var selected = visible.filter(function(c) { return !certExcludedIds.has(String(c.id)); });
+  var countEl = document.getElementById('certSelectionCount');
+  if (countEl) countEl.textContent = selected.length + ' / ' + visible.length + '件を選択中';
+  var copyBtn = document.getElementById('certCopyBtn');
+  if (copyBtn) copyBtn.textContent = '📋 選択した' + selected.length + '件をTSVコピー';
+  var allBox = document.getElementById('certSelectAllBox');
+  if (allBox) {
+    allBox.checked = visible.length > 0 && selected.length === visible.length;
+    allBox.indeterminate = selected.length > 0 && selected.length < visible.length;
+  }
+}
+
+function renderCertExport(el) {
+  var headers = ['疾患名','術式','年月日','年齢','性別','カルテ番号','外来・入院','研修施設名','指導医名','指導医登録番号'];
+  var filteredCases = getCertCasesInRange();
+  var selectedCount = filteredCases.filter(function(c) { return !certExcludedIds.has(String(c.id)); }).length;
+  var allVisibleSelected = filteredCases.length > 0 && selectedCount === filteredCases.length;
 
   var html = '<div style="padding:14px;">';
   html += '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">📊 専門医申請データ一覧</div>';
-  html += '<div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5;">「TSVコピー」を押してExcelに直接貼り付けできます。各症例の編集フォームから専門医申請データを入力してください。</div>';
+  html += '<div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5;">申請期間を指定し、申請する症例だけにチェックを入れてください。選択した症例だけをExcelへコピーできます。</div>';
+
+  // 申請期間
+  html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">';
+  html += '<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px;">📅 申請期間（入院日／未入力時はオペ日）</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end;">';
+  html += '<label style="display:block;"><span style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;">開始日</span><input type="date" id="certDateFrom" value="' + certDateFrom + '" onchange="setCertDateRange()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 8px;color:var(--text);font-family:inherit;font-size:12px;"></label>';
+  html += '<span style="font-size:12px;color:var(--text3);padding-bottom:10px;">〜</span>';
+  html += '<label style="display:block;"><span style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;">終了日</span><input type="date" id="certDateTo" value="' + certDateTo + '" onchange="setCertDateRange()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 8px;color:var(--text);font-family:inherit;font-size:12px;"></label>';
+  html += '</div>';
+  html += '<button onclick="clearCertDateRange()" style="margin-top:8px;width:100%;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:7px;padding:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">全期間に戻す</button>';
+  html += '</div>';
+
+  // 選択操作
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">';
+  html += '<button onclick="setAllVisibleCertCases(true)" style="background:rgba(26,174,200,0.12);color:var(--accent);border:1px solid rgba(26,174,200,0.35);border-radius:7px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">すべて選択</button>';
+  html += '<button onclick="setAllVisibleCertCases(false)" style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:7px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">すべて解除</button>';
+  html += '<span id="certSelectionCount" style="margin-left:auto;font-size:11px;font-weight:700;color:var(--accent);">' + selectedCount + ' / ' + filteredCases.length + '件を選択中</span>';
+  html += '</div>';
 
   // コピーボタン
   html += '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">';
-  html += '<button onclick="copyCertTSV()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;" id="certCopyBtn">📋 TSVコピー（Excelに貼り付け）</button>';
+  html += '<button onclick="copyCertTSV()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;" id="certCopyBtn">📋 選択した' + selectedCount + '件をTSVコピー</button>';
   html += '<button onclick="copyCertTSVWithHeader()" style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;" id="certCopyBtnH">📋 ヘッダー付きでコピー</button>';
   html += '</div>';
 
-  if (allCases.length === 0) {
-    html += '<div style="text-align:center;padding:40px;color:var(--text3);">症例が登録されていません</div>';
+  if (filteredCases.length === 0) {
+    html += '<div style="text-align:center;padding:40px;color:var(--text3);">' + (cases.length ? '指定期間に該当する症例がありません' : '症例が登録されていません') + '</div>';
     html += '</div>';
     el.innerHTML = html;
     return;
@@ -3531,6 +3622,7 @@ function renderCertExport(el) {
   html += '<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:700px;">';
   // ヘッダー行
   html += '<thead><tr>';
+  html += '<th style="background:var(--surface2);border:1px solid var(--border);padding:7px 8px;text-align:center;"><input type="checkbox" id="certSelectAllBox" onchange="setAllVisibleCertCases(this.checked)" ' + (allVisibleSelected ? 'checked' : '') + ' aria-label="表示中の症例をすべて選択" style="width:17px;height:17px;accent-color:var(--accent);"></th>';
   html += '<th style="background:var(--surface2);border:1px solid var(--border);padding:7px 10px;color:var(--text3);font-weight:700;font-size:10px;white-space:nowrap;text-align:left;">No.</th>';
   headers.forEach(function(h) {
     html += '<th style="background:var(--surface2);border:1px solid var(--border);padding:7px 10px;color:var(--text3);font-weight:700;font-size:10px;white-space:nowrap;text-align:left;">' + h + '</th>';
@@ -3539,11 +3631,14 @@ function renderCertExport(el) {
 
   // データ行
   html += '<tbody>';
-  allCases.forEach(function(c, idx) {
+  filteredCases.forEach(function(c, idx) {
     var rowBg = idx % 2 === 0 ? 'var(--surface)' : 'var(--surface2)';
     var certFilled = c.age || c.gender || c.chartNo || c.supervisorName;
     var rowStyle = 'background:' + rowBg + ';' + (certFilled ? '' : 'opacity:0.55;');
+    var jsId = String(c.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    var selected = !certExcludedIds.has(String(c.id));
     html += '<tr style="' + rowStyle + '">';
+    html += '<td style="border:1px solid var(--border);padding:7px 8px;text-align:center;"><input type="checkbox" onchange="toggleCertCaseSelection(\'' + jsId + '\',this.checked)" ' + (selected ? 'checked' : '') + ' aria-label="申請対象に含める" style="width:17px;height:17px;accent-color:var(--accent);"></td>';
     html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text3);text-align:center;">' + (idx + 1) + '</td>';
     // 疾患名
     html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);white-space:nowrap;">' + esc(c.disease || '') + '</td>';
@@ -3572,9 +3667,9 @@ function renderCertExport(el) {
   html += '</tbody></table></div>';
 
   // 入力状況サマリー
-  var filled = allCases.filter(function(c) { return c.age || c.chartNo || c.supervisorName; }).length;
+  var filled = filteredCases.filter(function(c) { return c.age || c.chartNo || c.supervisorName; }).length;
   html += '<div style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--text3);">';
-  html += '申請データ入力済み: <span style="color:var(--accent);font-weight:700;">' + filled + '件</span> ／ 全症例: <span style="font-weight:700;">' + allCases.length + '件</span>';
+  html += '申請対象: <span style="color:var(--accent);font-weight:700;">' + selectedCount + '件</span> ／ 期間内: <span style="font-weight:700;">' + filteredCases.length + '件</span> ／ 入力済み: <span style="font-weight:700;">' + filled + '件</span> ／ 全症例: <span style="font-weight:700;">' + cases.length + '件</span>';
   html += '　<span style="color:var(--text3);">（薄く表示されている行は申請データ未入力）</span>';
   html += '</div>';
 
@@ -3588,15 +3683,11 @@ function esc(str) {
 
 function buildCertRows(includeHeader) {
   var headers = ['疾患名','術式','年月日','年齢','性別','カルテ番号','外来・入院','研修施設名','指導医名','指導医登録番号'];
-  var allCases = cases.slice().sort(function(a, b) {
-    var da = a.admDate || a.opDate || '';
-    var db = b.admDate || b.opDate || '';
-    return da > db ? 1 : da < db ? -1 : 0;
-  });
+  var selectedCases = getSelectedCertCases();
   var lines = [];
   if (includeHeader) lines.push(headers.join('\t'));
-  allCases.forEach(function(c) {
-    var dateStr = c.admDate || c.opDate || '';
+  selectedCases.forEach(function(c) {
+    var dateStr = getCertCaseDate(c);
     var surgVal = (c.mode === 'ope') ? (c.surgery || '') : '';
     var row = [
       c.disease || '',
@@ -3616,14 +3707,22 @@ function buildCertRows(includeHeader) {
 }
 
 function copyCertTSV() {
+  if (getSelectedCertCases().length === 0) {
+    alert('申請する症例を1件以上選択してください');
+    return;
+  }
   var text = buildCertRows(false);
   navigator.clipboard.writeText(text).then(function() {
     var btn = document.getElementById('certCopyBtn');
-    if (btn) { btn.textContent = '✓ コピーしました！'; setTimeout(function() { btn.textContent = '📋 TSVコピー（Excelに貼り付け）'; }, 2500); }
+    if (btn) { btn.textContent = '✓ コピーしました！'; setTimeout(updateCertSelectionSummary, 2500); }
   }).catch(function() { alert('コピーに失敗しました。手動でコピーしてください。'); });
 }
 
 function copyCertTSVWithHeader() {
+  if (getSelectedCertCases().length === 0) {
+    alert('申請する症例を1件以上選択してください');
+    return;
+  }
   var text = buildCertRows(true);
   navigator.clipboard.writeText(text).then(function() {
     var btn = document.getElementById('certCopyBtnH');
