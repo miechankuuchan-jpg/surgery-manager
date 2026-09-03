@@ -1243,7 +1243,10 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
 
     <div class="form-group">
       <label class="form-label">研修施設名</label>
-      <input type="text" class="form-input" id="f_facility" placeholder="○○大学病院 耳鼻咽喉科・頭頸部外科">
+      <input type="text" class="form-input" id="f_facility" list="trainingFacilityOptions" placeholder="研修施設を選択または入力">
+      <datalist id="trainingFacilityOptions">
+        <option value="愛媛大学医学部附属病院"></option>
+      </datalist>
     </div>
 
     <div class="form-group">
@@ -1951,6 +1954,48 @@ const REGIMEN_DEFAULTS_BUILTIN = [
   },
 ];
 
+const TRAINING_FACILITIES_BUILTIN = [
+  '愛媛大学医学部附属病院',
+];
+
+const DEFAULT_SUPERVISORS = [
+  { name: '羽藤 直人',  regNo: '01143' },
+  { name: '鵜久森 徹',  regNo: '01144' },
+  { name: '岡田 昌浩',  regNo: '01145' },
+  { name: '田中 加緒里', regNo: '01146' },
+  { name: '西田 直哉',  regNo: '01147' },
+  { name: '白馬 伸洋',  regNo: '01148' },
+  { name: '山田 啓之',  regNo: '01149' },
+  { name: '吉田 正',   regNo: '01150' },
+  { name: '脇坂 浩之',  regNo: '01151' },
+  { name: '浅井 真紀',  regNo: '01152' },
+  { name: '有友 宏',   regNo: '01153' },
+  { name: '篠森 裕介',  regNo: '01154' },
+  { name: '田口 亜紀',  regNo: '01155' },
+  { name: '川田 晃弘',  regNo: '01156' },
+  { name: '宮本 佳人',  regNo: '01157' },
+  { name: '佐々木 康',  regNo: '01158' },
+  { name: '相原 隆一',  regNo: '01159' },
+  { name: '澤井 尚樹',  regNo: '01160' },
+  { name: '寺岡 正人',  regNo: '01161' },
+  { name: '富所 雄一',  regNo: '01162' },
+  { name: '中村 光士郎', regNo: '01163' },
+  { name: '本多 伸光',  regNo: '01164' },
+  { name: '兵頭 純',   regNo: '01165' },
+  { name: '高橋 宏尚',  regNo: '01166' },
+  { name: '横井 隆司',  regNo: '01167' },
+  { name: '大河内 喜久', regNo: '01168' },
+  { name: '佐伯 忠彦',  regNo: '01169' },
+  { name: '渡邊 太志',  regNo: '01170' },
+  { name: '松本 秀',   regNo: '01171' },
+  { name: '森 敏裕',   regNo: '01172' },
+  { name: '高木 大樹',  regNo: '01504' },
+  { name: '上田 哲平',  regNo: '01505' },
+  { name: '眞田 明昌',  regNo: '01649' },
+  { name: '能田 淳平',  regNo: '01650' },
+  { name: '三谷 壮平',  regNo: '01651' },
+];
+
 // Settings
 let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || {
   doctorName: '山口',
@@ -1978,35 +2023,20 @@ let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || 
     { label: '昼', hour: 12, minute: 0 },
     { label: '夜', hour: 20, minute: 0 },
   ],
-  supervisors: [],       // [{name:'...', regNo:'...'}]
-  defaultFacility: '',   // 研修施設名デフォルト値
+  supervisors: JSON.parse(JSON.stringify(DEFAULT_SUPERVISORS)),
+  defaultFacility: TRAINING_FACILITIES_BUILTIN[0],
+  supervisorMasterVersion: 1,
 };
-// 専門医申請データ 未設定なら初期値
+// 既存端末の設定を保ちながら、画像の研修施設・指導医マスターを不足分だけ追加
 if (!appSettings.supervisors) appSettings.supervisors = [];
-if (appSettings.defaultFacility === undefined) appSettings.defaultFacility = '';
-// 指導医リストが空の場合はデフォルト35名を登録
-// (DEFAULT_SUPERVISORS は関数定義の中にあるため、ここでは直接定義)
-if (appSettings.supervisors.length === 0) {
-  appSettings.supervisors = [
-    { name: '羽藤 直人',  regNo: '01143' }, { name: '鵜久森 徹',  regNo: '01144' },
-    { name: '岡田 昌浩',  regNo: '01145' }, { name: '田中 加緒里', regNo: '01146' },
-    { name: '西田 直哉',  regNo: '01147' }, { name: '白馬 伸洋',  regNo: '01148' },
-    { name: '山田 啓之',  regNo: '01149' }, { name: '吉田 正',   regNo: '01150' },
-    { name: '脇坂 浩之',  regNo: '01151' }, { name: '浅井 真紀',  regNo: '01152' },
-    { name: '有友 宏',   regNo: '01153' }, { name: '篠森 裕介',  regNo: '01154' },
-    { name: '田口 亜紀',  regNo: '01155' }, { name: '川田 晃弘',  regNo: '01156' },
-    { name: '宮本 佳人',  regNo: '01157' }, { name: '佐々木 康',  regNo: '01158' },
-    { name: '相原 隆一',  regNo: '01159' }, { name: '澤井 尚樹',  regNo: '01160' },
-    { name: '寺岡 正人',  regNo: '01161' }, { name: '富所 雄一',  regNo: '01162' },
-    { name: '中村 光士郎', regNo: '01163' }, { name: '本多 伸光',  regNo: '01164' },
-    { name: '兵頭 純',   regNo: '01165' }, { name: '高橋 宏尚',  regNo: '01166' },
-    { name: '横井 隆司',  regNo: '01167' }, { name: '大河内 喜久', regNo: '01168' },
-    { name: '佐伯 忠彦',  regNo: '01169' }, { name: '渡邊 太志',  regNo: '01170' },
-    { name: '松本 秀',   regNo: '01171' }, { name: '森 敏裕',   regNo: '01172' },
-    { name: '高木 大樹',  regNo: '01504' }, { name: '上田 哲平',  regNo: '01505' },
-    { name: '眞田 明昌',  regNo: '01649' }, { name: '能田 淳平',  regNo: '01650' },
-    { name: '三谷 壮平',  regNo: '01651' },
-  ];
+if (appSettings.supervisorMasterVersion !== 1) {
+  if (!appSettings.defaultFacility) appSettings.defaultFacility = TRAINING_FACILITIES_BUILTIN[0];
+  DEFAULT_SUPERVISORS.forEach(function(master) {
+    var existing = appSettings.supervisors.find(function(s) { return s.regNo === master.regNo; });
+    if (!existing) appSettings.supervisors.push(JSON.parse(JSON.stringify(master)));
+    else if (!existing.name) existing.name = master.name;
+  });
+  appSettings.supervisorMasterVersion = 1;
   localStorage.setItem('app_settings', JSON.stringify(appSettings));
 }
 // 3層チェックリスト 未設定なら初期値でシード
@@ -4982,44 +5012,6 @@ function updateSupervisor(idx, key, val) {
   save();
 }
 
-var DEFAULT_SUPERVISORS = [
-  { name: '羽藤 直人',  regNo: '01143' },
-  { name: '鵜久森 徹',  regNo: '01144' },
-  { name: '岡田 昌浩',  regNo: '01145' },
-  { name: '田中 加緒里', regNo: '01146' },
-  { name: '西田 直哉',  regNo: '01147' },
-  { name: '白馬 伸洋',  regNo: '01148' },
-  { name: '山田 啓之',  regNo: '01149' },
-  { name: '吉田 正',   regNo: '01150' },
-  { name: '脇坂 浩之',  regNo: '01151' },
-  { name: '浅井 真紀',  regNo: '01152' },
-  { name: '有友 宏',   regNo: '01153' },
-  { name: '篠森 裕介',  regNo: '01154' },
-  { name: '田口 亜紀',  regNo: '01155' },
-  { name: '川田 晃弘',  regNo: '01156' },
-  { name: '宮本 佳人',  regNo: '01157' },
-  { name: '佐々木 康',  regNo: '01158' },
-  { name: '相原 隆一',  regNo: '01159' },
-  { name: '澤井 尚樹',  regNo: '01160' },
-  { name: '寺岡 正人',  regNo: '01161' },
-  { name: '富所 雄一',  regNo: '01162' },
-  { name: '中村 光士郎', regNo: '01163' },
-  { name: '本多 伸光',  regNo: '01164' },
-  { name: '兵頭 純',   regNo: '01165' },
-  { name: '高橋 宏尚',  regNo: '01166' },
-  { name: '横井 隆司',  regNo: '01167' },
-  { name: '大河内 喜久', regNo: '01168' },
-  { name: '佐伯 忠彦',  regNo: '01169' },
-  { name: '渡邊 太志',  regNo: '01170' },
-  { name: '松本 秀',   regNo: '01171' },
-  { name: '森 敏裕',   regNo: '01172' },
-  { name: '高木 大樹',  regNo: '01504' },
-  { name: '上田 哲平',  regNo: '01505' },
-  { name: '眞田 明昌',  regNo: '01649' },
-  { name: '能田 淳平',  regNo: '01650' },
-  { name: '三谷 壮平',  regNo: '01651' },
-];
-
 function resetSupervisors() {
   if (!confirm('指導医リストをデフォルトの35名に戻しますか？\n（追加した指導医は削除されます）')) return;
   appSettings.supervisors = JSON.parse(JSON.stringify(DEFAULT_SUPERVISORS));
@@ -6847,8 +6839,8 @@ function renderSettings() {
       <div style="font-size:11px;font-weight:700;margin-bottom:4px;color:var(--text);">🏥 研修施設名（専門医申請用）</div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5;">新規症例追加時に自動入力されます。</div>
       <div class="form-group">
-        <input type="text" class="form-input" id="s_defaultFacility" value="${(appSettings.defaultFacility||'').replace(/"/g,'&quot;')}"
-          placeholder="例：○○大学病院 耳鼻咽喉科・頭頸部外科" style="font-size:12px;">
+        <input type="text" class="form-input" id="s_defaultFacility" list="trainingFacilityOptions" value="${(appSettings.defaultFacility||'').replace(/"/g,'&quot;')}"
+          placeholder="研修施設を選択または入力" style="font-size:12px;">
       </div>
       <button onclick="saveDefaultFacility()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;">保存</button>
     </div>
