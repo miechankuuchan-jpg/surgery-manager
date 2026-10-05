@@ -985,12 +985,14 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
     <div class="header-title"><span id="headerDoctorName">山口</span> <span>手術担当</span></div>
     <div id="todayDisplay" style="font-size:10px;color:var(--text3);margin-top:1px;font-family:'IBM Plex Mono',monospace;"></div>
     <div class="header-stats" id="headerStats"></div>
+    <div id="cloudSyncStatus" style="font-size:9px;color:var(--text3);margin-top:2px;min-height:12px;">端末内に保存</div>
   </div>
   <div class="header-actions">
     <div class="icon-btn-wrap">
       <button class="icon-btn" onclick="showNotifCenter()" title="今日のタスク">🔔</button>
       <span class="notif-badge" id="pendingBadge" style="display:none">!</span>
     </div>
+    <button class="icon-btn" onclick="manualCloudRefresh()" id="cloudRefreshBtn" title="最新の状態に更新">↻</button>
     <button class="icon-btn" onclick="toggleSearch()" id="searchToggleBtn" title="検索">🔍</button>
     <button class="icon-btn" onclick="openSettingsModal()" title="設定">⚙️</button>
     <button class="icon-btn primary" onclick="openAddModal()" title="症例追加">＋</button>
@@ -1148,6 +1150,51 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
       <label class="form-label">メモ（フリーコメント）</label>
       <textarea class="form-input" id="f_memo" placeholder="術後管理、食事再開時期など"></textarea>
     </div>
+
+    <div class="section-divider">📘 メンターシップ手帳</div>
+    <div style="font-size:10px;color:var(--text3);line-height:1.6;margin:-4px 0 12px;padding:9px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
+      患者名・疾患名・カルテ番号など、患者を特定できる情報は送信しません。下の手術記録だけを同期します。
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">手術名分類</label>
+        <select class="form-input" id="f_mentorCategory">
+          <option value="">— 選択 —</option>
+          <option value="耳科手術">耳科手術</option>
+          <option value="鼻科手術">鼻科手術</option>
+          <option value="口腔咽喉頭手術">口腔咽喉頭手術</option>
+          <option value="頭頸部腫瘍手術">頭頸部腫瘍手術</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">術者・助手</label>
+        <select class="form-input" id="f_mentorRole">
+          <option value="">— 選択 —</option>
+          <option value="術者">術者</option>
+          <option value="第一助手">第一助手</option>
+          <option value="第二助手">第二助手</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">執刀医名</label>
+      <input type="text" class="form-input" id="f_mentorSurgeon" placeholder="例：西原">
+    </div>
+    <div class="form-group">
+      <label class="form-label">よかった点（自分のコメント）</label>
+      <textarea class="form-input" id="f_mentorGood" placeholder="手術後に記録" style="min-height:64px;"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">次回意識すること（自分のコメント）</label>
+      <textarea class="form-input" id="f_mentorNext" placeholder="次回の具体的な目標" style="min-height:64px;"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">執刀医に言われた「次回意識すること」</label>
+      <textarea class="form-input" id="f_mentorAdvice" placeholder="執刀医からの助言" style="min-height:64px;"></textarea>
+    </div>
+    <button type="button" id="mentorSyncEditBtn" onclick="syncEditingCaseToMentorship()" style="display:none;width:100%;margin:-2px 0 14px;padding:11px 12px;background:rgba(26,174,200,0.12);border:1px solid rgba(26,174,200,0.4);border-radius:9px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+      📘 保存後、メンターシップ手帳へ送信
+    </button>
 
     <div class="section-divider">チェックリスト</div>
     <div class="checkbox-group" id="checklistOptions">
@@ -1386,7 +1433,7 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
       <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:var(--text);">🐙 GitHub自動同期</div>
       <div style="font-size:10px;color:var(--text2);line-height:1.7;">
         <strong style="color:var(--green);">✅ miechankuuchan-jpg/surgery-manager</strong><br>
-        このMacでHTMLが変更されると、自動的にGitHubへ保存されます。患者データはブラウザ内に保存され、GitHubへは送信されません。
+        このMacでHTMLが変更されると、自動的にGitHubへ保存されます。患者データはGitHubへ送信されません。端末間同期を有効にした場合だけ、ご自身のSupabaseへ保存されます。
       </div>
     </div>
 
@@ -1441,6 +1488,7 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
 <script>
 // ========== STATE ==========
 const CHECKLIST_DEFAULTS_BUILTIN = [
@@ -2026,6 +2074,8 @@ let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || 
   supervisors: JSON.parse(JSON.stringify(DEFAULT_SUPERVISORS)),
   defaultFacility: TRAINING_FACILITIES_BUILTIN[0],
   supervisorMasterVersion: 1,
+  cloudAutoSync: true,
+  mentorshipAutoSync: false,
 };
 // 既存端末の設定を保ちながら、画像の研修施設・指導医マスターを不足分だけ追加
 if (!appSettings.supervisors) appSettings.supervisors = [];
@@ -2058,6 +2108,8 @@ DISEASE_CHECK_RULES_BUILTIN.forEach(builtin => {
 });
 if (!appSettings.regimenList || !appSettings.regimenList.length)
   appSettings.regimenList = JSON.parse(JSON.stringify(REGIMEN_DEFAULTS_BUILTIN));
+if (typeof appSettings.cloudAutoSync !== 'boolean') appSettings.cloudAutoSync = true;
+if (typeof appSettings.mentorshipAutoSync !== 'boolean') appSettings.mentorshipAutoSync = false;
 REGIMEN_DEFAULTS_BUILTIN.forEach(builtin => {
   const idx = appSettings.regimenList.findIndex(r => r.id === builtin.id);
   if (idx >= 0) appSettings.regimenList[idx] = JSON.parse(JSON.stringify(builtin));
@@ -2087,6 +2139,8 @@ function onDiseaseOrSurgeryChange() {
   renderPrepSuggestions(rules);
   renderDiseaseCheckSuggestions(disease + ' ' + surgery);
   renderRegimenSuggestions(surgery);
+  const mentorCategory = document.getElementById('f_mentorCategory');
+  if (mentorCategory && !mentorCategory.value) mentorCategory.value = suggestMentorshipCategory(disease, surgery);
   // ケモモード切替時にチェックリスト表示を即時更新
   const checklistEl = document.getElementById('checklistOptions');
   if (checklistEl) {
@@ -2483,11 +2537,439 @@ function save() {
   localStorage.setItem('notif_settings', JSON.stringify(notifSettings));
   localStorage.setItem('app_settings', JSON.stringify(appSettings));
   applyTheme();
+  if (!patientCloudApplying) markPatientCloudDirty();
+}
+
+// ========== CLOUD / MENTORSHIP SYNC ==========
+// 公開してよい publishable key のみを使用。パスワードや service_role key は保存しない。
+const PATIENT_CLOUD_URL = 'https://eooskehlbrskotxgizrg.supabase.co';
+const PATIENT_CLOUD_KEY = 'sb_publishable__-Pp4_uFVjv7bdRV8H8TZg_qVsy5Utc';
+const MENTORSHIP_URL = 'https://pbgshppiqozvskwpcilw.supabase.co';
+const MENTORSHIP_KEY = 'sb_publishable_0kUStvEZnoVqJsZbMBDymQ_fRIemRDI';
+const CLOUD_META_KEY = 'surgery_cloud_meta_v1';
+let patientCloudClient = null;
+let mentorshipClient = null;
+let mentorshipConnected = false;
+let mentorshipIdentity = null;
+let patientCloudApplying = false;
+let patientCloudTimer = null;
+let patientCloudChannel = null;
+let patientCloudBusy = false;
+let patientCloudMeta = (() => {
+  try { return JSON.parse(localStorage.getItem(CLOUD_META_KEY) || '{}'); }
+  catch (_) { return {}; }
+})();
+
+function persistPatientCloudMeta() {
+  localStorage.setItem(CLOUD_META_KEY, JSON.stringify(patientCloudMeta));
+}
+
+function getDeviceId() {
+  if (!patientCloudMeta.deviceId) {
+    patientCloudMeta.deviceId = 'device_' + uid();
+    persistPatientCloudMeta();
+  }
+  return patientCloudMeta.deviceId;
+}
+
+function getPatientCloudClient() {
+  if (patientCloudClient) return patientCloudClient;
+  if (!window.supabase?.createClient) return null;
+  patientCloudClient = window.supabase.createClient(PATIENT_CLOUD_URL, PATIENT_CLOUD_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'surgery-manager-cloud-auth' }
+  });
+  return patientCloudClient;
+}
+
+function getMentorshipClient() {
+  if (mentorshipClient) return mentorshipClient;
+  if (!window.supabase?.createClient) return null;
+  mentorshipClient = window.supabase.createClient(MENTORSHIP_URL, MENTORSHIP_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'surgery-manager-mentorship-auth' }
+  });
+  return mentorshipClient;
+}
+
+function patientCloudSnapshot() {
+  return {
+    schema: 1,
+    cases: JSON.parse(JSON.stringify(cases)),
+    appSettings: JSON.parse(JSON.stringify(appSettings)),
+    notifSettings: JSON.parse(JSON.stringify(notifSettings)),
+  };
+}
+
+function patientCloudSignature(snapshot = patientCloudSnapshot()) {
+  const text = JSON.stringify(snapshot);
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return text.length + ':' + (hash >>> 0).toString(16);
+}
+
+function setCloudStatus(text, tone = 'muted') {
+  const el = document.getElementById('cloudSyncStatus');
+  if (!el) return;
+  const colors = { ok: 'var(--green)', busy: 'var(--accent)', warn: 'var(--accent3)', error: 'var(--red)', muted: 'var(--text3)' };
+  el.textContent = text;
+  el.style.color = colors[tone] || colors.muted;
+  const btn = document.getElementById('cloudRefreshBtn');
+  if (btn) btn.style.opacity = tone === 'busy' ? '0.55' : '1';
+}
+
+function markPatientCloudDirty() {
+  patientCloudMeta.localChangedAt = Date.now();
+  persistPatientCloudMeta();
+  if (!patientCloudMeta.connected) return setCloudStatus('端末内に保存');
+  setCloudStatus('未同期の変更あり', 'warn');
+  if (!appSettings.cloudAutoSync) return;
+  clearTimeout(patientCloudTimer);
+  patientCloudTimer = setTimeout(() => syncPatientCloud({ quiet: true }), 1400);
+}
+
+function mergePatientCloudSnapshots(remote, local) {
+  const remoteCases = Array.isArray(remote?.cases) ? remote.cases : [];
+  const localCases = Array.isArray(local?.cases) ? local.cases : [];
+  const byId = new Map(remoteCases.map(c => [c.id, c]));
+  localCases.forEach(c => byId.set(c.id, { ...(byId.get(c.id) || {}), ...c }));
+  return {
+    schema: 1,
+    cases: [...byId.values()],
+    appSettings: { ...(remote?.appSettings || {}), ...(local?.appSettings || {}) },
+    notifSettings: { ...(remote?.notifSettings || {}), ...(local?.notifSettings || {}) },
+  };
+}
+
+function applyPatientCloudSnapshot(snapshot) {
+  if (!snapshot || !Array.isArray(snapshot.cases)) throw new Error('クラウドデータの形式を確認できません');
+  patientCloudApplying = true;
+  try {
+    cases = snapshot.cases;
+    if (snapshot.appSettings) appSettings = { ...appSettings, ...snapshot.appSettings };
+    if (snapshot.notifSettings) notifSettings = { ...notifSettings, ...snapshot.notifSettings };
+    localStorage.setItem('surgery_cases', JSON.stringify(cases));
+    localStorage.setItem('notif_settings', JSON.stringify(notifSettings));
+    localStorage.setItem('app_settings', JSON.stringify(appSettings));
+    applyTheme();
+    render();
+    if (document.getElementById('settingsModal')?.classList.contains('open')) renderSettings();
+  } finally {
+    patientCloudApplying = false;
+  }
+}
+
+async function getPatientCloudSession() {
+  const client = getPatientCloudClient();
+  if (!client) return null;
+  const { data } = await client.auth.getSession();
+  return data?.session || null;
+}
+
+async function syncPatientCloud(options = {}) {
+  if (patientCloudBusy) return;
+  const client = getPatientCloudClient();
+  const session = await getPatientCloudSession();
+  if (!client || !session) {
+    patientCloudMeta.connected = false;
+    persistPatientCloudMeta();
+    setCloudStatus('端末内に保存');
+    if (!options.quiet) { openSettingsModal(); alert('設定の「患者データの端末間同期」からログインしてください。'); }
+    return;
+  }
+  patientCloudBusy = true;
+  patientCloudMeta.connected = true;
+  setCloudStatus('同期中…', 'busy');
+  try {
+    const userId = session.user.id;
+    const localSnapshot = patientCloudSnapshot();
+    const localSig = patientCloudSignature(localSnapshot);
+    const { data: remote, error: loadError } = await client
+      .from('patient_app_state')
+      .select('payload,revision,updated_at')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (loadError) throw loadError;
+
+    if (!remote) {
+      const { data: inserted, error } = await client.from('patient_app_state').insert({
+        user_id: userId, payload: localSnapshot, revision: 1, device_id: getDeviceId(), updated_at: new Date().toISOString()
+      }).select('revision,updated_at').single();
+      if (error) throw error;
+      patientCloudMeta.revision = inserted.revision;
+      patientCloudMeta.lastSyncedSignature = localSig;
+      patientCloudMeta.lastSyncAt = Date.now();
+      persistPatientCloudMeta();
+      setCloudStatus('クラウド保存済み', 'ok');
+      subscribePatientCloud(userId);
+      return;
+    }
+
+    const knownRevision = Number(patientCloudMeta.revision || 0);
+    const remoteRevision = Number(remote.revision || 0);
+    const localDirty = localSig !== patientCloudMeta.lastSyncedSignature;
+
+    if (!knownRevision && remote.payload) {
+      const merged = localSnapshot.cases.length
+        ? mergePatientCloudSnapshots(remote.payload, localSnapshot)
+        : remote.payload;
+      applyPatientCloudSnapshot(merged);
+      patientCloudMeta.revision = remoteRevision;
+      patientCloudMeta.lastSyncedSignature = patientCloudSignature(remote.payload);
+      persistPatientCloudMeta();
+      return syncPatientCloud({ ...options, quiet: true });
+    }
+
+    if (remoteRevision > knownRevision) {
+      if (localDirty) {
+        if (!options.manual) {
+          setCloudStatus('別端末の更新あり・確認待ち', 'warn');
+          return;
+        }
+        const merge = confirm('別端末の更新と、この端末の未同期変更があります。両方の症例を結合してクラウドへ保存しますか？\n\n「キャンセル」では変更せず、バックアップ後に確認できます。');
+        if (!merge) { setCloudStatus('競合を確認してください', 'warn'); return; }
+        const merged = mergePatientCloudSnapshots(remote.payload, localSnapshot);
+        applyPatientCloudSnapshot(merged);
+        patientCloudMeta.revision = remoteRevision;
+        patientCloudMeta.lastSyncedSignature = patientCloudSignature(remote.payload);
+        persistPatientCloudMeta();
+        return syncPatientCloud({ ...options, quiet: true });
+      }
+      applyPatientCloudSnapshot(remote.payload);
+      patientCloudMeta.revision = remoteRevision;
+      patientCloudMeta.lastSyncedSignature = patientCloudSignature(remote.payload);
+      patientCloudMeta.lastSyncAt = Date.now();
+      persistPatientCloudMeta();
+      setCloudStatus('最新の状態です', 'ok');
+      subscribePatientCloud(userId);
+      return;
+    }
+
+    if (localDirty) {
+      const nextRevision = remoteRevision + 1;
+      const { data: updated, error } = await client.from('patient_app_state')
+        .update({ payload: localSnapshot, revision: nextRevision, device_id: getDeviceId(), updated_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .eq('revision', remoteRevision)
+        .select('revision,updated_at');
+      if (error) throw error;
+      if (!updated?.length) {
+        setCloudStatus('別端末の更新あり・再読込してください', 'warn');
+        return;
+      }
+      patientCloudMeta.revision = updated[0].revision;
+      patientCloudMeta.lastSyncedSignature = localSig;
+    }
+    patientCloudMeta.lastSyncAt = Date.now();
+    persistPatientCloudMeta();
+    setCloudStatus('最新の状態です', 'ok');
+    subscribePatientCloud(userId);
+  } catch (error) {
+    console.error('Patient cloud sync failed', error);
+    const missingTable = /patient_app_state|schema cache|relation/i.test(error?.message || '');
+    setCloudStatus(missingTable ? '通信設定の準備待ち' : '同期できませんでした', 'error');
+    if (!options.quiet) alert(missingTable ? 'クラウド側の初期設定がまだ完了していません。' : '同期できませんでした。通信状態を確認してください。');
+  } finally {
+    patientCloudBusy = false;
+    if (document.getElementById('settingsModal')?.classList.contains('open')) renderSettings();
+  }
+}
+
+function subscribePatientCloud(userId) {
+  const client = getPatientCloudClient();
+  if (!client || patientCloudChannel) return;
+  patientCloudChannel = client.channel('patient-app-state-' + userId)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'patient_app_state', filter: 'user_id=eq.' + userId }, payload => {
+      const nextRevision = Number(payload.new?.revision || 0);
+      if (nextRevision > Number(patientCloudMeta.revision || 0)) {
+        clearTimeout(patientCloudTimer);
+        patientCloudTimer = setTimeout(() => syncPatientCloud({ quiet: true }), 350);
+      }
+    }).subscribe();
+}
+
+async function manualCloudRefresh() {
+  await syncPatientCloud({ manual: true });
+}
+
+async function patientCloudSignIn() {
+  const email = document.getElementById('cloudEmail')?.value.trim();
+  const password = document.getElementById('cloudPassword')?.value || '';
+  if (!email || !password) return alert('メールアドレスとパスワードを入力してください。');
+  setCloudStatus('ログイン中…', 'busy');
+  const client = getPatientCloudClient();
+  const { error } = await client.auth.signInWithPassword({ email, password });
+  document.getElementById('cloudPassword').value = '';
+  if (error) return alert('ログインできませんでした。メールアドレスとパスワードを確認してください。');
+  patientCloudMeta.connected = true;
+  patientCloudMeta.revision = 0;
+  persistPatientCloudMeta();
+  await syncPatientCloud({ manual: true });
+}
+
+async function patientCloudSignUp() {
+  const email = document.getElementById('cloudEmail')?.value.trim();
+  const password = document.getElementById('cloudPassword')?.value || '';
+  if (!email || password.length < 8) return alert('メールアドレスと8文字以上のパスワードを入力してください。');
+  const client = getPatientCloudClient();
+  const { data, error } = await client.auth.signUp({ email, password });
+  document.getElementById('cloudPassword').value = '';
+  if (error) return alert('同期アカウントを作成できませんでした。' + (error.message || ''));
+  if (!data.session) return alert('確認メールを送りました。メール内のリンクを開いてからログインしてください。');
+  patientCloudMeta.connected = true;
+  patientCloudMeta.revision = 0;
+  persistPatientCloudMeta();
+  await syncPatientCloud({ manual: true });
+}
+
+async function patientCloudSignOut() {
+  const client = getPatientCloudClient();
+  if (patientCloudChannel) { await client.removeChannel(patientCloudChannel); patientCloudChannel = null; }
+  await client.auth.signOut();
+  patientCloudMeta.connected = false;
+  patientCloudMeta.revision = 0;
+  patientCloudMeta.lastSyncedSignature = '';
+  persistPatientCloudMeta();
+  setCloudStatus('端末内に保存');
+  renderSettings();
+}
+
+async function initPatientCloud() {
+  const session = await getPatientCloudSession();
+  if (!session) {
+    patientCloudMeta.connected = false;
+    persistPatientCloudMeta();
+    return setCloudStatus('端末内に保存');
+  }
+  patientCloudMeta.connected = true;
+  persistPatientCloudMeta();
+  subscribePatientCloud(session.user.id);
+  await syncPatientCloud({ quiet: true });
+}
+
+function suggestMentorshipCategory(disease, surgery) {
+  const text = ((disease || '') + ' ' + (surgery || '')).toLowerCase();
+  if (/耳|鼓膜|鼓室|乳突|人工内耳|あぶみ骨/.test(text)) return '耳科手術';
+  if (/鼻|副鼻腔|ess|鼻中隔|下鼻甲介|涙嚢/.test(text)) return '鼻科手術';
+  if (/甲状腺|耳下腺|顎下腺|頸部郭清|喉頭全摘|咽喉食摘|頭頸部|腫瘍|癌|がん/.test(text)) return '頭頸部腫瘍手術';
+  if (/扁桃|咽頭|喉頭|声帯|気管切開|舌|口腔/.test(text)) return '口腔咽喉頭手術';
+  return '';
+}
+
+function mentorshipPayload(c) {
+  return {
+    date: c.opDate || c.admDate || '',
+    cat: c.mentorshipCategory || suggestMentorshipCategory(c.disease, c.surgery),
+    name: c.surgery || '',
+    role: c.mentorshipRole || '',
+    good: c.mentorshipGood || '',
+    next: c.mentorshipNext || '',
+    advice: c.mentorshipAdvice || '',
+    surgeon: c.mentorshipSurgeon || '',
+  };
+}
+
+function mentorshipSyncState(c) {
+  if (!c.mentorshipRecordId) return { label: '未送信', color: 'var(--text3)' };
+  const current = JSON.stringify(mentorshipPayload(c));
+  if (c.mentorshipSyncSignature !== current) return { label: '変更あり・未送信', color: 'var(--accent3)' };
+  return { label: '手帳へ送信済み', color: 'var(--green)' };
+}
+
+async function mentorshipSignIn() {
+  const email = document.getElementById('mentorEmail')?.value.trim();
+  const password = document.getElementById('mentorPassword')?.value || '';
+  if (!email || !password) return alert('メンターシップ手帳のメールアドレスとパスワードを入力してください。');
+  const client = getMentorshipClient();
+  const { error } = await client.auth.signInWithPassword({ email, password });
+  document.getElementById('mentorPassword').value = '';
+  if (error) return alert('メンターシップ手帳へログインできませんでした。');
+  await refreshMentorshipConnection();
+  renderSettings();
+}
+
+async function mentorshipSignOut() {
+  await getMentorshipClient()?.auth.signOut();
+  mentorshipConnected = false;
+  mentorshipIdentity = null;
+  renderSettings();
+}
+
+async function refreshMentorshipConnection() {
+  const client = getMentorshipClient();
+  const { data: sessionData } = await client.auth.getSession();
+  if (!sessionData.session) throw new Error('not_signed_in');
+  const { data: who, error } = await client.rpc('whoami');
+  if (error || !who || who.role !== 'learner') throw error || new Error('学習者アカウントを確認できません');
+  mentorshipConnected = true;
+  mentorshipIdentity = who;
+  return who;
+}
+
+async function initMentorshipConnection() {
+  try {
+    const client = getMentorshipClient();
+    const { data } = await client.auth.getSession();
+    if (data.session) await refreshMentorshipConnection();
+  } catch (_) {
+    mentorshipConnected = false;
+    mentorshipIdentity = null;
+  }
+  if (document.getElementById('settingsModal')?.classList.contains('open')) renderSettings();
+}
+
+async function syncAllMentorshipCases() {
+  const targets = cases.filter(c => (c.mode || detectCaseMode(c.surgery)) === 'ope' && c.opDate && c.surgery && c.mentorshipRole && (c.mentorshipCategory || suggestMentorshipCategory(c.disease, c.surgery)));
+  if (!targets.length) return alert('送信できる手術記録がありません。各症例で手術名分類と術者/助手を入力してください。');
+  let sent = 0;
+  for (const c of targets) if (await syncCaseToMentorship(c.id, { quiet: true })) sent += 1;
+  renderSettings();
+  alert(sent === targets.length
+    ? `${sent}件の手術記録をメンターシップ手帳へ送信しました。`
+    : `${sent}件を送信しました。${targets.length - sent}件は送信できなかったため、通信状態を確認してください。`);
+}
+
+async function syncCaseToMentorship(caseId, options = {}) {
+  const c = cases.find(x => x.id === caseId);
+  if (!c) return false;
+  const payload = mentorshipPayload(c);
+  if (!payload.date || !payload.name || !payload.cat || !payload.role) {
+    if (!options.quiet) {
+      openEditModal(caseId);
+      alert('手術日・術式・手術名分類・術者/助手を入力してから送信してください。');
+    }
+    return false;
+  }
+  try {
+    const client = getMentorshipClient();
+    const { data: sessionData } = await client.auth.getSession();
+    if (!sessionData.session) {
+      if (!options.quiet) { openSettingsModal(); alert('設定の「メンターシップ手帳連携」からログインしてください。'); }
+      return false;
+    }
+    const who = await refreshMentorshipConnection();
+    const recordId = c.mentorshipRecordId || ('sm_' + String(c.id).replace(/[^a-zA-Z0-9_-]/g, ''));
+    const { error } = await client.from('surgeries').upsert({ id: recordId, learner: who.id, data: payload });
+    if (error) throw error;
+    c.mentorshipRecordId = recordId;
+    c.mentorshipSyncedAt = new Date().toISOString();
+    c.mentorshipSyncSignature = JSON.stringify(payload);
+    save();
+    render();
+    if (!options.quiet) alert('患者を特定できる情報を除き、手術記録をメンターシップ手帳へ送信しました。');
+    return true;
+  } catch (error) {
+    console.error('Mentorship sync failed', error);
+    if (!options.quiet) alert('メンターシップ手帳へ送信できませんでした。通信状態とログインを確認してください。');
+    return false;
+  }
 }
 
 function saveDailyMemo(val) {
   appSettings.dailyMemo = val;
   localStorage.setItem('app_settings', JSON.stringify(appSettings));
+  markPatientCloudDirty();
 }
 
 function updateReminderPreset(idx, key, val) {
@@ -4199,6 +4681,7 @@ function renderCard(c, expandByDefault=false) {
 
   // モードバッジ
   const caseMode = c.mode || detectCaseMode(c.surgery);
+  const mentorState = mentorshipSyncState(c);
   const modeBadgeHtml = caseMode === 'crt'
     ? `<span style="font-size:10px;font-weight:700;color:var(--green);background:rgba(24,196,120,0.12);border:1px solid rgba(24,196,120,0.35);border-radius:4px;padding:1px 6px;margin-left:4px;">📡ケモラジ</span>`
     : caseMode === 'chemo'
@@ -4290,6 +4773,13 @@ function renderCard(c, expandByDefault=false) {
       ${sf.time !== false ? `<div class="info-row"><span class="info-label">予定時間</span><span class="info-value">${c.time || '—'}</span></div>` : ''}
       ${sf.items !== false ? `<div class="info-row"><span class="info-label">物品／注意</span><span class="info-value">${c.items || '特記事項なし'}</span></div>` : ''}
       ${sf.team !== false ? `<div class="info-row"><span class="info-label">担当</span><div class="team-chips">${teamChips || '<span style="color:var(--text3);font-size:12px">未設定</span>'}</div></div>` : ''}
+      ${caseMode === 'ope' ? `<div class="info-row" style="align-items:center;">
+        <span class="info-label">手術手帳</span>
+        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+          <span style="font-size:10px;font-weight:700;color:${mentorState.color};">${mentorState.label}</span>
+          <button onclick="event.stopPropagation();syncCaseToMentorship('${c.id}')" style="background:rgba(26,174,200,0.12);border:1px solid rgba(26,174,200,0.35);color:var(--accent);border-radius:6px;padding:4px 9px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">📘 送信</button>
+        </div>
+      </div>` : ''}
       <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.06em;margin-top:10px;margin-bottom:6px;">チェックリスト</div>
       <div class="checklist">${checks}</div>
       ${freeCheckHtml}
@@ -4814,6 +5304,8 @@ function openAddModal() {
   buildChecklistForm({});
   const editReminderBtn = document.getElementById('editChecklistReminderBtn');
   if (editReminderBtn) editReminderBtn.style.display = 'none';
+  const mentorSyncBtn = document.getElementById('mentorSyncEditBtn');
+  if (mentorSyncBtn) mentorSyncBtn.style.display = 'none';
   renderFreeChecklistForm();
   renderExamScheduleList();
   // setExamTypeはDOMが存在する時のみ、検査日付は今日をデフォルト
@@ -4853,6 +5345,12 @@ function openEditModal(id) {
   document.getElementById('f_team').value = c.team || '';
   document.getElementById('f_items').value = c.items || '';
   document.getElementById('f_memo').value = c.memo || '';
+  document.getElementById('f_mentorCategory').value = c.mentorshipCategory || suggestMentorshipCategory(c.disease, c.surgery);
+  document.getElementById('f_mentorRole').value = c.mentorshipRole || '';
+  document.getElementById('f_mentorSurgeon').value = c.mentorshipSurgeon || '';
+  document.getElementById('f_mentorGood').value = c.mentorshipGood || '';
+  document.getElementById('f_mentorNext').value = c.mentorshipNext || '';
+  document.getElementById('f_mentorAdvice').value = c.mentorshipAdvice || '';
   document.getElementById('f_icu').checked = !!c.icu;
   document.getElementById('f_recon').checked = !!c.recon;
   // 専門医申請データ
@@ -4871,6 +5369,8 @@ function openEditModal(id) {
   buildChecklistForm(c.checks || {});
   const editReminderBtn = document.getElementById('editChecklistReminderBtn');
   if (editReminderBtn) editReminderBtn.style.display = 'block';
+  const mentorSyncBtn = document.getElementById('mentorSyncEditBtn');
+  if (mentorSyncBtn) mentorSyncBtn.style.display = editMode === 'ope' ? 'block' : 'none';
   renderFreeChecklistForm();
   renderExamScheduleList();
   onSurgeryChange();
@@ -4888,7 +5388,7 @@ function openEditModal(id) {
 
 function clearForm() {
   ['f_opDate','f_admDate','f_dischargeDate','f_pathology','f_courseNotes','f_name','f_disease','f_surgery','f_time','f_team','f_items','f_memo',
-   'f_age','f_chartNo','f_facility','f_supervisorRegNoVal'].forEach(id => {
+   'f_age','f_chartNo','f_facility','f_supervisorRegNoVal','f_mentorSurgeon','f_mentorGood','f_mentorNext','f_mentorAdvice'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('f_icu').checked = false;
@@ -4898,6 +5398,10 @@ function clearForm() {
   if (gender) gender.value = '';
   const outin = document.getElementById('f_outInpatient');
   if (outin) outin.value = '';
+  const mentorCategory = document.getElementById('f_mentorCategory');
+  if (mentorCategory) mentorCategory.value = '';
+  const mentorRole = document.getElementById('f_mentorRole');
+  if (mentorRole) mentorRole.value = '';
   updateSupervisorRegDisplay('');
 }
 
@@ -5340,7 +5844,7 @@ function buildChecklistForm(checks, modeOverride) {
   el.innerHTML = html;
 }
 
-function saveCase() {
+function saveCase(options = {}) {
   const opDate = document.getElementById('f_opDate').value;
   const admDate = document.getElementById('f_admDate').value;
   const name = document.getElementById('f_name').value.trim();
@@ -5386,18 +5890,36 @@ function saveCase() {
     facility:       document.getElementById('f_facility').value.trim(),
     supervisorName: document.getElementById('f_supervisor').value,
     supervisorRegNo:document.getElementById('f_supervisorRegNoVal').value,
+    // メンターシップ手帳（患者を特定できる情報は含めない）
+    mentorshipCategory: document.getElementById('f_mentorCategory').value,
+    mentorshipRole:     document.getElementById('f_mentorRole').value,
+    mentorshipSurgeon:  document.getElementById('f_mentorSurgeon').value.trim(),
+    mentorshipGood:     document.getElementById('f_mentorGood').value.trim(),
+    mentorshipNext:     document.getElementById('f_mentorNext').value.trim(),
+    mentorshipAdvice:   document.getElementById('f_mentorAdvice').value.trim(),
   };
 
+  let savedId = editingId;
   if (editingId) {
     const idx = cases.findIndex(x => x.id === editingId);
     if (idx >= 0) { cases[idx] = { ...cases[idx], ...data }; }
   } else {
-    cases.push({ id: uid(), ...data });
+    savedId = uid();
+    cases.push({ id: savedId, ...data });
   }
 
   save();
   closeModal();
   render();
+  if (!options.skipMentorship && appSettings.mentorshipAutoSync && data.mode === 'ope') {
+    setTimeout(() => syncCaseToMentorship(savedId, { quiet: true }), 0);
+  }
+  return savedId;
+}
+
+function syncEditingCaseToMentorship() {
+  const savedId = saveCase({ skipMentorship: true });
+  if (savedId) syncCaseToMentorship(savedId);
 }
 
 function deleteCase() {
@@ -6601,10 +7123,67 @@ function applyTheme() {
 function openSettingsModal() {
   renderSettings();
   document.getElementById('settingsModal').classList.add('open');
+  initMentorshipConnection();
 }
 
 function closeSettingsModal() {
   document.getElementById('settingsModal').classList.remove('open');
+}
+
+function togglePatientCloudAutoSync(checked) {
+  appSettings.cloudAutoSync = !!checked;
+  save();
+  renderSettings();
+}
+
+function toggleMentorshipAutoSync(checked) {
+  appSettings.mentorshipAutoSync = !!checked;
+  save();
+  renderSettings();
+}
+
+function renderSyncSettingsHtml() {
+  const cloudConnected = !!patientCloudMeta.connected;
+  const mentorName = mentorshipIdentity?.name ? esc(mentorshipIdentity.name) + ' 先生' : 'ログイン済み';
+  return `
+    <div class="summary-block" style="margin-bottom:12px;border-color:rgba(26,174,200,0.35);">
+      <div style="font-size:11px;font-weight:700;margin-bottom:4px;color:var(--text);">☁️ 患者データの端末間同期</div>
+      <div style="font-size:10px;color:var(--text3);line-height:1.7;margin-bottom:10px;">同じアカウントでログインしたiPhone・iPad・Mac間で更新します。患者データはご自身のSupabaseに保存され、アカウントごとに分離されます。</div>
+      ${cloudConnected ? `
+        <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:9px;">✅ 接続済み</div>
+        <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;color:var(--text2);margin-bottom:10px;">
+          入力後に自動同期
+          <input type="checkbox" ${appSettings.cloudAutoSync ? 'checked' : ''} onchange="togglePatientCloudAutoSync(this.checked)" style="accent-color:var(--accent);width:18px;height:18px;">
+        </label>
+        <div style="display:flex;gap:7px;">
+          <button onclick="manualCloudRefresh()" class="copy-btn" style="flex:1;text-align:center;padding:9px;">↻ 最新の状態に更新</button>
+          <button onclick="patientCloudSignOut()" class="btn-danger" style="width:auto;margin:0;padding:9px 12px;">ログアウト</button>
+        </div>` : `
+        <div class="form-group"><label class="form-label">メールアドレス</label><input type="email" class="form-input" id="cloudEmail" autocomplete="email"></div>
+        <div class="form-group"><label class="form-label">同期用パスワード（8文字以上）</label><input type="password" class="form-input" id="cloudPassword" autocomplete="current-password"></div>
+        <div style="display:flex;gap:7px;">
+          <button onclick="patientCloudSignIn()" class="btn-primary" style="flex:1;margin:0;">ログイン</button>
+          <button onclick="patientCloudSignUp()" class="copy-btn" style="flex:1;text-align:center;padding:10px;">初回登録</button>
+        </div>`}
+    </div>
+
+    <div class="summary-block" style="margin-bottom:12px;border-color:rgba(24,196,120,0.3);">
+      <div style="font-size:11px;font-weight:700;margin-bottom:4px;color:var(--text);">📘 メンターシップ手帳連携</div>
+      <div style="font-size:10px;color:var(--text3);line-height:1.7;margin-bottom:10px;">送信するのは手術日・分類・術式・役割・振り返り・執刀医名だけです。患者名、疾患名、年齢、カルテ番号は送信しません。</div>
+      ${mentorshipConnected ? `
+        <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:9px;">✅ ${mentorName}で接続済み</div>
+        <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;color:var(--text2);margin-bottom:10px;">
+          症例保存後に自動送信
+          <input type="checkbox" ${appSettings.mentorshipAutoSync ? 'checked' : ''} onchange="toggleMentorshipAutoSync(this.checked)" style="accent-color:var(--green);width:18px;height:18px;">
+        </label>
+        <div style="display:flex;gap:7px;">
+          <button onclick="syncAllMentorshipCases()" class="copy-btn" style="flex:1;text-align:center;padding:9px;">未送信分をまとめて送信</button>
+          <button onclick="mentorshipSignOut()" class="btn-danger" style="width:auto;margin:0;padding:9px 12px;">ログアウト</button>
+        </div>` : `
+        <div class="form-group"><label class="form-label">メンターシップ手帳のメールアドレス</label><input type="email" class="form-input" id="mentorEmail" autocomplete="email"></div>
+        <div class="form-group"><label class="form-label">メンターシップ手帳のパスワード</label><input type="password" class="form-input" id="mentorPassword" autocomplete="current-password"></div>
+        <button onclick="mentorshipSignIn()" class="btn-primary" style="margin:0;">手帳へログインして連携</button>`}
+    </div>`;
 }
 
 function renderSettings() {
@@ -6624,6 +7203,7 @@ function renderSettings() {
   `).join('');
 
   el.innerHTML = `
+    ${renderSyncSettingsHtml()}
     <!-- テーマ -->
     <div class="summary-block" style="margin-bottom:12px;">
       <div style="font-size:11px;font-weight:700;margin-bottom:14px;color:var(--text);">🎨 テーマ・カラー</div>
@@ -7308,11 +7888,17 @@ function showDailyBriefIfNeeded() {
 }
 
 // ========== INIT ==========
-seedIfEmpty();
 applyTheme();
 render();
 showSetupIfNeeded();
 showDailyBriefIfNeeded();
+initPatientCloud();
+initMentorshipConnection();
+window.addEventListener('focus', () => {
+  if (patientCloudMeta.connected && Date.now() - Number(patientCloudMeta.lastSyncAt || 0) > 180000) {
+    syncPatientCloud({ quiet: true });
+  }
+});
 </script>
 </body>
 </html>
