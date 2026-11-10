@@ -7284,7 +7284,9 @@ function toggleMentorshipAutoSync(checked) {
 
 function renderSyncSettingsHtml() {
   const cloudConnected = !!patientCloudMeta.connected;
+  const pendingCloudEmail = esc(patientCloudMeta.pendingEmail || '');
   const mentorName = mentorshipIdentity?.name ? esc(mentorshipIdentity.name) + ' 先生' : 'ログイン済み';
+  const mentorLastDate = appSettings.mentorshipLastRemoteDate ? esc(appSettings.mentorshipLastRemoteDate) : '';
   return `
     <div class="summary-block" style="margin-bottom:12px;border-color:rgba(26,174,200,0.35);">
       <div style="font-size:11px;font-weight:700;margin-bottom:4px;color:var(--text);">☁️ 患者データの端末間同期</div>
@@ -7299,25 +7301,28 @@ function renderSyncSettingsHtml() {
           <button onclick="manualCloudRefresh()" class="copy-btn" style="flex:1;text-align:center;padding:9px;">↻ 最新の状態に更新</button>
           <button onclick="patientCloudSignOut()" class="btn-danger" style="width:auto;margin:0;padding:9px 12px;">ログアウト</button>
         </div>` : `
-        <div class="form-group"><label class="form-label">メールアドレス</label><input type="email" class="form-input" id="cloudEmail" autocomplete="email"></div>
+        ${pendingCloudEmail ? `<div style="font-size:10px;color:var(--accent3);line-height:1.6;margin-bottom:9px;">⏳ ${pendingCloudEmail} へ確認メールを送信済みです。メール内のリンクを開いてください。</div>` : ''}
+        <div class="form-group"><label class="form-label">メールアドレス</label><input type="email" class="form-input" id="cloudEmail" autocomplete="email" value="${pendingCloudEmail}"></div>
         <div class="form-group"><label class="form-label">同期用パスワード（8文字以上）</label><input type="password" class="form-input" id="cloudPassword" autocomplete="current-password"></div>
         <div style="display:flex;gap:7px;">
           <button onclick="patientCloudSignIn()" class="btn-primary" style="flex:1;margin:0;">ログイン</button>
           <button onclick="patientCloudSignUp()" class="copy-btn" style="flex:1;text-align:center;padding:10px;">初回登録</button>
-        </div>`}
+        </div>
+        ${pendingCloudEmail ? `<button onclick="patientCloudResendConfirmation()" class="copy-btn" style="width:100%;text-align:center;padding:9px;margin-top:8px;">確認メールを再送</button>` : ''}`}
     </div>
 
     <div class="summary-block" style="margin-bottom:12px;border-color:rgba(24,196,120,0.3);">
       <div style="font-size:11px;font-weight:700;margin-bottom:4px;color:var(--text);">📘 メンターシップ手帳連携</div>
-      <div style="font-size:10px;color:var(--text3);line-height:1.7;margin-bottom:10px;">送信するのは手術日・分類・術式・役割・振り返り・執刀医名だけです。患者名、疾患名、年齢、カルテ番号は送信しません。</div>
+      <div style="font-size:10px;color:var(--text3);line-height:1.7;margin-bottom:10px;">送信するのは未登録の新規症例の手術日・分類・術式・役割・執刀医名だけです。手帳側の既存症例とコメントは一切更新しません。患者名、疾患名、年齢、カルテ番号も送信しません。</div>
       ${mentorshipConnected ? `
         <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:9px;">✅ ${mentorName}で接続済み</div>
+        ${mentorLastDate ? `<div style="font-size:10px;color:var(--text3);margin-bottom:9px;">手帳の最新登録日：${mentorLastDate}（これより前の症例は送信しません）</div>` : ''}
         <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;color:var(--text2);margin-bottom:10px;">
-          症例保存後に自動送信
+          未登録の新規症例だけを保存後に自動登録
           <input type="checkbox" ${appSettings.mentorshipAutoSync ? 'checked' : ''} onchange="toggleMentorshipAutoSync(this.checked)" style="accent-color:var(--green);width:18px;height:18px;">
         </label>
         <div style="display:flex;gap:7px;">
-          <button onclick="syncAllMentorshipCases()" class="copy-btn" style="flex:1;text-align:center;padding:9px;">未送信分をまとめて送信</button>
+          <button onclick="syncAllMentorshipCases()" class="copy-btn" style="flex:1;text-align:center;padding:9px;">未登録の新規症例だけを確認・登録</button>
           <button onclick="mentorshipSignOut()" class="btn-danger" style="width:auto;margin:0;padding:9px 12px;">ログアウト</button>
         </div>` : `
         <div class="form-group"><label class="form-label">メンターシップ手帳のメールアドレス</label><input type="email" class="form-input" id="mentorEmail" autocomplete="email"></div>
