@@ -4922,7 +4922,7 @@ function renderCard(c, expandByDefault=false) {
         <span class="info-label">手術手帳</span>
         <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
           <span style="font-size:10px;font-weight:700;color:${mentorState.color};">${mentorState.label}</span>
-          <button onclick="event.stopPropagation();syncCaseToMentorship('${c.id}')" style="background:rgba(26,174,200,0.12);border:1px solid rgba(26,174,200,0.35);color:var(--accent);border-radius:6px;padding:4px 9px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">📘 送信</button>
+          ${mentorState.locked ? '' : `<button onclick="event.stopPropagation();syncCaseToMentorship('${c.id}')" style="background:rgba(26,174,200,0.12);border:1px solid rgba(26,174,200,0.35);color:var(--accent);border-radius:6px;padding:4px 9px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">📘 新規登録のみ</button>`}
         </div>
       </div>` : ''}
       <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.06em;margin-top:10px;margin-bottom:6px;">チェックリスト</div>
