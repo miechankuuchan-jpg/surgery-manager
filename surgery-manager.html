@@ -2532,6 +2532,7 @@ function save() {
 // 公開してよい publishable key のみを使用。パスワードや service_role key は保存しない。
 const PATIENT_CLOUD_URL = 'https://eooskehlbrskotxgizrg.supabase.co';
 const PATIENT_CLOUD_KEY = 'sb_publishable__-Pp4_uFVjv7bdRV8H8TZg_qVsy5Utc';
+const PATIENT_CLOUD_REDIRECT_URL = 'https://miechankuuchan-jpg.github.io/surgery-manager/surgery-manager.html';
 const MENTORSHIP_URL = 'https://pbgshppiqozvskwpcilw.supabase.co';
 const MENTORSHIP_KEY = 'sb_publishable_0kUStvEZnoVqJsZbMBDymQ_fRIemRDI';
 const CLOUD_META_KEY = 'surgery_cloud_meta_v1';
@@ -2564,7 +2565,7 @@ function getPatientCloudClient() {
   if (patientCloudClient) return patientCloudClient;
   if (!window.supabase?.createClient) return null;
   patientCloudClient = window.supabase.createClient(PATIENT_CLOUD_URL, PATIENT_CLOUD_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'surgery-manager-cloud-auth' }
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit', storageKey: 'surgery-manager-cloud-auth' }
   });
   return patientCloudClient;
 }
@@ -2789,11 +2790,34 @@ async function patientCloudSignIn() {
   const client = getPatientCloudClient();
   const { error } = await client.auth.signInWithPassword({ email, password });
   document.getElementById('cloudPassword').value = '';
-  if (error) return alert('ログインできませんでした。メールアドレスとパスワードを確認してください。');
+  if (error) {
+    setCloudStatus('ログインできませんでした', 'error');
+    return alert(patientCloudAuthErrorMessage(error, 'ログイン'));
+  }
   patientCloudMeta.connected = true;
+  delete patientCloudMeta.pendingEmail;
   patientCloudMeta.revision = 0;
   persistPatientCloudMeta();
   await syncPatientCloud({ manual: true });
+}
+
+function patientCloudAuthErrorMessage(error, action = '処理') {
+  const message = String(error?.message || '');
+  if (/project.*paused|project.*inactive|fetch failed|failed to fetch|network/i.test(message))
+    return '同期サーバーに接続できません。通信状態を確認し、少し待ってからもう一度お試しください。';
+  if (/signup.*disabled|signups.*not allowed|user.*disabled/i.test(message))
+    return '現在、初回登録が停止されています。管理者に確認してください。';
+  if (/already registered|already exists|user.*exists/i.test(message))
+    return 'このメールアドレスは登録済みです。「ログイン」をお試しください。';
+  if (/password/i.test(message))
+    return 'パスワードは8文字以上で、推測されにくいものを設定してください。';
+  if (/rate limit|too many/i.test(message))
+    return '確認メールの送信回数制限に達しました。数分待ってからもう一度お試しください。';
+  if (/invalid.*email|email.*invalid/i.test(message))
+    return 'メールアドレスの形式を確認してください。';
+  if (/email.*not confirmed/i.test(message))
+    return 'メールに届いた確認リンクを開いてからログインしてください。';
+  return `${action}できませんでした。${message ? '\n' + message : '通信状態を確認してください。'}`;
 }
 
 async function patientCloudSignUp() {
@@ -2801,14 +2825,50 @@ async function patientCloudSignUp() {
   const password = document.getElementById('cloudPassword')?.value || '';
   if (!email || password.length < 8) return alert('メールアドレスと8文字以上のパスワードを入力してください。');
   const client = getPatientCloudClient();
-  const { data, error } = await client.auth.signUp({ email, password });
+  setCloudStatus('初回登録中…', 'busy');
+  const { data, error } = await client.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: PATIENT_CLOUD_REDIRECT_URL }
+  });
   document.getElementById('cloudPassword').value = '';
-  if (error) return alert('同期アカウントを作成できませんでした。' + (error.message || ''));
-  if (!data.session) return alert('確認メールを送りました。メール内のリンクを開いてからログインしてください。');
+  if (error) {
+    setCloudStatus('初回登録できませんでした', 'error');
+    return alert(patientCloudAuthErrorMessage(error, '同期アカウントを作成'));
+  }
+  if (!data.session) {
+    patientCloudMeta.connected = false;
+    patientCloudMeta.pendingEmail = email;
+    persistPatientCloudMeta();
+    setCloudStatus('確認メール送信済み', 'warn');
+    renderSettings();
+    return alert('同期アカウントの仮登録が完了しました。\n\n届いた確認メールのリンクを開くと登録が完了し、このアプリに戻ります。届かない場合は迷惑メールも確認してください。');
+  }
   patientCloudMeta.connected = true;
+  delete patientCloudMeta.pendingEmail;
   patientCloudMeta.revision = 0;
   persistPatientCloudMeta();
   await syncPatientCloud({ manual: true });
+}
+
+async function patientCloudResendConfirmation() {
+  const email = document.getElementById('cloudEmail')?.value.trim() || patientCloudMeta.pendingEmail || '';
+  if (!email) return alert('確認メールの送信先を入力してください。');
+  const client = getPatientCloudClient();
+  setCloudStatus('確認メールを再送中…', 'busy');
+  const { error } = await client.auth.resend({
+    type: 'signup',
+    email,
+    options: { emailRedirectTo: PATIENT_CLOUD_REDIRECT_URL }
+  });
+  if (error) {
+    setCloudStatus('確認メールを再送できませんでした', 'error');
+    return alert(patientCloudAuthErrorMessage(error, '確認メールを再送'));
+  }
+  patientCloudMeta.pendingEmail = email;
+  persistPatientCloudMeta();
+  setCloudStatus('確認メール送信済み', 'warn');
+  alert('確認メールを再送しました。メール内のリンクを開いてください。');
 }
 
 async function patientCloudSignOut() {
