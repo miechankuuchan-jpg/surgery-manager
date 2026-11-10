@@ -2837,6 +2837,10 @@ async function patientCloudSignUp() {
     setCloudStatus('初回登録できませんでした', 'error');
     return alert(patientCloudAuthErrorMessage(error, '同期アカウントを作成'));
   }
+  if (!data.session && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+    setCloudStatus('このメールは登録済みです', 'warn');
+    return alert('このメールアドレスは登録済みです。「ログイン」をお試しください。\n確認メールが未確認の場合は、「初回登録」ではなく確認メールの再送を行ってください。');
+  }
   if (!data.session) {
     patientCloudMeta.connected = false;
     patientCloudMeta.pendingEmail = email;
@@ -3084,12 +3088,16 @@ async function syncCaseToMentorship(caseId, options = {}) {
       c.mentorshipLinkType = 'existing';
       c.mentorshipSyncedAt = new Date().toISOString();
       delete c.mentorshipIgnoredBeforeDate;
+      appSettings.mentorshipLastScanAt = new Date().toISOString();
+      appSettings.mentorshipLastRemoteDate = remoteState.latestDate || appSettings.mentorshipLastRemoteDate || '';
       if (options.saveAfter !== false) { save(); render(); }
       if (!options.quiet) alert('同じ手術日・術式の症例がすでに手帳にあるため、送信しませんでした。既存のコメントはそのまま保存されています。');
       return 'duplicate';
     }
     if (remoteState.latestDate && payload.date < remoteState.latestDate) {
       c.mentorshipIgnoredBeforeDate = remoteState.latestDate;
+      appSettings.mentorshipLastScanAt = new Date().toISOString();
+      appSettings.mentorshipLastRemoteDate = remoteState.latestDate;
       if (options.saveAfter !== false) { save(); render(); }
       if (!options.quiet) alert(`手帳の前回登録日（${remoteState.latestDate}）より前の症例のため、送信しませんでした。`);
       return 'older';
@@ -3113,6 +3121,8 @@ async function syncCaseToMentorship(caseId, options = {}) {
     delete c.mentorshipIgnoredBeforeDate;
     remoteState.records.push({ id: recordId, data: payload });
     if (!remoteState.latestDate || payload.date > remoteState.latestDate) remoteState.latestDate = payload.date;
+    appSettings.mentorshipLastScanAt = new Date().toISOString();
+    appSettings.mentorshipLastRemoteDate = remoteState.latestDate || appSettings.mentorshipLastRemoteDate || '';
     if (options.saveAfter !== false) { save(); render(); }
     if (!options.quiet) alert('未登録の新規症例だけをメンターシップ手帳に登録しました。コメントは手帳側で入力してください。');
     return 'inserted';
