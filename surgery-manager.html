@@ -2544,6 +2544,7 @@ let patientCloudApplying = false;
 let patientCloudTimer = null;
 let patientCloudChannel = null;
 let patientCloudBusy = false;
+let patientCloudAuthListenerBound = false;
 let patientCloudMeta = (() => {
   try { return JSON.parse(localStorage.getItem(CLOUD_META_KEY) || '{}'); }
   catch (_) { return {}; }
@@ -2884,6 +2885,17 @@ async function patientCloudSignOut() {
 }
 
 async function initPatientCloud() {
+  const client = getPatientCloudClient();
+  if (client && !patientCloudAuthListenerBound) {
+    patientCloudAuthListenerBound = true;
+    client.auth.onAuthStateChange((event, session) => {
+      if (!session || !['SIGNED_IN', 'TOKEN_REFRESHED', 'INITIAL_SESSION'].includes(event)) return;
+      patientCloudMeta.connected = true;
+      delete patientCloudMeta.pendingEmail;
+      persistPatientCloudMeta();
+      setTimeout(() => syncPatientCloud({ quiet: true }), 0);
+    });
+  }
   const session = await getPatientCloudSession();
   if (!session) {
     patientCloudMeta.connected = false;
