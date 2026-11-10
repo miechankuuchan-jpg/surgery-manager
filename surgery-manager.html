@@ -5493,9 +5493,6 @@ function openEditModal(id) {
   document.getElementById('f_mentorCategory').value = c.mentorshipCategory || suggestMentorshipCategory(c.disease, c.surgery);
   document.getElementById('f_mentorRole').value = c.mentorshipRole || '';
   document.getElementById('f_mentorSurgeon').value = c.mentorshipSurgeon || '';
-  document.getElementById('f_mentorGood').value = c.mentorshipGood || '';
-  document.getElementById('f_mentorNext').value = c.mentorshipNext || '';
-  document.getElementById('f_mentorAdvice').value = c.mentorshipAdvice || '';
   document.getElementById('f_icu').checked = !!c.icu;
   document.getElementById('f_recon').checked = !!c.recon;
   // 専門医申請データ
@@ -5515,7 +5512,7 @@ function openEditModal(id) {
   const editReminderBtn = document.getElementById('editChecklistReminderBtn');
   if (editReminderBtn) editReminderBtn.style.display = 'block';
   const mentorSyncBtn = document.getElementById('mentorSyncEditBtn');
-  if (mentorSyncBtn) mentorSyncBtn.style.display = editMode === 'ope' ? 'block' : 'none';
+  if (mentorSyncBtn) mentorSyncBtn.style.display = editMode === 'ope' && !c.mentorshipRecordId ? 'block' : 'none';
   renderFreeChecklistForm();
   renderExamScheduleList();
   onSurgeryChange();
@@ -5533,7 +5530,7 @@ function openEditModal(id) {
 
 function clearForm() {
   ['f_opDate','f_admDate','f_dischargeDate','f_pathology','f_courseNotes','f_name','f_disease','f_surgery','f_time','f_team','f_items','f_memo',
-   'f_age','f_chartNo','f_facility','f_supervisorRegNoVal','f_mentorSurgeon','f_mentorGood','f_mentorNext','f_mentorAdvice'].forEach(id => {
+   'f_age','f_chartNo','f_facility','f_supervisorRegNoVal','f_mentorSurgeon'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('f_icu').checked = false;
@@ -6039,9 +6036,7 @@ function saveCase(options = {}) {
     mentorshipCategory: document.getElementById('f_mentorCategory').value,
     mentorshipRole:     document.getElementById('f_mentorRole').value,
     mentorshipSurgeon:  document.getElementById('f_mentorSurgeon').value.trim(),
-    mentorshipGood:     document.getElementById('f_mentorGood').value.trim(),
-    mentorshipNext:     document.getElementById('f_mentorNext').value.trim(),
-    mentorshipAdvice:   document.getElementById('f_mentorAdvice').value.trim(),
+    updatedAt:          new Date().toISOString(),
   };
 
   let savedId = editingId;
@@ -6050,7 +6045,7 @@ function saveCase(options = {}) {
     if (idx >= 0) { cases[idx] = { ...cases[idx], ...data }; }
   } else {
     savedId = uid();
-    cases.push({ id: savedId, ...data });
+    cases.push({ id: savedId, createdAt: new Date().toISOString(), ...data });
   }
 
   save();
