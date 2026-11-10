@@ -2911,18 +2911,51 @@ function mentorshipPayload(c) {
     cat: c.mentorshipCategory || suggestMentorshipCategory(c.disease, c.surgery),
     name: c.surgery || '',
     role: c.mentorshipRole || '',
-    good: c.mentorshipGood || '',
-    next: c.mentorshipNext || '',
-    advice: c.mentorshipAdvice || '',
     surgeon: c.mentorshipSurgeon || '',
   };
 }
 
 function mentorshipSyncState(c) {
-  if (!c.mentorshipRecordId) return { label: '未送信', color: 'var(--text3)' };
-  const current = JSON.stringify(mentorshipPayload(c));
-  if (c.mentorshipSyncSignature !== current) return { label: '変更あり・未送信', color: 'var(--accent3)' };
-  return { label: '手帳へ送信済み', color: 'var(--green)' };
+  if (c.mentorshipRecordId) return { label: '手帳に登録済み（更新しません）', color: 'var(--green)', locked: true };
+  if (c.mentorshipIgnoredBeforeDate) return { label: '前回登録より前・連携対象外', color: 'var(--text3)', locked: true };
+  return { label: '未登録の新規症例', color: 'var(--text3)', locked: false };
+}
+
+function normalizeMentorshipText(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\s　・･、。,.，．()\[]{}（）【】ー\-_\/\\]/g, '');
+}
+
+function mentorshipRemotePayload(record) {
+  return record && typeof record.data === 'object' && record.data ? record.data : (record || {});
+}
+
+function mentorshipRecordMatches(record, payload) {
+  const existing = mentorshipRemotePayload(record);
+  if (!existing.date || existing.date !== payload.date) return false;
+  const existingName = normalizeMentorshipText(existing.name);
+  const newName = normalizeMentorshipText(payload.name);
+  return !!existingName && !!newName && existingName === newName;
+}
+
+function latestMentorshipDate(records) {
+  return records
+    .map(record => mentorshipRemotePayload(record).date || '')
+    .filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date))
+    .sort()
+    .pop() || '';
+}
+
+async function loadMentorshipRemoteState(client, learnerId) {
+  const { data, error } = await client
+    .from('surgeries')
+    .select('id,data')
+    .eq('learner', learnerId);
+  if (error) throw error;
+  const records = Array.isArray(data) ? data : [];
+  return { records, latestDate: latestMentorshipDate(records) };
 }
 
 async function mentorshipSignIn() {
@@ -2968,49 +3001,113 @@ async function initMentorshipConnection() {
 }
 
 async function syncAllMentorshipCases() {
-  const targets = cases.filter(c => (c.mode || detectCaseMode(c.surgery)) === 'ope' && c.opDate && c.surgery && c.mentorshipRole && (c.mentorshipCategory || suggestMentorshipCategory(c.disease, c.surgery)));
-  if (!targets.length) return alert('送信できる手術記録がありません。各症例で手術名分類と術者/助手を入力してください。');
-  let sent = 0;
-  for (const c of targets) if (await syncCaseToMentorship(c.id, { quiet: true })) sent += 1;
-  renderSettings();
-  alert(sent === targets.length
-    ? `${sent}件の手術記録をメンターシップ手帳へ送信しました。`
-    : `${sent}件を送信しました。${targets.length - sent}件は送信できなかったため、通信状態を確認してください。`);
+  try {
+    const client = getMentorshipClient();
+    const { data: sessionData } = await client.auth.getSession();
+    if (!sessionData.session) {
+      openSettingsModal();
+      return alert('設定の「メンターシップ手帳連携」からログインしてください。');
+    }
+    const who = await refreshMentorshipConnection();
+    const remoteState = await loadMentorshipRemoteState(client, who.id);
+    const targets = cases
+      .filter(c => !c.mentorshipRecordId && (c.mode || detectCaseMode(c.surgery)) === 'ope')
+      .filter(c => c.opDate && c.surgery && c.mentorshipRole && (c.mentorshipCategory || suggestMentorshipCategory(c.disease, c.surgery)))
+      .sort((a, b) => String(a.opDate).localeCompare(String(b.opDate)));
+    if (!targets.length) return alert('連携対象の新規手術記録はありません。');
+
+    const count = { inserted: 0, duplicate: 0, older: 0, error: 0 };
+    for (const c of targets) {
+      const result = await syncCaseToMentorship(c.id, { quiet: true, remoteState, who, saveAfter: false });
+      if (count[result] !== undefined) count[result] += 1;
+      else if (result === 'already') count.duplicate += 1;
+      else count.error += 1;
+    }
+    appSettings.mentorshipLastScanAt = new Date().toISOString();
+    appSettings.mentorshipLastRemoteDate = remoteState.latestDate || appSettings.mentorshipLastRemoteDate || '';
+    save();
+    render();
+    renderSettings();
+    alert([
+      `新規登録：${count.inserted}件`,
+      `登録済みのため送信しなかった症例：${count.duplicate}件`,
+      `前回登録より前のため対象外：${count.older}件`,
+      count.error ? `送信できなかった症例：${count.error}件` : '',
+      '',
+      '既存の症例とコメントは変更していません。'
+    ].filter(Boolean).join('\n'));
+  } catch (error) {
+    console.error('Mentorship bulk sync failed', error);
+    alert('メンターシップ手帳の登録状況を確認できませんでした。通信状態とログインを確認してください。');
+  }
 }
 
 async function syncCaseToMentorship(caseId, options = {}) {
   const c = cases.find(x => x.id === caseId);
-  if (!c) return false;
+  if (!c) return 'error';
+  if (c.mentorshipRecordId) {
+    if (!options.quiet) alert('この症例はメンターシップ手帳に登録済みです。手帳側のコメントを保護するため、このアプリからは更新しません。');
+    return 'already';
+  }
   const payload = mentorshipPayload(c);
   if (!payload.date || !payload.name || !payload.cat || !payload.role) {
     if (!options.quiet) {
       openEditModal(caseId);
-      alert('手術日・術式・手術名分類・術者/助手を入力してから送信してください。');
+      alert('手術日・術式・手術名分類・術者/助手を入力してから新規登録してください。');
     }
-    return false;
+    return 'error';
   }
   try {
     const client = getMentorshipClient();
     const { data: sessionData } = await client.auth.getSession();
     if (!sessionData.session) {
       if (!options.quiet) { openSettingsModal(); alert('設定の「メンターシップ手帳連携」からログインしてください。'); }
-      return false;
+      return 'error';
     }
-    const who = await refreshMentorshipConnection();
-    const recordId = c.mentorshipRecordId || ('sm_' + String(c.id).replace(/[^a-zA-Z0-9_-]/g, ''));
-    const { error } = await client.from('surgeries').upsert({ id: recordId, learner: who.id, data: payload });
-    if (error) throw error;
+    const who = options.who || await refreshMentorshipConnection();
+    const remoteState = options.remoteState || await loadMentorshipRemoteState(client, who.id);
+    const existing = remoteState.records.find(record => mentorshipRecordMatches(record, payload));
+    if (existing) {
+      c.mentorshipRecordId = existing.id;
+      c.mentorshipLinkType = 'existing';
+      c.mentorshipSyncedAt = new Date().toISOString();
+      delete c.mentorshipIgnoredBeforeDate;
+      if (options.saveAfter !== false) { save(); render(); }
+      if (!options.quiet) alert('同じ手術日・術式の症例がすでに手帳にあるため、送信しませんでした。既存のコメントはそのまま保存されています。');
+      return 'duplicate';
+    }
+    if (remoteState.latestDate && payload.date < remoteState.latestDate) {
+      c.mentorshipIgnoredBeforeDate = remoteState.latestDate;
+      if (options.saveAfter !== false) { save(); render(); }
+      if (!options.quiet) alert(`手帳の前回登録日（${remoteState.latestDate}）より前の症例のため、送信しませんでした。`);
+      return 'older';
+    }
+    const recordId = 'sm_' + String(c.id).replace(/[^a-zA-Z0-9_-]/g, '');
+    const { error } = await client.from('surgeries').insert({ id: recordId, learner: who.id, data: payload });
+    if (error) {
+      if (error.code === '23505' || /duplicate key|already exists/i.test(error.message || '')) {
+        c.mentorshipRecordId = recordId;
+        c.mentorshipLinkType = 'existing';
+        c.mentorshipSyncedAt = new Date().toISOString();
+        if (options.saveAfter !== false) { save(); render(); }
+        if (!options.quiet) alert('この症例は登録済みのため、更新しませんでした。');
+        return 'duplicate';
+      }
+      throw error;
+    }
     c.mentorshipRecordId = recordId;
+    c.mentorshipLinkType = 'inserted';
     c.mentorshipSyncedAt = new Date().toISOString();
-    c.mentorshipSyncSignature = JSON.stringify(payload);
-    save();
-    render();
-    if (!options.quiet) alert('患者を特定できる情報を除き、手術記録をメンターシップ手帳へ送信しました。');
-    return true;
+    delete c.mentorshipIgnoredBeforeDate;
+    remoteState.records.push({ id: recordId, data: payload });
+    if (!remoteState.latestDate || payload.date > remoteState.latestDate) remoteState.latestDate = payload.date;
+    if (options.saveAfter !== false) { save(); render(); }
+    if (!options.quiet) alert('未登録の新規症例だけをメンターシップ手帳に登録しました。コメントは手帳側で入力してください。');
+    return 'inserted';
   } catch (error) {
     console.error('Mentorship sync failed', error);
-    if (!options.quiet) alert('メンターシップ手帳へ送信できませんでした。通信状態とログインを確認してください。');
-    return false;
+    if (!options.quiet) alert('メンターシップ手帳に新規登録できませんでした。既存データは変更していません。通信状態とログインを確認してください。');
+    return 'error';
   }
 }
 
