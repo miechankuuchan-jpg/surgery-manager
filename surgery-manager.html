@@ -2838,7 +2838,10 @@ async function patientCloudSignUp() {
     return alert(patientCloudAuthErrorMessage(error, '同期アカウントを作成'));
   }
   if (!data.session && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+    patientCloudMeta.pendingEmail = email;
+    persistPatientCloudMeta();
     setCloudStatus('このメールは登録済みです', 'warn');
+    renderSettings();
     return alert('このメールアドレスは登録済みです。「ログイン」をお試しください。\n確認メールが未確認の場合は、「初回登録」ではなく確認メールの再送を行ってください。');
   }
   if (!data.session) {
