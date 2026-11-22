@@ -2,11 +2,11 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="手術担当">
-<meta name="theme-color" content="#0C1320">
+<meta name="theme-color" content="#17232B">
 <title>手術担当管理</title>
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon-192.png">
@@ -975,6 +975,262 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
   margin-top: 16px;
 }
 .daily-brief-close-btn:active { opacity: 0.82; }
+
+/* Interface layer: shared surfaces, control sizes and reading hierarchy. */
+:root {
+  color-scheme: dark;
+  --radius: 16px;
+  --radius-sm: 11px;
+  --radius-xs: 7px;
+  --accent-fill: #056273;
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  --control-border: #627784;
+  --app-width: 64rem;
+  --reading-width: 54rem;
+  --edge: clamp(12px, 3vw, 28px);
+  --shadow: 0 8px 28px rgb(0 0 0 / 12%);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.55;
+  overflow-x: clip;
+}
+button, input, textarea, select { font-family: inherit; }
+input, select, textarea { min-width: 0; }
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid #ffd54d;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px #151515;
+}
+button:disabled { cursor: not-allowed; }
+
+.sticky-nav {
+  padding-top: env(safe-area-inset-top);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 7%);
+}
+.header, .tab-bar {
+  width: 100%;
+  max-width: var(--app-width);
+  margin-inline: auto;
+  padding-inline: max(var(--edge), env(safe-area-inset-left)) max(var(--edge), env(safe-area-inset-right));
+  border-bottom: 0;
+}
+.header {
+  gap: 12px;
+  padding-block: 14px 10px;
+}
+.header > div:first-child { min-width: 0; }
+.header-title {
+  font-size: clamp(1.125rem, 4vw, 1.5rem);
+  letter-spacing: -.025em;
+  overflow-wrap: anywhere;
+}
+.header-title span { color: var(--text); }
+.header-title #headerDoctorName { color: var(--accent); }
+#todayDisplay, #cloudSyncStatus {
+  font-family: inherit !important;
+  font-size: .8125rem !important;
+  font-variant-numeric: tabular-nums;
+}
+.stat-chip { font-family: inherit; font-size: .75rem; }
+.header-actions { gap: 6px; }
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--surface2);
+  color: var(--text);
+  flex-shrink: 0;
+}
+.icon-btn svg { width: 20px; height: 20px; display: block; }
+.icon-btn.primary, .btn-primary, .fab, .prep-apply-btn, .daily-brief-close-btn,
+.cal-day.today, .op-date-badge {
+  background: var(--accent-fill);
+  color: #fff;
+}
+.icon-btn.primary { border-color: transparent; }
+:is(button, div, span)[style*="background:var(--accent);color:#fff"] {
+  background: var(--accent-fill) !important;
+}
+.notif-badge { background: #a62636; font-size: .6875rem; border: 2px solid var(--surface); }
+.tab-bar {
+  padding-block: 6px 9px;
+  gap: 5px;
+  scroll-padding-inline: var(--edge);
+  scrollbar-width: thin;
+  scrollbar-color: var(--control-border) transparent;
+}
+.tab-bar::-webkit-scrollbar { display: block; height: 4px; }
+.tab-bar::-webkit-scrollbar-thumb { background: var(--control-border); border-radius: 8px; }
+.tab {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text2);
+  font-size: .875rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.tab.active {
+  background: var(--accent-soft, var(--surface2));
+  color: var(--text);
+  border-color: transparent;
+  box-shadow: inset 0 -3px var(--accent);
+  font-weight: 700;
+}
+.tab:focus-visible { outline-offset: -3px; box-shadow: inset 0 0 0 5px #151515; }
+.tab:active { background: var(--surface2); }
+
+.content, #searchBar {
+  width: 100%;
+  max-width: var(--reading-width);
+  margin-inline: auto;
+}
+.content {
+  padding: clamp(16px, 3vw, 28px) max(var(--edge), env(safe-area-inset-right))
+    calc(88px + env(safe-area-inset-bottom)) max(var(--edge), env(safe-area-inset-left));
+}
+#searchBar { padding-inline: var(--edge) !important; }
+#searchInput { font-size: 1rem !important; min-height: 36px; }
+#searchInput:focus-visible { outline: 2px solid #ffd54d !important; }
+.view-heading { font-size: 1.25rem; font-weight: 700; margin-bottom: 14px; }
+.daily-memo {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+.daily-memo label { display: block; font-size: .9375rem; font-weight: 700; margin-bottom: 8px; }
+#dailyMemoInput { display: block; resize: none; overflow: hidden; }
+.surgery-card { margin-bottom: 12px; }
+.surgery-card.is-discharged .card-status-bar { background: var(--control-border); }
+.card-status-bar { width: 4px; }
+.card-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; padding: 14px; }
+.card-header .icon-btn { width: 44px !important; height: 44px !important; font-size: .9375rem !important; }
+.card-header .icon-btn[title="全完了"] { background: var(--surface2) !important; border-color: var(--border) !important; }
+.patient-name { font-size: 1.125rem; font-weight: 700; flex-wrap: wrap; overflow-wrap: anywhere; }
+.patient-meta { font-size: .8125rem; gap: 5px; }
+.meta-tag, .days-badge, .op-date-badge { font-family: inherit; font-size: .8125rem; font-weight: 600; line-height: 1.35; }
+.meta-tag { padding: 3px 7px; max-width: 100%; overflow-wrap: anywhere; }
+.meta-tag[style*="font-size"], .card-body :is(button, span)[style*="font-size:10px"] { font-size: .8125rem !important; }
+.op-date-badge { font-variant-numeric: tabular-nums; padding: 4px 8px; }
+.op-date-badge.past { background: var(--surface2); color: var(--text2); }
+.op-date-badge.today { background: #a62636; animation: none; }
+.op-date-badge.soon { background: #805014; }
+.info-label { font-size: .8125rem; min-width: 5rem; letter-spacing: 0; }
+.info-value, .note-box, .summary-block pre { font-size: .9375rem; overflow-wrap: anywhere; }
+.team-chip, .progress-label, .date-separator-text { font-size: .8125rem; }
+.date-separator-text { font-family: inherit; letter-spacing: 0; white-space: normal; }
+.progress-bar { height: 4px; }
+.checklist { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.check-item { min-height: 44px; font-size: .875rem; padding: 7px 8px; overflow-wrap: anywhere; }
+.fab {
+  width: 56px;
+  height: 56px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  right: max(16px, calc(env(safe-area-inset-right) + 12px), calc((100% - var(--app-width)) / 2 + 12px));
+  box-shadow: var(--shadow);
+}
+
+.modal-overlay { justify-content: center; }
+.modal, .daily-brief-modal {
+  max-width: 44rem;
+  max-height: 90vh;
+  max-height: min(90dvh, calc(100dvh - env(safe-area-inset-top) - 10px));
+  overscroll-behavior-y: contain;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 22px 22px 0 0;
+  padding: 12px var(--edge) calc(24px + env(safe-area-inset-bottom));
+  box-shadow: var(--shadow);
+  overflow-wrap: anywhere;
+}
+.modal-handle, .daily-brief-handle { background: var(--control-border); margin-bottom: 16px; }
+.modal-title, .daily-brief-title { font-size: 1.25rem; line-height: 1.4; }
+.form-label, .section-divider, .daily-brief-section-title {
+  font-size: .875rem;
+  letter-spacing: 0;
+  color: var(--text2);
+}
+.form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.form-input, .import-textarea { font: inherit; }
+.form-input { min-height: 44px; border-color: var(--control-border); }
+.form-input[type="date"], .form-input[type="time"] { max-width: 100%; }
+.form-input:focus-visible, .import-textarea:focus-visible { outline: 2px solid #ffd54d; }
+.form-input::placeholder, #searchInput::placeholder { color: var(--text3); opacity: 1; }
+select.form-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23737f87' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='m3.5 6 4.5 4 4.5-4'/%3E%3C/svg%3E");
+  padding-inline-end: 34px;
+}
+:is(.btn-primary, .btn-danger, .copy-btn, .prep-apply-btn, .daily-brief-close-btn, .cal-nav-btn) {
+  min-height: 44px;
+  font-size: .875rem !important;
+}
+.copy-btn { color: var(--text); border-color: var(--control-border); }
+.checkbox-row { min-height: 44px; font-size: .9375rem; }
+.checkbox-row input { width: 18px; height: 18px; flex-shrink: 0; }
+.summary-block > div:first-child, .notif-panel-title { font-size: .9375rem !important; }
+#settingsContent .form-group :is(input, select):not([type="checkbox"], [type="color"]) { font-size: 1rem !important; }
+#settingsContent .summary-block :is(button, label) { font-size: .8125rem; }
+#settingsContent :is(input[type="text"], input[type="number"]) { max-width: 100%; }
+.daily-brief-row, .empty-state-text { font-size: .9375rem; }
+
+.cal-month-label { font-size: 1.125rem; }
+.cal-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+.cal-weekday { font-size: .8125rem; }
+.cal-day { min-height: 48px; font-size: .9375rem; padding: 5px 1px 9px; }
+.cal-day:not(.empty) { background: var(--surface); border: 1px solid var(--border); }
+.cal-day.today { background: var(--accent-fill); }
+.cal-day.selected:not(.today) { background: var(--accent-soft); border: 2px solid var(--accent); }
+.cal-day-op { font-size: .6875rem; }
+.cal-day-detail-header, .cal-task-row { font-size: .875rem; }
+
+.discharge-group { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; }
+.discharge-group-header {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap;
+  padding: 12px 14px; background: var(--surface2); border-bottom: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.discharge-week { font-size: 1rem; font-weight: 700; color: var(--accent); }
+.discharge-presentation { font-size: .875rem; font-weight: 700; color: var(--accent3); }
+.discharge-group-count { font-size: .8125rem; color: var(--text2); }
+.discharge-row { padding: 14px; border-bottom: 1px solid var(--border); }
+.discharge-row:last-child { border-bottom: 0; }
+.discharge-row-layout { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+.discharge-patient { font-size: 1rem; font-weight: 700; overflow-wrap: anywhere; }
+.discharge-meta { font-size: .875rem; color: var(--text2); margin-top: 3px; overflow-wrap: anywhere; }
+.discharge-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.discharge-controls :is(label, button), .discharge-checks label { min-height: 44px; font-size: .8125rem !important; }
+.discharge-checks label { padding: 4px 8px !important; }
+.discharge-checks > span, .discharge-controls > span { font-size: .8125rem !important; }
+.discharge-row label input { width: 16px !important; height: 16px !important; flex-shrink: 0; }
+
+@media (min-width: 720px) {
+  .modal-overlay, .daily-brief-overlay { align-items: center; padding: 20px; }
+  .modal, .daily-brief-modal { border-radius: 22px; }
+  .modal-handle, .daily-brief-handle { height: 0; }
+}
+@media (max-width: 430px) {
+  .header { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding-block: 9px 4px; }
+  .header-actions { width: 100%; }
+  .header-actions > .primary { margin-inline-start: auto; }
+  .card-header { padding: 11px; gap: 6px; }
+  .discharge-row-layout { grid-template-columns: minmax(0, 1fr); }
+  .discharge-controls { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
+}
+@media (hover: hover) {
+  .tab:not(.active):hover, .copy-btn:hover, .icon-btn:not(.primary):hover { background: var(--accent-soft); }
+  .surgery-card:hover { border-color: var(--control-border); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
 </style>
 </head>
 <body>
@@ -989,27 +1245,27 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
   </div>
   <div class="header-actions">
     <div class="icon-btn-wrap">
-      <button class="icon-btn" onclick="showNotifCenter()" title="今日のタスク">🔔</button>
+      <button class="icon-btn" onclick="showNotifCenter()" title="今日のタスク" aria-label="今日のタスク"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button>
       <span class="notif-badge" id="pendingBadge" style="display:none">!</span>
     </div>
-    <button class="icon-btn" onclick="manualCloudRefresh()" id="cloudRefreshBtn" title="最新の状態に更新">↻</button>
-    <button class="icon-btn" onclick="toggleSearch()" id="searchToggleBtn" title="検索">🔍</button>
-    <button class="icon-btn" onclick="openSettingsModal()" title="設定">⚙️</button>
-    <button class="icon-btn primary" onclick="openAddModal()" title="症例追加">＋</button>
+    <button class="icon-btn" onclick="manualCloudRefresh()" id="cloudRefreshBtn" title="最新の状態に更新" aria-label="最新の状態に更新"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 4v5h-5M4 15a8 8 0 0 0 15 2M4 9a8 8 0 0 1 14-2l2 2"/></svg></button>
+    <button class="icon-btn" onclick="toggleSearch()" id="searchToggleBtn" title="検索" aria-label="検索"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg></button>
+    <button class="icon-btn" onclick="openSettingsModal()" title="設定" aria-label="設定"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 6h5m4 0h7M4 12h9m4 0h3M4 18h3m4 0h9M11 4v4m4 2v4m-6 2v4"/></svg></button>
+    <button class="icon-btn primary" onclick="openAddModal()" title="症例追加" aria-label="症例追加"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
   </div>
 </div>
 
-<div class="tab-bar">
-  <div class="tab" onclick="switchTab('calendar', this)">📅 カレンダー</div>
-  <div class="tab active" onclick="switchTab('admitted', this)">🏥 入院中</div>
-  <div class="tab" onclick="switchTab('list', this)">症例一覧</div>
-  <div class="tab" onclick="switchTab('summary_incomplete', this)">📋 サマリ未完了</div>
-  <div class="tab" onclick="switchTab('discharge_weekly', this)">🏥 退院一覧</div>
-  <div class="tab" onclick="switchTab('knowledge', this)">📚 知識</div>
-  <div class="tab" onclick="switchTab('history', this)">🔪 手術歴</div>
-  <div class="tab" onclick="switchTab('cancer', this)">🎗 癌症例</div>
-  <div class="tab" onclick="switchTab('cert', this)">📊 申請</div>
-</div>
+<nav class="tab-bar" aria-label="画面切り替え">
+  <button type="button" class="tab" aria-pressed="false" onclick="switchTab('calendar', this)">📅 カレンダー</button>
+  <button type="button" class="tab active" aria-pressed="true" onclick="switchTab('admitted', this)">🏥 入院中</button>
+  <button type="button" class="tab" aria-pressed="false" onclick="switchTab('list', this)">症例一覧</button>
+  <button type="button" class="tab" aria-pressed="false" onclick="switchTab('summary_incomplete', this)">📋 サマリ未完了</button>
+  <button type="button" class="tab" aria-pressed="false" onclick="switchTab('discharge_weekly', this)">🏥 退院一覧</button>
+  <button type="button" class="tab" aria-pressed="false" onclick="switchTab('knowledge', this)">📚 知識</button>
+  <button type="button" class="tab" aria-pressed="false" onclick="switchTab('history', this)">🔪 手術歴</button>
+  <button type="button" class="tab" aria-pressed="false" onclick="switchTab('cancer', this)">🎗 癌症例</button>
+  <button type="button" class="tab" aria-pressed="false" onclick="switchTab('cert', this)">📊 申請</button>
+</nav>
 </div>
 
 <div id="searchBar" style="padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--border);display:none;">
@@ -1025,7 +1281,7 @@ textarea.form-input { resize: vertical; min-height: 70px; line-height: 1.6; }
   <!-- Dynamic content here -->
 </div>
 
-<button class="fab" onclick="openAddModal()">＋</button>
+<button class="fab" onclick="openAddModal()" aria-label="症例追加">＋</button>
 
 <!-- Add/Edit Modal -->
 <div class="modal-overlay" id="addModal" onclick="closeModalOnBg(event)">
@@ -3246,17 +3502,16 @@ function renderAdmitted(container) {
 
   const memoVal = (appSettings.dailyMemo || '').replace(/"/g, '&quot;');
   const memoBanner = `
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;">📝 やることメモ</div>
-      <textarea id="dailyMemoInput"
-        style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--text);font-family:inherit;resize:none;line-height:1.5;box-sizing:border-box;overflow:hidden;min-height:58px;"
+    <div class="daily-memo">
+      <label for="dailyMemoInput">📝 やることメモ</label>
+      <textarea id="dailyMemoInput" class="form-input"
         placeholder="今日のやること、申し送りなど..."
         oninput="saveDailyMemo(this.value);autoResizeTextarea(this);">${memoVal}</textarea>
     </div>`;
 
   el.innerHTML = `
-    <div style="padding:14px 14px 4px;">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">入院中 ${admitted.length}名</div>
+    <div>
+      <h1 class="view-heading">入院中 ${admitted.length}名</h1>
       ${memoBanner}
       ${examBanner}
       ${admitted.map(c => renderCard(c)).join('')}
@@ -3543,7 +3798,7 @@ function renderDischargeWeekly(el) {
       const completionBadge = completion.complete
         ? `<span style="font-size:10px;color:var(--green,#18C478);font-weight:700;white-space:nowrap;">${completion.automatic ? '✅ 完了' : '✅ 完了（手動）'}</span>`
         : `<span style="font-size:10px;color:var(--accent2);font-weight:700;white-space:nowrap;">未完了 ${completion.done}/4</span>`;
-      const completionChecksHtml = `<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:8px;">
+      const completionChecksHtml = `<div class="discharge-checks" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:8px;">
         <span style="font-size:9px;font-weight:700;color:var(--text3);margin-right:2px;">完了条件</span>
         ${completion.items.map(item => `<label style="display:flex;align-items:center;gap:3px;padding:3px 6px;border-radius:5px;border:1px solid ${item.done ? 'rgba(24,196,120,0.45)' : 'var(--border)'};background:${item.done ? 'rgba(24,196,120,0.10)' : 'var(--surface2)'};color:${item.done ? 'var(--green)' : 'var(--text3)'};font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap;">
           <input type="checkbox" aria-label="${item.label}" onchange="toggleDischargeCompletionItem('${c.id}','${item.key}',this.checked)" ${item.done ? 'checked' : ''} style="width:13px;height:13px;accent-color:var(--green);">${item.label}
@@ -3561,17 +3816,17 @@ function renderDischargeWeekly(el) {
             <span style="font-size:11px;color:var(--text2);line-height:1.4;white-space:pre-wrap;">${c.courseNotes}</span>
            </div>`
         : '';
-      return `<div style="padding:10px 12px;border-bottom:1px solid var(--border);">
-        <div style="display:flex;align-items:flex-start;gap:10px;">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:11px;font-weight:700;color:var(--text);">${c.name || '名前未設定'}</div>
-            <div style="font-size:10px;color:var(--text2);margin-top:3px;"><span style="font-weight:700;color:var(--text3);">現疾患：</span>${c.disease || '—'}</div>
-            <div style="font-size:10px;color:var(--text2);margin-top:2px;"><span style="font-weight:700;color:var(--text3);">術式：</span>${c.surgery || '—'} ／ 退院:${toDateStr(c.dischargeDate)}</div>
+      return `<div class="discharge-row">
+        <div class="discharge-row-layout">
+          <div style="min-width:0;">
+            <div class="discharge-patient">${c.name || '名前未設定'}</div>
+            <div class="discharge-meta"><strong>現疾患：</strong>${c.disease || '—'}</div>
+            <div class="discharge-meta"><strong>術式：</strong>${c.surgery || '—'} ／ 退院:${toDateStr(c.dischargeDate)}</div>
             ${completionChecksHtml}
             ${pathBadge}
             ${courseHtml}
           </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+          <div class="discharge-controls">
             ${completionBadge}
             <label style="display:flex;align-items:center;gap:4px;font-size:9px;font-weight:700;color:${completion.manual ? 'var(--green)' : 'var(--text3)'};cursor:pointer;white-space:nowrap;">
               <input type="checkbox" aria-label="手動で完了" onchange="setDischargeManualComplete('${c.id}',this.checked)" ${completion.manual ? 'checked' : ''} style="width:13px;height:13px;accent-color:var(--green);">手動完了
@@ -3582,13 +3837,13 @@ function renderDischargeWeekly(el) {
       </div>`;
     }).join('');
 
-    html += `<div style="margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
-      <div style="padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+    html += `<div class="discharge-group">
+      <div class="discharge-group-header">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;">
-          <div style="font-size:12px;font-weight:700;color:var(--accent);">${weekLabel}</div>
-          <div style="font-size:10px;font-weight:700;color:var(--accent3);white-space:nowrap;">${presentationLabel}</div>
+          <div class="discharge-week">${weekLabel}</div>
+          <div class="discharge-presentation">${presentationLabel}</div>
         </div>
-        <div style="font-size:11px;color:var(--text3);">${group.length}名退院</div>
+        <div class="discharge-group-count">${group.length}名退院</div>
       </div>
       ${rows}
     </div>`;
@@ -4908,10 +5163,7 @@ function renderCard(c, expandByDefault=false) {
     : admStatus === 'discharged' ? 'discharged'
     : 'pre';
 
-  // 退院済みはカード全体を薄く
-  const cardStyle = admStatus === 'discharged' ? 'opacity:0.55;' : '';
-
-  return `<div class="surgery-card" id="card_${c.id}" style="${cardStyle}">
+  return `<div class="surgery-card${admStatus === 'discharged' ? ' is-discharged' : ''}" id="card_${c.id}">
     <div class="card-status-bar ${barClass}"></div>
     <div class="card-inner">
     <div class="card-header" onclick="toggleCard('${c.id}')">
@@ -4934,7 +5186,7 @@ function renderCard(c, expandByDefault=false) {
           <span class="op-date-badge ${status}">${isToday(c.opDate)?'TODAY':formatOpDate(c.opDate)}</span>
           <div style="display:flex;gap:4px;align-items:center;">
             ${isPastCase ? `<button class="icon-btn" style="width:28px;height:28px;font-size:11px;background:var(--green);color:#fff;border-color:transparent;" onclick="event.stopPropagation();completeAllTasks('${c.id}')" title="全完了">✅</button>` : ''}
-            <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('${c.id}')">✏️</button>
+            <button class="icon-btn" style="width:28px;height:28px;font-size:12px" onclick="event.stopPropagation();openEditModal('${c.id}')" aria-label="症例を編集">✏️</button>
           </div>
         </div>
       </div>
@@ -7033,8 +7285,11 @@ function matchesSearch(c, q) {
 // ========== TABS ==========
 function switchTab(tab, el) {
   currentTab = tab;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  if (el) el.classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => {
+    const active = t === el;
+    t.classList.toggle('active', active);
+    t.setAttribute('aria-pressed', String(active));
+  });
   render();
 }
 
@@ -7272,16 +7527,55 @@ function confirmImport() {
 }
 
 const THEMES = {
-  dark:  { '--bg':'#07090F','--surface':'#0C1320','--surface2':'#131F34','--border':'#1B2D44','--text':'#D8E8F4','--text2':'#5E84A0','--text3':'#2E4A60' },
-  light: { '--bg':'#EFF4FB','--surface':'#FFFFFF','--surface2':'#E4EDF8','--border':'#C2D2E6','--text':'#0A1522','--text2':'#3B5368','--text3':'#7A92A8' },
-  warm:  { '--bg':'#100D09','--surface':'#1A1612','--surface2':'#241E18','--border':'#322A20','--text':'#EAE0CE','--text2':'#9A8060','--text3':'#584030' },
+  dark: {
+    '--bg':'#101920', '--surface':'#17232B', '--surface2':'#213039',
+    '--border':'#364852', '--control-border':'#788B95',
+    '--text':'#EDF4F5', '--text2':'#CBD9DD', '--text3':'#A5BBC3',
+    '--red':'#FF9DA4', '--accent2':'#FF9DA4', '--accent3':'#F1CA83', '--green':'#77D9AB', '--icu':'#F1AD83',
+  },
+  light: {
+    '--bg':'#F0F5F5', '--surface':'#FFFFFF', '--surface2':'#E8F0F1',
+    '--border':'#CFDCDF', '--control-border':'#637782',
+    '--text':'#14262E', '--text2':'#354E57', '--text3':'#4C606A',
+    '--red':'#9D2534', '--accent2':'#9D2534', '--accent3':'#76500B', '--green':'#1F684A', '--icu':'#8B431B',
+  },
+  warm: {
+    '--bg':'#181613', '--surface':'#23201B', '--surface2':'#302B24',
+    '--border':'#4A4135', '--control-border':'#928674',
+    '--text':'#FAF1E3', '--text2':'#E0D2BB', '--text3':'#C1AE94',
+    '--red':'#FFA4A4', '--accent2':'#FFA4A4', '--accent3':'#F4CC88', '--green':'#81DBAA', '--icu':'#F4AD83',
+  },
 };
+
+// Preserve the selected hue while giving accent text and solid buttons separate contrast roles.
+function readableThemeAccent(hex, backgrounds, lighten) {
+  const rgb = value => value.slice(1).match(/../g).map(part => parseInt(part, 16));
+  const luminance = channels => channels.reduce((sum, channel, i) => {
+    const s = channel / 255;
+    return sum + (s <= .04045 ? s / 12.92 : ((s + .055) / 1.055) ** 2.4) * [.2126, .7152, .0722][i];
+  }, 0);
+  const base = rgb(/^#[\da-f]{6}$/i.test(hex) ? hex : '#1AAEC8');
+  const surrounding = backgrounds.map(bg => luminance(rgb(bg)));
+  const edge = lighten ? 255 : 0;
+  for (let step = 0; step <= 100; step += 2) {
+    const color = base.map(channel => Math.round(channel + (edge - channel) * step / 100));
+    const lum = luminance(color);
+    if (surrounding.every(bg => (Math.max(bg, lum) + .05) / (Math.min(bg, lum) + .05) >= 5)) {
+      return '#' + color.map(channel => channel.toString(16).padStart(2, '0')).join('');
+    }
+  }
+  return lighten ? '#ffffff' : '#000000';
+}
 
 function applyTheme() {
   const t = THEMES[appSettings.theme] || THEMES.dark;
   const root = document.documentElement;
   Object.entries(t).forEach(([k,v]) => root.style.setProperty(k, v));
-  root.style.setProperty('--accent', appSettings.accentColor || '#1AAEC8');
+  root.style.colorScheme = t === THEMES.light ? 'light' : 'dark';
+  const accent = appSettings.accentColor || '#1AAEC8';
+  root.style.setProperty('--accent', readableThemeAccent(accent, [t['--bg'], t['--surface'], t['--surface2']], t !== THEMES.light));
+  root.style.setProperty('--accent-fill', readableThemeAccent(accent, ['#ffffff'], false));
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t['--surface']);
 }
 
 // ========== SETTINGS ==========
@@ -7382,7 +7676,7 @@ function renderSettings() {
         <div style="display:flex;gap:8px;margin-top:4px;">
           ${[['dark','🌙 ダーク'],['light','☀️ ライト'],['warm','🔥 ウォーム']].map(([val,label])=>`
             <button onclick="setTheme('${val}')" style="flex:1;padding:10px 4px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;
-              background:${appSettings.theme===val?'var(--accent)':'var(--surface2)'};
+              background:${appSettings.theme===val?'var(--accent-fill)':'var(--surface2)'};
               border:1px solid ${appSettings.theme===val?'var(--accent)':'var(--border)'};
               color:${appSettings.theme===val?'#fff':'var(--text2)'};">
               ${label}
