@@ -1211,6 +1211,38 @@ select.form-input {
 .discharge-checks > span, .discharge-controls > span { font-size: .8125rem !important; }
 .discharge-row label input { width: 16px !important; height: 16px !important; flex-shrink: 0; }
 
+.cert-section {
+  min-inline-size: 0;
+  margin: 14px 0;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.cert-section legend { padding-inline: 5px; font-weight: 700; }
+.cert-note { margin-block: 6px 10px; color: var(--text2); font-size: .875rem; overflow-wrap: anywhere; }
+.cert-category-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin-bottom: 14px; }
+.cert-category-grid .checkbox-row {
+  min-width: 0; font-size: .875rem; line-height: 1.35; padding: 5px 7px; overflow-wrap: anywhere;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2);
+}
+.cert-category-grid .checkbox-row:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.cert-actions, .cert-case-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.cert-actions { margin-bottom: 12px; }
+.cert-actions :is(button.copy-btn, button.btn-primary), .cert-case-actions button { margin: 0; width: auto; }
+.cert-actions button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); font-weight: 700; }
+.cert-actions button:disabled { opacity: .6; }
+.cert-cases { display: grid; gap: 8px; }
+.cert-case { padding: 8px 14px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.cert-case-actions { justify-content: space-between; font-size: .875rem; }
+.cert-ready { color: var(--green); }
+.cert-needs-input { color: var(--accent3); }
+.cert-count-list { list-style: none; }
+.cert-count-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; border-top: 1px solid var(--border); padding: 8px 0; font-size: .9375rem; }
+.cert-count-row span:last-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cert-subcount { padding-inline-start: 12px; color: var(--text2); font-size: .8125rem; }
+#certCopyStatus { color: var(--text2); }
+
 @media (min-width: 720px) {
   .modal-overlay, .daily-brief-overlay { align-items: center; padding: 20px; }
   .modal, .daily-brief-modal { border-radius: 22px; }
@@ -1498,17 +1530,46 @@ select.form-input {
 
     <!-- タブ2: 専門医申請データ -->
     <div id="formTab_cert" style="display:none;">
-    <div style="font-size:11px;color:var(--text3);margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);line-height:1.6;">
-      📌 専門医機構への症例提出用データです。<br>年月日は入院日が自動適用されます。
-    </div>
+    <p class="cert-note">Excelの「管理経験登録」「基本手術登録」用です。未入力でも症例は保存できます。</p>
+    <fieldset class="cert-section">
+      <legend>管理経験登録</legend>
+      <p class="cert-note">該当する分類をすべて選択できます。Excelでは分類ごとに1行になります。</p>
+      <div id="f_certManagementCategories" class="cert-category-grid"></div>
+      <label class="form-label" for="f_certExperienceDate">管理経験の年月日（任意）</label>
+      <input type="date" class="form-input" id="f_certExperienceDate" aria-describedby="certExperienceDateHelp">
+      <p id="certExperienceDateHelp" class="cert-note">未入力なら入院日、入院日がなければオペ日を使用します。入院日がない外来症例はここに受診日を入力してください。</p>
+    </fieldset>
+    <fieldset class="cert-section">
+      <legend>基本手術登録</legend>
+      <p class="cert-note">経験した手術のみ設定してください。年月日はオペ日を使用します。</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="f_certSurgeryCategory">手術名分類</label>
+          <select class="form-input" id="f_certSurgeryCategory" onchange="setCertSurgeryGroupOptions()"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f_certSurgeryRole">術者・助手</label>
+          <select class="form-input" id="f_certSurgeryRole">
+            <option value="">— 未選択 —</option>
+            <option value="術者">術者</option>
+            <option value="助手">助手</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" id="certSurgeryGroupBox" hidden>
+        <label class="form-label" for="f_certSurgeryGroup">手術の内訳（集計用）</label>
+        <select class="form-input" id="f_certSurgeryGroup"></select>
+      </div>
+    </fieldset>
+    <div class="section-divider">両シートの共通情報</div>
 
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">年齢</label>
+        <label class="form-label" for="f_age">年齢</label>
         <input type="number" class="form-input" id="f_age" placeholder="65" min="0" max="130" style="text-align:right;">
       </div>
       <div class="form-group">
-        <label class="form-label">性別</label>
+        <label class="form-label" for="f_gender">性別</label>
         <select class="form-input" id="f_gender">
           <option value="">—</option>
           <option value="男">男性</option>
@@ -1519,7 +1580,7 @@ select.form-input {
 
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">外来・入院</label>
+        <label class="form-label" for="f_outInpatient">外来・入院</label>
         <select class="form-input" id="f_outInpatient">
           <option value="">—</option>
           <option value="入院">入院</option>
@@ -1527,13 +1588,13 @@ select.form-input {
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">カルテ番号</label>
+        <label class="form-label" for="f_chartNo">カルテ番号</label>
         <input type="text" class="form-input" id="f_chartNo" placeholder="12345678">
       </div>
     </div>
 
     <div class="form-group">
-      <label class="form-label">研修施設名</label>
+      <label class="form-label" for="f_facility">研修施設名</label>
       <input type="text" class="form-input" id="f_facility" list="trainingFacilityOptions" placeholder="研修施設を選択または入力">
       <datalist id="trainingFacilityOptions">
         <option value="愛媛大学医学部附属病院"></option>
@@ -1541,7 +1602,7 @@ select.form-input {
     </div>
 
     <div class="form-group">
-      <label class="form-label">指導医名</label>
+      <label class="form-label" for="f_supervisor">指導医名</label>
       <select class="form-input" id="f_supervisor" onchange="onSupervisorChange(this)" style="font-size:13px;">
         <option value="">— 指導医を選択 —</option>
       </select>
@@ -2638,7 +2699,9 @@ let currentExamSchedules = []; // 編集中の検査スケジュール
 let selectedExamType = 'blood'; // 現在選択中の検査タイプ
 let certDateFrom = '';          // 専門医申請一覧の開始日
 let certDateTo = '';            // 専門医申請一覧の終了日
-let certExcludedIds = new Set();// 専門医申請から手動で外した症例ID
+let certView = 'management';
+const certExcludedIds = { management: new Set(), surgery: new Set() };
+const certStartNos = { management: '', surgery: '' };
 
 // ========== 病棟業務 週間スケジュール ==========
 // dow: 0=日, 1=月, 2=火, 3=水, 4=木, 5=金, 6=土
@@ -4409,35 +4472,153 @@ function copyCancerTSV() {
 }
 
 // ========== 専門医申請エクスポート ==========
-function getCertCaseDate(c) {
-  return c.admDate || c.opDate || '';
+const CERT_MANAGEMENT = [
+  ['難聴・中耳炎',25], ['めまい・平衡障害',20], ['顔面神経麻痺',5], ['アレルギー性鼻炎',10],
+  ['鼻・副鼻腔炎',10], ['外傷・鼻出血',10], ['扁桃感染症',10], ['嚥下障害',10],
+  ['口腔・咽頭腫瘍',10], ['喉頭腫瘍',10], ['音声言語障害',10], ['呼吸障害',10],
+  ['頭頸部良性腫瘍',10], ['頭頸部悪性腫瘍',20], ['リハビリテーション',10], ['緩和医療',5],
+];
+const CERT_SURGERY = [
+  { name:'耳科手術', minimum:20, groups:[] },
+  { name:'鼻科手術', minimum:40, groups:[] },
+  { name:'口腔咽喉頭手術', minimum:40, groups:[
+    ['tonsil','扁桃摘出術',20], ['oral','舌、口腔、咽頭腫瘍摘出術等',5],
+    ['larynx','喉頭微細手術、嚥下機能改善、誤嚥防止、音声機能改善手術',15],
+  ]},
+  { name:'頭頸部腫瘍手術', minimum:30, groups:[
+    ['neck','頸部郭清術',10], ['tumor','頭頸部腫瘍摘出術（唾液腺、甲状腺、喉頭、頸部腫瘤等）',20],
+  ]},
+];
+const CERT_EXPORT = {
+  management: { sheet:'管理経験登録', first:3, dateLabel:'管理経験日',
+    headers:['疾患名分類','疾患名','術式','年月日','年齢','性別','カルテ番号','外来・入院','研修施設名','指導医名','指導医登録番号'] },
+  surgery: { sheet:'基本手術登録', first:4, dateLabel:'オペ日',
+    headers:['手術名分類','手術名','年月日','年齢','性別','カルテ番号','術者・助手','研修施設名','指導医名','指導医登録番号'] },
+};
+
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function getCertCasesInRange() {
-  return cases.filter(function(c) {
-    var date = getCertCaseDate(c);
-    if ((certDateFrom || certDateTo) && !date) return false;
-    if (certDateFrom && date < certDateFrom) return false;
-    if (certDateTo && date > certDateTo) return false;
-    return true;
-  }).sort(function(a, b) {
-    var da = getCertCaseDate(a);
-    var db = getCertCaseDate(b);
-    return da > db ? 1 : da < db ? -1 : 0;
-  });
+function certAttr(value) {
+  return esc(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function getSelectedCertCases() {
-  return getCertCasesInRange().filter(function(c) {
-    return !certExcludedIds.has(String(c.id));
-  });
+function getCertManagementCategories(c) {
+  const values = Array.isArray(c.certManagementCategories) ? c.certManagementCategories : [];
+  return CERT_MANAGEMENT.map(([name]) => name).filter(name => values.includes(name));
+}
+
+function getCertSurgeryCategory(c) {
+  return CERT_SURGERY.find(x => x.name === c.certSurgeryCategory);
+}
+
+function setCertSurgeryGroupOptions(savedGroup = '') {
+  const category = document.getElementById('f_certSurgeryCategory').value;
+  const groups = getCertSurgeryCategory({ certSurgeryCategory: category })?.groups || [];
+  const select = document.getElementById('f_certSurgeryGroup');
+  select.replaceChildren(new Option('— 未選択 —', ''), ...groups.map(([key, label]) => new Option(label, key)));
+  if (groups.some(([key]) => key === savedGroup)) select.value = savedGroup;
+  document.getElementById('certSurgeryGroupBox').hidden = groups.length === 0;
+}
+
+function fillCertClassificationForm(c = {}) {
+  const selected = getCertManagementCategories(c);
+  document.getElementById('f_certManagementCategories').innerHTML = CERT_MANAGEMENT.map(([label]) =>
+    '<label class="checkbox-row"><input type="checkbox" value="' + certAttr(label) + '"' +
+    (selected.includes(label) ? ' checked' : '') + '>' + esc(label) + '</label>'
+  ).join('');
+  document.getElementById('f_certExperienceDate').value = c.certExperienceDate || '';
+  const category = document.getElementById('f_certSurgeryCategory');
+  category.replaceChildren(new Option('— 未選択 —', ''), ...CERT_SURGERY.map(x => new Option(x.name, x.name)));
+  category.value = getCertSurgeryCategory(c)?.name || '';
+  document.getElementById('f_certSurgeryRole').value = c.certSurgeryRole || '';
+  setCertSurgeryGroupOptions(c.certSurgeryGroup);
+}
+
+function getCertCaseDate(c, view = 'management') {
+  return view === 'surgery' ? c.opDate || '' : c.certExperienceDate || c.admDate || c.opDate || '';
+}
+
+function isCertOperation(c) {
+  return (c.mode || detectCaseMode(c.surgery || '')) === 'ope';
+}
+
+function isCertDate(date) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  const parsed = new Date(date + 'T00:00:00Z');
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
+}
+
+function getCertCasesInRange(view) {
+  return cases.filter(c => {
+    if (view === 'surgery' && (!isCertOperation(c) || !(c.certSurgeryCategory || (c.opDate && c.surgery)))) return false;
+    const date = getCertCaseDate(c, view);
+    return (!(certDateFrom || certDateTo) || !!date) &&
+      (!certDateFrom || date >= certDateFrom) && (!certDateTo || date <= certDateTo);
+  }).sort((a,b) => getCertCaseDate(a, view).localeCompare(getCertCaseDate(b, view)));
+}
+
+function getCertEntry(c, view, today = toISODate(new Date())) {
+  const date = getCertCaseDate(c, view);
+  const validDate = isCertDate(date);
+  const elapsed = validDate && date <= today;
+  const category = getCertSurgeryCategory(c);
+  const categories = view === 'management' ? getCertManagementCategories(c) : category ? [category.name] : [];
+  const missing = [];
+  const field = (value, label) => {
+    const text = String(value ?? '').trim();
+    if (!text) missing.push(label);
+    return text;
+  };
+  if (!categories.length) missing.push(view === 'management' ? '疾患名分類' : '手術名分類');
+  if (!validDate) missing.push(view === 'management' ? '管理経験日' : 'オペ日');
+  else if (!elapsed) missing.push('実施日が未来');
+  const age = String(c.age ?? '').trim();
+  if (!/^\d{1,3}$/.test(age) || +age > 130) missing.push('年齢');
+  if (!['男','女'].includes(c.gender)) missing.push('性別');
+  const chartNo = field(c.chartNo, 'カルテ番号');
+  const facility = field(c.facility || appSettings.defaultFacility, '研修施設名');
+  const supervisor = field(c.supervisorName, '指導医名');
+  const regNo = field(c.supervisorRegNo, '指導医登録番号');
+  const excelDate = date.replace(/-/g, '/');
+  const surgery = String(c.surgery || '').trim();
+  let data;
+  if (view === 'management') {
+    const setting = c.outInpatient || (c.admDate ? '入院' : '');
+    if (!['外来','入院'].includes(setting)) missing.push('外来・入院');
+    data = [field(c.disease, '疾患名'), isCertOperation(c) ? surgery : '', excelDate,
+      age, c.gender, chartNo, setting, facility, supervisor, regNo];
+  } else {
+    if (!isCertOperation(c)) missing.push('手術症例ではない');
+    if (!surgery) missing.push('手術名');
+    if (!['術者','助手'].includes(c.certSurgeryRole)) missing.push('術者・助手');
+    data = [surgery, excelDate, age, c.gender, chartNo, c.certSurgeryRole, facility, supervisor, regNo];
+  }
+  return {
+    categories, date, missing, elapsed,
+    rows: missing.length ? [] : categories.map(label => [label, ...data]),
+  };
+}
+
+function certExcelCell(value, identifier = false) {
+  const text = String(value ?? '').replace(/[\t\r\n]+/g, ' ').trim();
+  // Excelで式になり得る値を文字列化。番号の先頭ゼロも保護する。
+  return /^[=+\-@]/.test(text) || (identifier && /^0\d/.test(text)) ? "'" + text : text;
+}
+
+function buildCertClipboard(view, rows, start = '') {
+  const meta = CERT_EXPORT[view];
+  return rows.map((row, i) => {
+    const cells = row.map((value, col) => certExcelCell(value, ['カルテ番号','指導医登録番号'].includes(meta.headers[col])));
+    if (start !== '') cells.unshift(String(Number(start) + i));
+    return cells.join('\t');
+  }).join('\n');
 }
 
 function setCertDateRange() {
-  var fromEl = document.getElementById('certDateFrom');
-  var toEl = document.getElementById('certDateTo');
-  var from = fromEl ? fromEl.value : '';
-  var to = toEl ? toEl.value : '';
+  const from = document.getElementById('certDateFrom').value;
+  const to = document.getElementById('certDateTo').value;
   if (from && to && from > to) {
     alert('開始日は終了日以前にしてください');
     renderCertExport(document.getElementById('mainContent'));
@@ -4449,192 +4630,179 @@ function setCertDateRange() {
 }
 
 function clearCertDateRange() {
-  certDateFrom = '';
-  certDateTo = '';
+  certDateFrom = certDateTo = '';
+  renderCertExport(document.getElementById('mainContent'));
+}
+
+function setCertView(view) {
+  certView = view;
   renderCertExport(document.getElementById('mainContent'));
 }
 
 function toggleCertCaseSelection(id, checked) {
-  if (checked) certExcludedIds.delete(id);
-  else certExcludedIds.add(id);
+  const excluded = certExcludedIds[certView];
+  if (checked) excluded.delete(id);
+  else excluded.add(id);
   updateCertSelectionSummary();
 }
 
 function setAllVisibleCertCases(checked) {
-  getCertCasesInRange().forEach(function(c) {
-    var id = String(c.id);
-    if (checked) certExcludedIds.delete(id);
-    else certExcludedIds.add(id);
+  getCertCasesInRange(certView).forEach(c => {
+    const id = String(c.id);
+    if (checked) certExcludedIds[certView].delete(id);
+    else certExcludedIds[certView].add(id);
   });
   renderCertExport(document.getElementById('mainContent'));
 }
 
+function getCertExportSelection(view) {
+  const visible = getCertCasesInRange(view);
+  const selected = visible.filter(c => !certExcludedIds[view].has(String(c.id)));
+  const entries = selected.map(c => getCertEntry(c, view));
+  return {
+    visible: visible.length, selected: selected.length,
+    ready: entries.filter(entry => entry.rows.length).length,
+    rows: entries.flatMap(entry => entry.rows),
+  };
+}
+
 function updateCertSelectionSummary() {
-  var visible = getCertCasesInRange();
-  var selected = visible.filter(function(c) { return !certExcludedIds.has(String(c.id)); });
-  var countEl = document.getElementById('certSelectionCount');
-  if (countEl) countEl.textContent = selected.length + ' / ' + visible.length + '件を選択中';
-  var copyBtn = document.getElementById('certCopyBtn');
-  if (copyBtn) copyBtn.textContent = '📋 選択した' + selected.length + '件をTSVコピー';
-  var allBox = document.getElementById('certSelectAllBox');
-  if (allBox) {
-    allBox.checked = visible.length > 0 && selected.length === visible.length;
-    allBox.indeterminate = selected.length > 0 && selected.length < visible.length;
+  const info = getCertExportSelection(certView);
+  const summary = document.getElementById('certSelectionCount');
+  const button = document.getElementById('certCopyBtn');
+  const status = document.getElementById('certCopyStatus');
+  const manual = document.getElementById('certManualCopy');
+  if (status) status.textContent = '';
+  if (manual) { manual.value = ''; manual.hidden = true; }
+  if (summary) summary.textContent = '選択 ' + info.selected + ' / ' + info.visible + '症例・コピー可 ' + info.ready +
+    '症例' + (info.selected > info.ready ? '・対象外 ' + (info.selected - info.ready) + '症例' : '');
+  if (button) {
+    button.disabled = info.rows.length === 0;
+    button.textContent = 'Excel用に ' + info.rows.length + '行コピー';
   }
+}
+
+function getCertExperienceCounts() {
+  const today = toISODate(new Date());
+  const management = getCertCasesInRange('management').filter(c => {
+    const date = getCertCaseDate(c);
+    return isCertDate(date) && date <= today;
+  });
+  const surgery = getCertCasesInRange('surgery').filter(c =>
+    isCertDate(c.opDate || '') && c.opDate <= today && String(c.surgery || '').trim() && ['術者','助手'].includes(c.certSurgeryRole));
+  return {
+    management: CERT_MANAGEMENT.map(([label, minimum]) =>
+      ({ label, minimum, count: management.filter(c => getCertManagementCategories(c).includes(label)).length })),
+    surgery: CERT_SURGERY.map(category => {
+      const group = surgery.filter(c => c.certSurgeryCategory === category.name);
+      const detail = category.groups.map(([key, label, minimum]) =>
+        ({ label, minimum, count: group.filter(c => c.certSurgeryGroup === key).length }));
+      return {
+        label: category.name, minimum: category.minimum, count: group.length, detail,
+        unassigned: detail.length ? group.length - detail.reduce((sum, d) => sum + d.count, 0) : 0,
+      };
+    }),
+  };
+}
+
+function renderCertExperienceCounts() {
+  const counts = getCertExperienceCounts();
+  const line = (item, subtype = false) =>
+    '<li class="cert-count-row' + (subtype ? ' cert-subcount' : '') + '"><span>' + esc(item.label) +
+    '</span><span><strong>' + item.count + '</strong> / ' + item.minimum + '例</span></li>';
+  return '<p class="cert-note">指定期間の経験件数 ／ Excelの基準例数。コピーでの選択や共通情報の入力状況には左右されません。未来の日付は数えません。</p>' +
+    '<div class="summary-block"><h3>疾患の管理経験</h3><p class="cert-note">同一症例は該当分類ごとに1例ずつ計上。</p><ul class="cert-count-list">' +
+    counts.management.map(item => line(item)).join('') + '</ul></div>' +
+    '<div class="summary-block"><h3>基本的手術手技</h3><p class="cert-note">オペ日と術者・助手が設定された手術を、分類ごとに1症例1例で計上。</p><ul class="cert-count-list">' +
+    counts.surgery.map(item => line(item) + item.detail.map(sub => line(sub, true)).join('') +
+      (item.unassigned ? '<li class="cert-count-row cert-subcount"><span>内訳未選択</span><span>' + item.unassigned + '例</span></li>' : '')
+    ).join('') + '</ul></div>';
 }
 
 function renderCertExport(el) {
-  var headers = ['疾患名','術式','年月日','年齢','性別','カルテ番号','外来・入院','研修施設名','指導医名','指導医登録番号'];
-  var filteredCases = getCertCasesInRange();
-  var selectedCount = filteredCases.filter(function(c) { return !certExcludedIds.has(String(c.id)); }).length;
-  var allVisibleSelected = filteredCases.length > 0 && selectedCount === filteredCases.length;
+  if (!el) return;
+  const meta = CERT_EXPORT[certView];
+  const isSummary = certView === 'summary';
+  const tabs = [...Object.entries(CERT_EXPORT).map(([key, val]) => [key, val.sheet]), ['summary','分類別集計']];
+  const tabButtons = tabs.map(([key, label]) =>
+    '<button type="button" class="copy-btn" data-view="' + key + '" aria-pressed="' + (certView === key) +
+    '" onclick="setCertView(this.dataset.view)">' + label + '</button>'
+  ).join('');
+  el.innerHTML = '<h1 class="view-heading">専門医申請データ一覧</h1>' +
+    '<div class="cert-actions" aria-label="申請画面の切り替え">' + tabButtons + '</div>' +
+    '<section class="summary-block"><h3>申請期間</h3><p class="cert-note">' +
+    (isSummary ? '管理経験は管理経験日、基本手術はオペ日で集計します。年度を集計するときは対象の日付を指定してください。' : meta.dateLabel + 'で絞り込みます。') +
+    '</p><div class="form-row"><label>開始日<input type="date" class="form-input" id="certDateFrom" value="' + certAttr(certDateFrom) +
+    '" onchange="setCertDateRange()"></label><label>終了日<input type="date" class="form-input" id="certDateTo" value="' + certAttr(certDateTo) +
+    '" onchange="setCertDateRange()"></label></div><button class="copy-btn" onclick="clearCertDateRange()">全期間に戻す</button></section>' +
+    (isSummary ? renderCertExperienceCounts() : renderCertCopySection(certView));
+  if (!isSummary) updateCertSelectionSummary();
+}
 
-  var html = '<div style="padding:14px;">';
-  html += '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">📊 専門医申請データ一覧</div>';
-  html += '<div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5;">申請期間を指定し、申請する症例だけにチェックを入れてください。選択した症例だけをExcelへコピーできます。</div>';
+function renderCertCopySection(view) {
+  const meta = CERT_EXPORT[view];
+  const records = getCertCasesInRange(view);
+  return '<section class="summary-block"><h3>Excelに貼り付け</h3>' +
+    '<p class="cert-note">「' + meta.sheet + '」の最初の空行（' + meta.first + '行目以降）の<strong>B列</strong>に貼り付けます。見出しは含みません。' +
+    (view === 'management' ? '複数の分類を選んだ症例は、分類だけを変えて縦に並べます。' : '手術症例のみ対象です。') +
+    '入力不足・未来の症例はコピーしません。</p>' +
+    '<label class="form-label" for="certStartNo">連番の開始番号（任意）</label>' +
+    '<input type="number" id="certStartNo" class="form-input" min="1" step="1" inputmode="numeric" placeholder="連番が不要なら空欄" value="' + certAttr(certStartNos[view]) +
+    '" oninput="certStartNos[certView]=this.value">' +
+    '<p class="cert-note">番号を入力した場合は<strong>A列</strong>から貼り付けます。</p>' +
+    '<div class="cert-actions"><button class="btn-primary" id="certCopyBtn" onclick="copyCertTSV()"></button>' +
+    '<button class="copy-btn" onclick="setAllVisibleCertCases(true)">すべて選択</button>' +
+    '<button class="copy-btn" onclick="setAllVisibleCertCases(false)">すべて解除</button></div>' +
+    '<p id="certSelectionCount" class="cert-note" aria-live="polite"></p>' +
+    '<div id="certCopyStatus" role="status"></div>' +
+    '<textarea id="certManualCopy" class="form-input" aria-label="手動コピー用データ" readonly hidden></textarea>' +
+    '</section>' +
+    (records.length ? '<div class="cert-cases">' + records.map(c => {
+      const entry = getCertEntry(c, view);
+      const id = certAttr(c.id);
+      const title = esc(c.name || c.disease || '症例');
+      const detail = [entry.date, view === 'surgery' ? c.surgery : c.disease, ...entry.categories]
+        .filter(Boolean).map(esc).join(' ／ ');
+      return '<article class="cert-case">' +
+        '<label class="checkbox-row"><input type="checkbox" aria-label="' + certAttr(c.name || '症例') + 'を選択" data-id="' + id + '"' +
+        (certExcludedIds[view].has(String(c.id)) ? '' : ' checked') +
+        ' onchange="toggleCertCaseSelection(this.dataset.id,this.checked)"><strong>' + title + '</strong></label>' +
+        '<div class="cert-note">' + detail + '</div><div class="cert-case-actions">' +
+        '<span class="' + (entry.rows.length ? 'cert-ready' : 'cert-needs-input') + '">' +
+        (entry.rows.length ? 'コピー可・' + entry.rows.length + '行' : '対象外：' + esc(entry.missing.join('、'))) +
+        '</span><button class="copy-btn" data-id="' + id + '" onclick="openCertCaseEdit(this.dataset.id)">申請項目を編集</button></div></article>';
+    }).join('') + '</div>' : '<p class="empty-state">指定期間に該当する症例がありません。</p>');
+}
 
-  // 申請期間
-  html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">';
-  html += '<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px;">📅 申請期間（入院日／未入力時はオペ日）</div>';
-  html += '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end;">';
-  html += '<label style="display:block;"><span style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;">開始日</span><input type="date" id="certDateFrom" value="' + certDateFrom + '" onchange="setCertDateRange()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 8px;color:var(--text);font-family:inherit;font-size:12px;"></label>';
-  html += '<span style="font-size:12px;color:var(--text3);padding-bottom:10px;">〜</span>';
-  html += '<label style="display:block;"><span style="display:block;font-size:10px;color:var(--text3);margin-bottom:4px;">終了日</span><input type="date" id="certDateTo" value="' + certDateTo + '" onchange="setCertDateRange()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 8px;color:var(--text);font-family:inherit;font-size:12px;"></label>';
-  html += '</div>';
-  html += '<button onclick="clearCertDateRange()" style="margin-top:8px;width:100%;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:7px;padding:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">全期間に戻す</button>';
-  html += '</div>';
+function openCertCaseEdit(id) {
+  openEditModal(id);
+  switchFormTab('cert');
+}
 
-  // 選択操作
-  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">';
-  html += '<button onclick="setAllVisibleCertCases(true)" style="background:rgba(26,174,200,0.12);color:var(--accent);border:1px solid rgba(26,174,200,0.35);border-radius:7px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">すべて選択</button>';
-  html += '<button onclick="setAllVisibleCertCases(false)" style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:7px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">すべて解除</button>';
-  html += '<span id="certSelectionCount" style="margin-left:auto;font-size:11px;font-weight:700;color:var(--accent);">' + selectedCount + ' / ' + filteredCases.length + '件を選択中</span>';
-  html += '</div>';
-
-  // コピーボタン
-  html += '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">';
-  html += '<button onclick="copyCertTSV()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;" id="certCopyBtn">📋 選択した' + selectedCount + '件をTSVコピー</button>';
-  html += '<button onclick="copyCertTSVWithHeader()" style="background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;" id="certCopyBtnH">📋 ヘッダー付きでコピー</button>';
-  html += '</div>';
-
-  if (filteredCases.length === 0) {
-    html += '<div style="text-align:center;padding:40px;color:var(--text3);">' + (cases.length ? '指定期間に該当する症例がありません' : '症例が登録されていません') + '</div>';
-    html += '</div>';
-    el.innerHTML = html;
+async function copyCertTSV() {
+  const view = certView;
+  const { rows } = getCertExportSelection(view);
+  if (!rows.length) return;
+  const start = certStartNos[view];
+  if (start !== '' && (!/^[1-9]\d*$/.test(start) || !Number.isSafeInteger(Number(start) + rows.length - 1))) {
+    alert('連番の開始番号には1以上の整数を入力してください。');
     return;
   }
-
-  // テーブル
-  html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">';
-  html += '<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:700px;">';
-  // ヘッダー行
-  html += '<thead><tr>';
-  html += '<th style="background:var(--surface2);border:1px solid var(--border);padding:7px 8px;text-align:center;"><input type="checkbox" id="certSelectAllBox" onchange="setAllVisibleCertCases(this.checked)" ' + (allVisibleSelected ? 'checked' : '') + ' aria-label="表示中の症例をすべて選択" style="width:17px;height:17px;accent-color:var(--accent);"></th>';
-  html += '<th style="background:var(--surface2);border:1px solid var(--border);padding:7px 10px;color:var(--text3);font-weight:700;font-size:10px;white-space:nowrap;text-align:left;">No.</th>';
-  headers.forEach(function(h) {
-    html += '<th style="background:var(--surface2);border:1px solid var(--border);padding:7px 10px;color:var(--text3);font-weight:700;font-size:10px;white-space:nowrap;text-align:left;">' + h + '</th>';
-  });
-  html += '</tr></thead>';
-
-  // データ行
-  html += '<tbody>';
-  filteredCases.forEach(function(c, idx) {
-    var rowBg = idx % 2 === 0 ? 'var(--surface)' : 'var(--surface2)';
-    var certFilled = c.age || c.gender || c.chartNo || c.supervisorName;
-    var rowStyle = 'background:' + rowBg + ';' + (certFilled ? '' : 'opacity:0.55;');
-    var jsId = String(c.id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    var selected = !certExcludedIds.has(String(c.id));
-    html += '<tr style="' + rowStyle + '">';
-    html += '<td style="border:1px solid var(--border);padding:7px 8px;text-align:center;"><input type="checkbox" onchange="toggleCertCaseSelection(\'' + jsId + '\',this.checked)" ' + (selected ? 'checked' : '') + ' aria-label="申請対象に含める" style="width:17px;height:17px;accent-color:var(--accent);"></td>';
-    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text3);text-align:center;">' + (idx + 1) + '</td>';
-    // 疾患名
-    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);white-space:nowrap;">' + esc(c.disease || '') + '</td>';
-    // 術式（オペ症例のみ）
-    var surgStr = (c.mode === 'ope') ? (c.surgery || '') : '';
-    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);white-space:nowrap;">' + esc(surgStr) + '</td>';
-    // 年月日
-    var dateStr = c.admDate || c.opDate || '';
-    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);white-space:nowrap;">' + esc(dateStr) + '</td>';
-    // 年齢
-    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);text-align:center;">' + esc(c.age || '') + '</td>';
-    // 性別
-    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);text-align:center;">' + esc(c.gender || '') + '</td>';
-    // カルテ番号
-    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);">' + esc(c.chartNo || '') + '</td>';
-    // 外来・入院
-    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);text-align:center;">' + esc(c.outInpatient || '') + '</td>';
-    // 研修施設名
-    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);">' + esc(c.facility || appSettings.defaultFacility || '') + '</td>';
-    // 指導医名
-    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);white-space:nowrap;">' + esc(c.supervisorName || '') + '</td>';
-    // 指導医登録番号
-    html += '<td style="border:1px solid var(--border);padding:7px 10px;color:var(--text);">' + esc(c.supervisorRegNo || '') + '</td>';
-    html += '</tr>';
-  });
-  html += '</tbody></table></div>';
-
-  // 入力状況サマリー
-  var filled = filteredCases.filter(function(c) { return c.age || c.chartNo || c.supervisorName; }).length;
-  html += '<div style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--text3);">';
-  html += '申請対象: <span style="color:var(--accent);font-weight:700;">' + selectedCount + '件</span> ／ 期間内: <span style="font-weight:700;">' + filteredCases.length + '件</span> ／ 入力済み: <span style="font-weight:700;">' + filled + '件</span> ／ 全症例: <span style="font-weight:700;">' + cases.length + '件</span>';
-  html += '　<span style="color:var(--text3);">（薄く表示されている行は申請データ未入力）</span>';
-  html += '</div>';
-
-  html += '</div>';
-  el.innerHTML = html;
-}
-
-function esc(str) {
-  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function buildCertRows(includeHeader) {
-  var headers = ['疾患名','術式','年月日','年齢','性別','カルテ番号','外来・入院','研修施設名','指導医名','指導医登録番号'];
-  var selectedCases = getSelectedCertCases();
-  var lines = [];
-  if (includeHeader) lines.push(headers.join('\t'));
-  selectedCases.forEach(function(c) {
-    var dateStr = getCertCaseDate(c);
-    var surgVal = (c.mode === 'ope') ? (c.surgery || '') : '';
-    var row = [
-      c.disease || '',
-      surgVal,
-      dateStr,
-      c.age || '',
-      c.gender || '',
-      c.chartNo || '',
-      c.outInpatient || '',
-      c.facility || appSettings.defaultFacility || '',
-      c.supervisorName || '',
-      c.supervisorRegNo || '',
-    ];
-    lines.push(row.join('\t'));
-  });
-  return lines.join('\n');
-}
-
-function copyCertTSV() {
-  if (getSelectedCertCases().length === 0) {
-    alert('申請する症例を1件以上選択してください');
-    return;
+  const text = buildCertClipboard(view, rows, start);
+  const status = document.getElementById('certCopyStatus');
+  const manual = document.getElementById('certManualCopy');
+  try {
+    await navigator.clipboard.writeText(text);
+    manual.hidden = true;
+    manual.value = '';
+    status.textContent = rows.length + '行をコピーしました。Excelの' + (start === '' ? 'B' : 'A') + '列から貼り付けてください。';
+  } catch (_) {
+    status.textContent = '自動コピーできませんでした。下の欄を選択してコピーしてください。';
+    manual.hidden = false;
+    manual.value = text;
+    manual.focus();
+    manual.select();
   }
-  var text = buildCertRows(false);
-  navigator.clipboard.writeText(text).then(function() {
-    var btn = document.getElementById('certCopyBtn');
-    if (btn) { btn.textContent = '✓ コピーしました！'; setTimeout(updateCertSelectionSummary, 2500); }
-  }).catch(function() { alert('コピーに失敗しました。手動でコピーしてください。'); });
-}
-
-function copyCertTSVWithHeader() {
-  if (getSelectedCertCases().length === 0) {
-    alert('申請する症例を1件以上選択してください');
-    return;
-  }
-  var text = buildCertRows(true);
-  navigator.clipboard.writeText(text).then(function() {
-    var btn = document.getElementById('certCopyBtnH');
-    if (btn) { btn.textContent = '✓ コピーしました！'; setTimeout(function() { btn.textContent = '📋 ヘッダー付きでコピー'; }, 2500); }
-  }).catch(function() { alert('コピーに失敗しました。'); });
 }
 
 function renderKnowledge(el) {
@@ -5716,7 +5884,9 @@ function openAddModal() {
   if (appSettings.defaultTeam) {
     document.getElementById('f_team').value = appSettings.defaultTeam;
   }
+  document.getElementById('f_supervisor').value = '';
   populateSupervisorSelect();
+  fillCertClassificationForm();
   document.getElementById('f_facility').value = appSettings.defaultFacility || '';
   document.getElementById('f_supervisorRegNoVal').value = '';
   updateSupervisorRegDisplay('');
@@ -5773,8 +5943,9 @@ function openEditModal(id) {
   document.getElementById('f_icu').checked = !!c.icu;
   document.getElementById('f_recon').checked = !!c.recon;
   // 専門医申請データ
-  populateSupervisorSelect();
-  document.getElementById('f_age').value = c.age || '';
+  fillCertClassificationForm(c);
+  populateSupervisorSelect(c.supervisorName, c.supervisorRegNo);
+  document.getElementById('f_age').value = c.age ?? '';
   document.getElementById('f_gender').value = c.gender || '';
   document.getElementById('f_outInpatient').value = c.outInpatient || (c.admDate ? '入院' : '');
   document.getElementById('f_chartNo').value = c.chartNo || '';
@@ -5975,7 +6146,7 @@ function switchFormTab(tab) {
 }
 
 // ========== 指導医セレクト ==========
-function populateSupervisorSelect() {
+function populateSupervisorSelect(savedName = '', savedRegNo = '') {
   var sel = document.getElementById('f_supervisor');
   if (!sel) return;
   var currentVal = sel.value;
@@ -5985,7 +6156,10 @@ function populateSupervisorSelect() {
         return '<option value="' + s.name.replace(/"/g, '&quot;') + '">'
           + s.name + '　(' + (s.regNo || '—') + ')</option>';
       }).join('');
-  sel.value = currentVal;
+  if (savedName && !sups.some(s => s.name === savedName)) {
+    sel.add(new Option(savedName + '　(' + (savedRegNo || '—') + ')', savedName));
+  }
+  sel.value = savedName || currentVal;
 }
 
 function onSupervisorChange(sel) {
@@ -6268,8 +6442,11 @@ function saveCase(options = {}) {
   const admDate = document.getElementById('f_admDate').value;
   const name = document.getElementById('f_name').value.trim();
   const disease = document.getElementById('f_disease').value.trim();
-  if (!name || !admDate || !disease) {
-    alert('患者名・疾患名・入院日は必須です');
+  const certExperienceDate = document.getElementById('f_certExperienceDate').value;
+  const outInpatient = document.getElementById('f_outInpatient').value;
+  const outpatientWithoutAdmission = outInpatient === '外来' && !!certExperienceDate;
+  if (!name || (!admDate && !outpatientWithoutAdmission) || !disease) {
+    alert('患者名・疾患名・入院日は必須です。外来で入院日がない場合は「専門医申請」で外来と管理経験の年月日を入力してください。');
     return;
   }
   const surgeryForChecks = document.getElementById('f_surgery').value.trim();
@@ -6301,10 +6478,15 @@ function saveCase(options = {}) {
     checkReminders: JSON.parse(JSON.stringify(existingCase?.checkReminders || {})),
     freeChecks: JSON.parse(JSON.stringify(freeChecks)),
     examSchedules: JSON.parse(JSON.stringify(currentExamSchedules)),
-    // 専門医申請データ（年月日は admDate を使用）
+    // 専門医申請データ（手帳連携とは別の分類・役割）
+    certExperienceDate,
+    certManagementCategories: [...document.querySelectorAll('#f_certManagementCategories input:checked')].map(input => input.value),
+    certSurgeryCategory: document.getElementById('f_certSurgeryCategory').value,
+    certSurgeryGroup: document.getElementById('f_certSurgeryGroup').value,
+    certSurgeryRole: document.getElementById('f_certSurgeryRole').value,
     age:            document.getElementById('f_age').value,
     gender:         document.getElementById('f_gender').value,
-    outInpatient:   document.getElementById('f_outInpatient').value,
+    outInpatient,
     chartNo:        document.getElementById('f_chartNo').value.trim(),
     facility:       document.getElementById('f_facility').value.trim(),
     supervisorName: document.getElementById('f_supervisor').value,
