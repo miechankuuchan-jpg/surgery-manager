@@ -1211,6 +1211,12 @@ select.form-input {
 .discharge-checks > span, .discharge-controls > span { font-size: .8125rem !important; }
 .discharge-row label input { width: 16px !important; height: 16px !important; flex-shrink: 0; }
 
+body[data-patient-cloud-role="viewer"] :is(.header .icon-btn.primary, .fab) { display: none; }
+#addModal[data-read-only] :is([onclick="saveCase()"], #deleteBtn, #editChecklistReminderBtn, #mentorSyncEditBtn) { display: none !important; }
+#addModal[data-read-only] :is(input, select, textarea):disabled { opacity: 1; -webkit-text-fill-color: var(--text); }
+.patient-cloud-role { margin-bottom: 10px; }
+.patient-cloud-role .btn-primary { margin-bottom: 8px; }
+
 .cert-section {
   min-inline-size: 0;
   margin: 14px 0;
@@ -2623,7 +2629,7 @@ function CHECKLIST_DEFAULTS_getter() { return getChecklist(); }
 Object.defineProperty(window, 'CHECKLIST_DEFAULTS', { get: getChecklist });
 
 function getRegimenList() {
-  return appSettings.regimenList || REGIMEN_DEFAULTS_BUILTIN;
+  return getPatientCaseDisplaySettings().regimenList || REGIMEN_DEFAULTS_BUILTIN;
 }
 
 // レジメン名またはキーワードが text に含まれるか（大小文字無視）
@@ -2639,7 +2645,7 @@ function detectCaseMode(surgery) {
   const regList = getRegimenList();
   if (regList.some(r => r.mode === 'crt' && regimenMatchesText(r, surgery))) return 'crt';
   if (regList.some(r => r.mode === 'chemo' && regimenMatchesText(r, surgery))) return 'chemo';
-  if ((appSettings.diseaseCheckRules || []).some(r => {
+  if ((getPatientCaseDisplaySettings().diseaseCheckRules || []).some(r => {
     if (!r.chemoMode) return false;
     return r.keyword.split(/[,、\s]+/).map(k => k.trim()).filter(k => k)
       .some(kw => surgery.toLowerCase().includes(kw.toLowerCase()));
@@ -2662,16 +2668,17 @@ function isChemoCase(surgery) {
 // ケース表示に使うチェックリスト項目を返す（共通 + モード固有 + レジメン固有）
 function getDisplayedChecklistItems(c) {
   const mode = c.mode || detectCaseMode(c.surgery);
+  const settings = getPatientCaseDisplaySettings();
 
   // 1. 共通（全モード）
-  const commonItems = appSettings.defaultCheckItems || DEFAULT_CHECK_ITEMS_BUILTIN;
+  const commonItems = settings.defaultCheckItems || DEFAULT_CHECK_ITEMS_BUILTIN;
 
   // 2. モード固有
   let modeItems;
-  if (mode === 'ope')        modeItems = appSettings.opeCheckItems   || OPE_CHECK_ITEMS_BUILTIN;
-  else if (mode === 'chemo') modeItems = appSettings.chemoCheckItems || CHEMO_CHECK_ITEMS_BUILTIN;
-  else if (mode === 'crt')   modeItems = appSettings.crtCheckItems   || CRT_CHECK_ITEMS_BUILTIN;
-  else                       modeItems = appSettings.opeCheckItems   || OPE_CHECK_ITEMS_BUILTIN;
+  if (mode === 'ope')        modeItems = settings.opeCheckItems   || OPE_CHECK_ITEMS_BUILTIN;
+  else if (mode === 'chemo') modeItems = settings.chemoCheckItems || CHEMO_CHECK_ITEMS_BUILTIN;
+  else if (mode === 'crt')   modeItems = settings.crtCheckItems   || CRT_CHECK_ITEMS_BUILTIN;
+  else                       modeItems = settings.opeCheckItems   || OPE_CHECK_ITEMS_BUILTIN;
 
   // 3. 共通 + モード固有（重複排除）
   const usedKeys = new Set(commonItems.map(i => i.key));
@@ -2840,11 +2847,15 @@ function getDischargeSummaryWarning(c) {
 }
 
 function save() {
-  localStorage.setItem('surgery_cases', JSON.stringify(cases));
+  if (patientCloudRole === 'viewer') {
+    if (JSON.stringify(cases) !== patientCloudViewerCases) cases = JSON.parse(patientCloudViewerCases);
+  } else {
+    localStorage.setItem('surgery_cases', JSON.stringify(cases));
+  }
   localStorage.setItem('notif_settings', JSON.stringify(notifSettings));
   localStorage.setItem('app_settings', JSON.stringify(appSettings));
   applyTheme();
-  if (!patientCloudApplying) markPatientCloudDirty();
+  markPatientCloudDirty();
 }
 
 // ========== CLOUD / MENTORSHIP SYNC ==========
@@ -2859,15 +2870,24 @@ let patientCloudClient = null;
 let mentorshipClient = null;
 let mentorshipConnected = false;
 let mentorshipIdentity = null;
-let patientCloudApplying = false;
 let patientCloudTimer = null;
 let patientCloudChannel = null;
+let patientCloudChannelOwner = null;
 let patientCloudBusy = false;
+let patientCloudRunAgain = false;
+let patientCloudEpoch = 0;
 let patientCloudAuthListenerBound = false;
 let patientCloudMeta = (() => {
   try { return JSON.parse(localStorage.getItem(CLOUD_META_KEY) || '{}'); }
   catch (_) { return {}; }
 })();
+const PATIENT_CLOUD_SYNC_MODE = 'single-primary-v1';
+let patientCloudViewerCases = '[]';
+let patientCloudViewerSettings = null;
+let patientCloudRole = patientCloudMeta.viewerAccount ? 'viewer' : 'local';
+let patientCloudLastRemote = null;
+let patientCloudSessionOwner = null;
+if (patientCloudRole === 'viewer') cases = [];
 
 function persistPatientCloudMeta() {
   localStorage.setItem(CLOUD_META_KEY, JSON.stringify(patientCloudMeta));
@@ -2875,7 +2895,7 @@ function persistPatientCloudMeta() {
 
 function getDeviceId() {
   if (!patientCloudMeta.deviceId) {
-    patientCloudMeta.deviceId = 'device_' + uid();
+    patientCloudMeta.deviceId = 'device_' + (globalThis.crypto?.randomUUID?.() || uid());
     persistPatientCloudMeta();
   }
   return patientCloudMeta.deviceId;
@@ -2909,7 +2929,12 @@ function patientCloudSnapshot() {
 }
 
 function patientCloudSignature(snapshot = patientCloudSnapshot()) {
-  const text = JSON.stringify(snapshot);
+  const text = JSON.stringify({
+    cases: snapshot.cases, appSettings: snapshot.appSettings, notifSettings: snapshot.notifSettings,
+  }, (_, value) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+    return Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]]));
+  });
   let hash = 2166136261;
   for (let i = 0; i < text.length; i++) {
     hash ^= text.charCodeAt(i);
@@ -2928,173 +2953,302 @@ function setCloudStatus(text, tone = 'muted') {
   if (btn) btn.style.opacity = tone === 'busy' ? '0.55' : '1';
 }
 
-function markPatientCloudDirty() {
-  patientCloudMeta.localChangedAt = Date.now();
-  persistPatientCloudMeta();
-  if (!patientCloudMeta.connected) return setCloudStatus('端末内に保存');
-  setCloudStatus('未同期の変更あり', 'warn');
-  if (!appSettings.cloudAutoSync) return;
+function queuePatientCloudSync(delay = 1400) {
   clearTimeout(patientCloudTimer);
-  patientCloudTimer = setTimeout(() => syncPatientCloud({ quiet: true }), 1400);
+  patientCloudTimer = setTimeout(() => syncPatientCloud({ quiet: true }), delay);
 }
 
-function mergePatientCloudSnapshots(remote, local) {
-  const remoteCases = Array.isArray(remote?.cases) ? remote.cases : [];
-  const localCases = Array.isArray(local?.cases) ? local.cases : [];
-  const byId = new Map(remoteCases.map(c => [c.id, c]));
-  localCases.forEach(c => byId.set(c.id, { ...(byId.get(c.id) || {}), ...c }));
-  return {
-    schema: 1,
-    cases: [...byId.values()],
-    appSettings: { ...(remote?.appSettings || {}), ...(local?.appSettings || {}) },
-    notifSettings: { ...(remote?.notifSettings || {}), ...(local?.notifSettings || {}) },
-  };
-}
-
-function applyPatientCloudSnapshot(snapshot) {
-  if (!snapshot || !Array.isArray(snapshot.cases)) throw new Error('クラウドデータの形式を確認できません');
-  patientCloudApplying = true;
-  try {
-    cases = snapshot.cases;
-    if (snapshot.appSettings) appSettings = { ...appSettings, ...snapshot.appSettings };
-    if (snapshot.notifSettings) notifSettings = { ...notifSettings, ...snapshot.notifSettings };
-    localStorage.setItem('surgery_cases', JSON.stringify(cases));
-    localStorage.setItem('notif_settings', JSON.stringify(notifSettings));
-    localStorage.setItem('app_settings', JSON.stringify(appSettings));
-    applyTheme();
-    render();
-    if (document.getElementById('settingsModal')?.classList.contains('open')) renderSettings();
-  } finally {
-    patientCloudApplying = false;
+function markPatientCloudDirty() {
+  if (patientCloudRole === 'viewer') return;
+  if (patientCloudRole !== 'primary') {
+    if (!patientCloudMeta.connected) setCloudStatus('端末内に保存');
+    return;
   }
+  setCloudStatus('正本：未同期の変更あり', 'warn');
+  if (appSettings.cloudAutoSync) queuePatientCloudSync();
+}
+
+function requireEditablePatientCases() {
+  if (patientCloudRole !== 'viewer') return true;
+  alert('この端末は閲覧専用です。症例を変更する場合は、正本に設定した端末をお使いください。');
+  render();
+  return false;
+}
+
+function getStoredPatientCases() {
+  const stored = JSON.parse(localStorage.getItem('surgery_cases') || '[]');
+  if (!Array.isArray(stored)) throw new Error('Invalid local case list');
+  return stored;
+}
+
+function getPatientCaseDisplaySettings() {
+  return patientCloudViewerSettings || appSettings;
+}
+
+function switchPatientCloudRole(role, userId = null, snapshot = null) {
+  const wasViewer = patientCloudRole === 'viewer';
+  patientCloudRole = role;
+  document.body.dataset.patientCloudRole = role;
+  if (role === 'viewer') {
+    patientCloudMeta.viewerAccount = userId;
+    const serialized = JSON.stringify(snapshot.cases);
+    const settings = snapshot.appSettings || null;
+    const changed = !wasViewer || patientCloudViewerCases !== serialized ||
+      JSON.stringify(settings) !== JSON.stringify(patientCloudViewerSettings);
+    patientCloudViewerSettings = settings;
+    if (changed) {
+      patientCloudViewerCases = serialized;
+      cases = JSON.parse(serialized);
+      closeModal();
+      render();
+    }
+  } else {
+    delete patientCloudMeta.viewerAccount;
+    if (wasViewer) {
+      patientCloudViewerCases = '[]';
+      patientCloudViewerSettings = null;
+      cases = getStoredPatientCases();
+      closeModal();
+      render();
+    }
+  }
+  persistPatientCloudMeta();
 }
 
 async function getPatientCloudSession() {
   const client = getPatientCloudClient();
   if (!client) return null;
-  const { data } = await client.auth.getSession();
+  const { data, error } = await client.auth.getSession();
+  if (error) throw error;
   return data?.session || null;
 }
 
+function updatePatientCloudBaseline(userId, revision, snapshot) {
+  patientCloudMeta.ownerId = userId;
+  patientCloudMeta.revision = Number(revision);
+  patientCloudMeta.lastSyncedSignature = patientCloudSignature(snapshot);
+  patientCloudMeta.lastSyncAt = Date.now();
+  persistPatientCloudMeta();
+}
+
+function rememberPatientCloudRemote(remote) {
+  patientCloudLastRemote = {
+    primary: remote?.primary_device_id || null,
+    count: remote ? remote.payload.cases.length : null,
+    revision: remote ? Number(remote.revision) : 0,
+  };
+}
+
+async function loadPatientCloudRemote(client, userId) {
+  const { data, error } = await client.from('patient_app_state')
+    .select('payload,revision,primary_device_id').eq('user_id', userId).maybeSingle();
+  if (error) throw error;
+  if (data && !Array.isArray(data.payload?.cases)) throw new Error('Invalid cloud case list');
+  return data;
+}
+
+function refreshPatientCloudSettings() {
+  if (document.getElementById('settingsModal')?.classList.contains('open')) renderSettings();
+}
+
 async function syncPatientCloud(options = {}) {
-  if (patientCloudBusy) return;
-  const client = getPatientCloudClient();
-  const session = await getPatientCloudSession();
-  if (!client || !session) {
-    patientCloudMeta.connected = false;
-    persistPatientCloudMeta();
-    setCloudStatus('端末内に保存');
-    if (!options.quiet) { openSettingsModal(); alert('設定の「患者データの端末間同期」からログインしてください。'); }
+  if (patientCloudBusy) {
+    if (options.manual) patientCloudRunAgain = true;
     return;
   }
   patientCloudBusy = true;
-  patientCloudMeta.connected = true;
-  setCloudStatus('同期中…', 'busy');
+  const previousRole = patientCloudRole;
+  const previousRemote = patientCloudLastRemote;
+  const epoch = patientCloudEpoch;
   try {
+    const client = getPatientCloudClient();
+    const session = await getPatientCloudSession();
+    if (epoch !== patientCloudEpoch) return;
+    if (!client || !session) {
+      patientCloudMeta.connected = false;
+      patientCloudLastRemote = null;
+      patientCloudSessionOwner = null;
+      switchPatientCloudRole('local');
+      setCloudStatus('端末内に保存');
+      if (options.manual) { openSettingsModal(); alert('設定の「患者データの端末間同期」からログインしてください。'); }
+      return;
+    }
     const userId = session.user.id;
-    const localSnapshot = patientCloudSnapshot();
-    const localSig = patientCloudSignature(localSnapshot);
-    const { data: remote, error: loadError } = await client
-      .from('patient_app_state')
-      .select('payload,revision,updated_at')
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (loadError) throw loadError;
-
-    if (!remote) {
-      const { data: inserted, error } = await client.from('patient_app_state').insert({
-        user_id: userId, payload: localSnapshot, revision: 1, device_id: getDeviceId(), updated_at: new Date().toISOString()
-      }).select('revision,updated_at').single();
-      if (error) throw error;
-      patientCloudMeta.revision = inserted.revision;
-      patientCloudMeta.lastSyncedSignature = localSig;
-      patientCloudMeta.lastSyncAt = Date.now();
-      persistPatientCloudMeta();
-      setCloudStatus('クラウド保存済み', 'ok');
-      subscribePatientCloud(userId);
-      return;
-    }
-
-    const knownRevision = Number(patientCloudMeta.revision || 0);
-    const remoteRevision = Number(remote.revision || 0);
-    const localDirty = localSig !== patientCloudMeta.lastSyncedSignature;
-
-    if (!knownRevision && remote.payload) {
-      const merged = localSnapshot.cases.length
-        ? mergePatientCloudSnapshots(remote.payload, localSnapshot)
-        : remote.payload;
-      applyPatientCloudSnapshot(merged);
-      patientCloudMeta.revision = remoteRevision;
-      patientCloudMeta.lastSyncedSignature = patientCloudSignature(remote.payload);
-      persistPatientCloudMeta();
-      return syncPatientCloud({ ...options, quiet: true });
-    }
-
-    if (remoteRevision > knownRevision) {
-      if (localDirty) {
-        if (!options.manual) {
-          setCloudStatus('別端末の更新あり・確認待ち', 'warn');
-          return;
-        }
-        const merge = confirm('別端末の更新と、この端末の未同期変更があります。両方の症例を結合してクラウドへ保存しますか？\n\n「キャンセル」では変更せず、バックアップ後に確認できます。');
-        if (!merge) { setCloudStatus('競合を確認してください', 'warn'); return; }
-        const merged = mergePatientCloudSnapshots(remote.payload, localSnapshot);
-        applyPatientCloudSnapshot(merged);
-        patientCloudMeta.revision = remoteRevision;
-        patientCloudMeta.lastSyncedSignature = patientCloudSignature(remote.payload);
-        persistPatientCloudMeta();
-        return syncPatientCloud({ ...options, quiet: true });
-      }
-      applyPatientCloudSnapshot(remote.payload);
-      patientCloudMeta.revision = remoteRevision;
-      patientCloudMeta.lastSyncedSignature = patientCloudSignature(remote.payload);
-      patientCloudMeta.lastSyncAt = Date.now();
-      persistPatientCloudMeta();
-      setCloudStatus('最新の状態です', 'ok');
-      subscribePatientCloud(userId);
-      return;
-    }
-
-    if (localDirty) {
-      const nextRevision = remoteRevision + 1;
-      const { data: updated, error } = await client.from('patient_app_state')
-        .update({ payload: localSnapshot, revision: nextRevision, device_id: getDeviceId(), updated_at: new Date().toISOString() })
-        .eq('user_id', userId)
-        .eq('revision', remoteRevision)
-        .select('revision,updated_at');
-      if (error) throw error;
-      if (!updated?.length) {
-        setCloudStatus('別端末の更新あり・再読込してください', 'warn');
-        return;
-      }
-      patientCloudMeta.revision = updated[0].revision;
-      patientCloudMeta.lastSyncedSignature = localSig;
-    }
-    patientCloudMeta.lastSyncAt = Date.now();
-    persistPatientCloudMeta();
-    setCloudStatus('最新の状態です', 'ok');
+    patientCloudSessionOwner = userId;
+    patientCloudMeta.connected = true;
+    const remote = await loadPatientCloudRemote(client, userId);
+    if (epoch !== patientCloudEpoch) return;
+    rememberPatientCloudRemote(remote);
     subscribePatientCloud(userId);
+    if (!remote?.primary_device_id) {
+      switchPatientCloudRole('local');
+      setCloudStatus('正本未設定・この端末内の症例', 'warn');
+      return;
+    }
+    if (remote.primary_device_id !== getDeviceId()) {
+      switchPatientCloudRole('viewer', userId, remote.payload);
+      patientCloudMeta.lastSyncAt = Date.now();
+      persistPatientCloudMeta();
+      setCloudStatus('閲覧専用：正本 ' + remote.payload.cases.length + '件', 'ok');
+      return;
+    }
+
+    switchPatientCloudRole('primary');
+    const local = patientCloudSnapshot();
+    const localSig = patientCloudSignature(local);
+    const remoteSig = patientCloudSignature(remote.payload);
+    const remoteRevision = Number(remote.revision);
+    const matchesRemote = localSig === remoteSig;
+    const ownedRevision = patientCloudMeta.ownerId === userId ? Number(patientCloudMeta.revision || 0) : 0;
+    if (matchesRemote) {
+      updatePatientCloudBaseline(userId, remoteRevision, local);
+      setCloudStatus('正本：同期済み ' + local.cases.length + '件', 'ok');
+      return;
+    }
+    if (ownedRevision !== remoteRevision) {
+      // A newer tab won the compare-and-set. Do not send this tab's stale copy.
+      if (patientCloudMeta.ownerId === userId && localSig === patientCloudMeta.lastSyncedSignature &&
+          !document.getElementById('addModal')?.classList.contains('open')) {
+        const latest = remote.payload;
+        cases = latest.cases;
+        if (latest.appSettings) appSettings = { ...appSettings, ...latest.appSettings };
+        if (latest.notifSettings) notifSettings = { ...notifSettings, ...latest.notifSettings };
+        updatePatientCloudBaseline(userId, remoteRevision, patientCloudSnapshot());
+        save();
+        render();
+        setCloudStatus('正本：同期済み ' + cases.length + '件', 'ok');
+      } else {
+        setCloudStatus('正本：競合あり・送信保留', 'warn');
+        if (options.manual) alert('クラウドに別の更新があります。この画面からは上書きしていません。この端末のバックアップを保存してからご相談ください。');
+      }
+      return;
+    }
+    if (!options.manual && !appSettings.cloudAutoSync) {
+      setCloudStatus('正本：未同期の変更あり', 'warn');
+      return;
+    }
+    const { data, error } = await client.from('patient_app_state')
+      .update({ payload: { ...local, syncMode: PATIENT_CLOUD_SYNC_MODE }, revision: remoteRevision + 1,
+        device_id: getDeviceId(), updated_at: new Date().toISOString() })
+      .eq('user_id', userId).eq('revision', remoteRevision).eq('primary_device_id', getDeviceId())
+      .select('revision').maybeSingle();
+    if (epoch !== patientCloudEpoch) return;
+    if (error) throw error;
+    if (!data) {
+      setCloudStatus('正本：競合あり・送信保留', 'warn');
+      return;
+    }
+    updatePatientCloudBaseline(userId, data.revision, local);
+    patientCloudLastRemote = { ...patientCloudLastRemote, revision: Number(data.revision), count: local.cases.length };
+    setCloudStatus('正本：同期済み ' + local.cases.length + '件', 'ok');
+    if (patientCloudSignature() !== localSig && appSettings.cloudAutoSync) queuePatientCloudSync();
   } catch (error) {
-    console.error('Patient cloud sync failed', error);
-    const missingTable = /patient_app_state|schema cache|relation/i.test(error?.message || '');
-    setCloudStatus(missingTable ? '通信設定の準備待ち' : '同期できませんでした', 'error');
-    if (!options.quiet) alert(missingTable ? 'クラウド側の初期設定がまだ完了していません。' : '同期できませんでした。通信状態を確認してください。');
+    if (epoch !== patientCloudEpoch) return;
+    setCloudStatus('同期できませんでした・データ変更なし', 'error');
+    if (options.manual) alert('同期できませんでした。通信状態を確認して開き直してください。');
   } finally {
     patientCloudBusy = false;
-    if (document.getElementById('settingsModal')?.classList.contains('open')) renderSettings();
+    if (epoch === patientCloudEpoch && (options.manual || previousRole !== patientCloudRole || previousRemote?.revision !== patientCloudLastRemote?.revision)) {
+      refreshPatientCloudSettings();
+    }
+    if (patientCloudRunAgain) {
+      patientCloudRunAgain = false;
+      if (epoch === patientCloudEpoch) setTimeout(() => syncPatientCloud({ manual: true }), 0);
+    }
+  }
+}
+
+async function setThisDeviceAsPatientCloudPrimary() {
+  if (patientCloudBusy) return alert('同期状況を確認中です。少し待ってから操作してください。');
+  if (patientCloudRole === 'viewer') return;
+  if (editingId || document.getElementById('addModal')?.classList.contains('open')) {
+    alert('症例入力を保存または閉じてから、正本を設定してください。');
+    return;
+  }
+  patientCloudBusy = true;
+  const epoch = patientCloudEpoch;
+  try {
+    const client = getPatientCloudClient();
+    const session = await getPatientCloudSession();
+    if (!client || !session || epoch !== patientCloudEpoch) return;
+    const userId = session.user.id;
+    const remote = await loadPatientCloudRemote(client, userId);
+    if (epoch !== patientCloudEpoch) return;
+    rememberPatientCloudRemote(remote);
+    if (remote?.primary_device_id) {
+      alert('正本はすでに設定済みです。この端末のデータは送信していません。');
+      patientCloudRunAgain = true;
+      return;
+    }
+    const local = patientCloudSnapshot();
+    if (!local.cases.length) {
+      alert('この端末には症例がありません。症例が最も多い端末から設定してください。');
+      return;
+    }
+    const cloudCount = remote?.payload.cases.length ?? 0;
+    const message = 'この端末の ' + local.cases.length + '件を正本に設定します。' +
+      '\n現在のクラウド：' + cloudCount + '件。以前のクラウドデータがある場合は控えとして保存され、症例は結合しません。' +
+      '\nほかの端末は閲覧専用になります。症例が最も多い端末であることを確認しましたか？';
+    const proceed = confirm(message);
+    if (!proceed || epoch !== patientCloudEpoch) return;
+    const deviceId = getDeviceId();
+    const params = { payload: { ...local, syncMode: PATIENT_CLOUD_SYNC_MODE },
+      primary_device_id: deviceId, device_id: deviceId,
+      revision: (remote ? Number(remote.revision) : 0) + 1, updated_at: new Date().toISOString() };
+    const request = remote ? client.from('patient_app_state').update(params).eq('user_id', userId)
+      .eq('revision', remote.revision).is('primary_device_id', null)
+      : client.from('patient_app_state').insert({ user_id: userId, ...params });
+    const { data, error } = await request.select('revision').maybeSingle();
+    if (epoch !== patientCloudEpoch) return;
+    if (error || !data) throw error || new Error('Primary setup conflict');
+    switchPatientCloudRole('primary');
+    patientCloudLastRemote = { primary: deviceId, count: local.cases.length, revision: Number(data.revision) };
+    updatePatientCloudBaseline(userId, data.revision, local);
+    setCloudStatus('正本：同期済み ' + local.cases.length + '件', 'ok');
+    subscribePatientCloud(userId);
+    if (appSettings.cloudAutoSync && patientCloudSignature() !== patientCloudMeta.lastSyncedSignature) queuePatientCloudSync();
+    alert('この端末を正本に設定しました。ほかの端末には同じ同期アカウントでログインしてください。');
+  } catch (_) {
+    if (epoch === patientCloudEpoch) alert('正本の設定を確認できませんでした。最新の状態に更新してから再確認してください。');
+  } finally {
+    patientCloudBusy = false;
+    if (epoch === patientCloudEpoch) refreshPatientCloudSettings();
+    if (patientCloudRunAgain) {
+      patientCloudRunAgain = false;
+      if (epoch === patientCloudEpoch) queuePatientCloudSync(0);
+    }
+  }
+}
+
+async function downloadPreviousPatientCloudSnapshot() {
+  try {
+    const client = getPatientCloudClient();
+    const session = await getPatientCloudSession();
+    if (!session || patientCloudRole !== 'primary') return;
+    const userId = session.user.id;
+    const { data, error } = await client.from('patient_app_state').select('previous_payload')
+      .eq('user_id', userId).eq('primary_device_id', getDeviceId()).maybeSingle();
+    if (error) throw error;
+    if (userId !== patientCloudSessionOwner || patientCloudRole !== 'primary') return;
+    if (!Array.isArray(data?.previous_payload?.cases)) {
+      alert('正本設定前のクラウド控えはありません。');
+      return;
+    }
+    downloadPatientBackup(data.previous_payload, 'surgery-cloud-before-primary');
+  } catch (_) {
+    alert('クラウド控えを確認できませんでした。');
   }
 }
 
 function subscribePatientCloud(userId) {
   const client = getPatientCloudClient();
-  if (!client || patientCloudChannel) return;
+  if (!client || patientCloudChannelOwner === userId) return;
+  if (patientCloudChannel) void client.removeChannel(patientCloudChannel);
+  patientCloudChannelOwner = userId;
   patientCloudChannel = client.channel('patient-app-state-' + userId)
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'patient_app_state', filter: 'user_id=eq.' + userId }, payload => {
-      const nextRevision = Number(payload.new?.revision || 0);
-      if (nextRevision > Number(patientCloudMeta.revision || 0)) {
-        clearTimeout(patientCloudTimer);
-        patientCloudTimer = setTimeout(() => syncPatientCloud({ quiet: true }), 350);
-      }
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'patient_app_state', filter: 'user_id=eq.' + userId }, payload => {
+      if (patientCloudSessionOwner !== userId) return;
+      if (payload.eventType === 'DELETE' || Number(payload.new?.revision || 0) > (patientCloudLastRemote?.revision || 0)) queuePatientCloudSync(350);
     }).subscribe();
 }
 
@@ -3116,7 +3270,6 @@ async function patientCloudSignIn() {
   }
   patientCloudMeta.connected = true;
   delete patientCloudMeta.pendingEmail;
-  patientCloudMeta.revision = 0;
   persistPatientCloudMeta();
   await syncPatientCloud({ manual: true });
 }
@@ -3173,7 +3326,6 @@ async function patientCloudSignUp() {
   }
   patientCloudMeta.connected = true;
   delete patientCloudMeta.pendingEmail;
-  patientCloudMeta.revision = 0;
   persistPatientCloudMeta();
   await syncPatientCloud({ manual: true });
 }
@@ -3200,12 +3352,19 @@ async function patientCloudResendConfirmation() {
 
 async function patientCloudSignOut() {
   const client = getPatientCloudClient();
-  if (patientCloudChannel) { await client.removeChannel(patientCloudChannel); patientCloudChannel = null; }
-  await client.auth.signOut();
+  ++patientCloudEpoch;
+  clearTimeout(patientCloudTimer);
+  if (patientCloudChannel) {
+    void client.removeChannel(patientCloudChannel);
+    patientCloudChannel = null;
+    patientCloudChannelOwner = null;
+  }
+  const { error } = await client.auth.signOut({ scope: 'local' });
+  if (error) { queuePatientCloudSync(0); return alert('ログアウトできませんでした。通信状態を確認してください。'); }
   patientCloudMeta.connected = false;
-  patientCloudMeta.revision = 0;
-  patientCloudMeta.lastSyncedSignature = '';
-  persistPatientCloudMeta();
+  patientCloudSessionOwner = null;
+  patientCloudLastRemote = null;
+  switchPatientCloudRole('local');
   setCloudStatus('端末内に保存');
   renderSettings();
 }
@@ -3215,22 +3374,27 @@ async function initPatientCloud() {
   if (client && !patientCloudAuthListenerBound) {
     patientCloudAuthListenerBound = true;
     client.auth.onAuthStateChange((event, session) => {
-      if (!session || !['SIGNED_IN', 'TOKEN_REFRESHED', 'INITIAL_SESSION'].includes(event)) return;
-      patientCloudMeta.connected = true;
-      delete patientCloudMeta.pendingEmail;
-      persistPatientCloudMeta();
-      setTimeout(() => syncPatientCloud({ quiet: true }), 0);
+      if (event === 'SIGNED_OUT') {
+        ++patientCloudEpoch;
+        if (patientCloudRole === 'viewer') {
+          patientCloudViewerCases = '[]';
+          patientCloudViewerSettings = null;
+          cases = [];
+          render();
+        }
+        queuePatientCloudSync(0);
+      } else if (session && event === 'SIGNED_IN') {
+        if (patientCloudSessionOwner && patientCloudSessionOwner !== session.user.id) {
+          ++patientCloudEpoch;
+          if (patientCloudRole === 'viewer') { patientCloudViewerCases = '[]'; patientCloudViewerSettings = null; cases = []; render(); }
+        }
+        patientCloudMeta.connected = true;
+        delete patientCloudMeta.pendingEmail;
+        persistPatientCloudMeta();
+        queuePatientCloudSync(0);
+      }
     });
   }
-  const session = await getPatientCloudSession();
-  if (!session) {
-    patientCloudMeta.connected = false;
-    persistPatientCloudMeta();
-    return setCloudStatus('端末内に保存');
-  }
-  patientCloudMeta.connected = true;
-  persistPatientCloudMeta();
-  subscribePatientCloud(session.user.id);
   await syncPatientCloud({ quiet: true });
 }
 
@@ -3339,6 +3503,7 @@ async function initMentorshipConnection() {
 }
 
 async function syncAllMentorshipCases() {
+  if (!requireEditablePatientCases()) return;
   try {
     const client = getMentorshipClient();
     const { data: sessionData } = await client.auth.getSession();
@@ -3381,6 +3546,7 @@ async function syncAllMentorshipCases() {
 }
 
 async function syncCaseToMentorship(caseId, options = {}) {
+  if (!requireEditablePatientCases()) return;
   const c = cases.find(x => x.id === caseId);
   if (!c) return 'error';
   if (c.mentorshipRecordId) {
@@ -3656,6 +3822,7 @@ function renderPending(el) {
 }
 
 function completeAllTasks(id) {
+  if (!requireEditablePatientCases()) return;
   const c = cases.find(x => x.id === id);
   if (!c) return;
   CHECKLIST_DEFAULTS.forEach(item => {
@@ -3754,6 +3921,7 @@ function renderSummaryIncomplete(el) {
 }
 
 function toggleSummaryReason(id, reasonKey) {
+  if (!requireEditablePatientCases()) return;
   const c = cases.find(x => x.id === id);
   if (!c) return;
   if (!c.summaryPendingReasons) c.summaryPendingReasons = [];
@@ -3767,6 +3935,7 @@ function toggleSummaryReason(id, reasonKey) {
 }
 
 function markDischargeSummaryDone(id) {
+  if (!requireEditablePatientCases()) return;
   const c = cases.find(x => x.id === id);
   if (!c) return;
   if (!c.checks) c.checks = {};
@@ -3796,6 +3965,7 @@ function getDischargeCompletionStatus(c) {
 }
 
 function toggleDischargeCompletionItem(id, key, checked) {
+  if (!requireEditablePatientCases()) return;
   const c = cases.find(x => x.id === id);
   if (!c || !DISCHARGE_COMPLETION_ITEMS.some(item => item.key === key)) return;
   if (!c.checks) c.checks = {};
@@ -3808,6 +3978,7 @@ function toggleDischargeCompletionItem(id, key, checked) {
 }
 
 function setDischargeManualComplete(id, checked) {
+  if (!requireEditablePatientCases()) return;
   const c = cases.find(x => x.id === id);
   if (!c) return;
   c.dischargeListManualComplete = !!checked;
@@ -4329,6 +4500,7 @@ function compareCancerByDischargeDesc(a, b) {
 }
 
 function setHeadNeckDbRegistered(id, checked) {
+  if (!requireEditablePatientCases()) return;
   var c = cases.find(function(item) { return item.id === id; });
   if (!c) return;
   c.headNeckDbRegistered = !!checked;
@@ -5395,6 +5567,7 @@ function toggleSideEffects(id) {
 }
 
 function toggleCheck(id, key) {
+  if (!requireEditablePatientCases()) return;
   const c = cases.find(x => x.id === id);
   if (!c) return;
   if (!c.checks) c.checks = {};
@@ -5425,6 +5598,7 @@ function toggleCheck(id, key) {
 }
 
 function toggleFreeCheckCard(id, idx) {
+  if (!requireEditablePatientCases()) return;
   const c = cases.find(x => x.id === id);
   if (!c || !c.freeChecks || !c.freeChecks[idx]) return;
   c.freeChecks[idx].done = !c.freeChecks[idx].done;
@@ -5746,6 +5920,7 @@ function closeCheckReminder(e) {
 }
 
 function openReminderOrCalendar(title, notes, dt, c) {
+  if (!requireEditablePatientCases()) return;
   const fmtJST = (d) => {
     const pad = n => String(n).padStart(2,'0');
     return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
@@ -5874,6 +6049,8 @@ function formatDateShort(dateStr) {
 
 // ========== MODAL ==========
 function openAddModal() {
+  if (!requireEditablePatientCases()) return;
+  applyPatientCaseFormMode(false);
   editingId = null;
   freeChecks = [];
   currentExamSchedules = [];
@@ -5923,7 +6100,9 @@ function openEditModal(id) {
   if (!c) return;
   freeChecks = c.freeChecks ? JSON.parse(JSON.stringify(c.freeChecks)) : [];
   currentExamSchedules = JSON.parse(JSON.stringify(c.examSchedules || []));
-  document.getElementById('modalTitle').textContent = '症例を編集';
+  const readOnly = patientCloudRole === 'viewer';
+  applyPatientCaseFormMode(false);
+  document.getElementById('modalTitle').textContent = readOnly ? '症例の詳細（閲覧専用）' : '症例を編集';
   document.getElementById('deleteBtn').style.display = 'block';
   document.getElementById('f_opDate').value = c.opDate || '';
   document.getElementById('f_admDate').value = c.admDate || '';
@@ -5965,15 +6144,32 @@ function openEditModal(id) {
   renderExamScheduleList();
   onSurgeryChange();
   setTimeout(() => {
+    if (editingId !== id) return;
     selectFormMode(editMode);
     setExamType('blood');
     const ed = document.getElementById('examDate');
     if (ed && !ed.value) ed.value = toISODate(new Date());
+    applyPatientCaseFormMode(readOnly);
   }, 0);
   _fcReminderPresetIdx = -1;
   setTimeout(() => renderFcReminderPresets(), 0);
   switchFormTab('info');
+  applyPatientCaseFormMode(readOnly);
   document.getElementById('addModal').classList.add('open');
+}
+
+function applyPatientCaseFormMode(readOnly) {
+  const modal = document.getElementById('addModal');
+  modal.toggleAttribute('data-read-only', readOnly);
+  if (readOnly) {
+    modal.querySelectorAll('input:not([type="hidden"]), select, textarea, button:not(#formTabBtn_info, #formTabBtn_cert, [onclick="closeModal()"])').forEach(control => {
+      if (!control.disabled) { control.disabled = true; control.dataset.cloudDisabled = '1'; }
+    });
+  } else {
+    modal.querySelectorAll('[data-cloud-disabled]').forEach(control => { control.disabled = false; delete control.dataset.cloudDisabled; });
+  }
+  const close = modal.querySelector('button[onclick="closeModal()"]');
+  if (close) close.textContent = readOnly ? '閉じる' : 'キャンセル';
 }
 
 function clearForm() {
@@ -6438,6 +6634,7 @@ function buildChecklistForm(checks, modeOverride) {
 }
 
 function saveCase(options = {}) {
+  if (!requireEditablePatientCases()) return;
   const opDate = document.getElementById('f_opDate').value;
   const admDate = document.getElementById('f_admDate').value;
   const name = document.getElementById('f_name').value.trim();
@@ -6522,6 +6719,7 @@ function syncEditingCaseToMentorship() {
 }
 
 function deleteCase() {
+  if (!requireEditablePatientCases()) return;
   if (!editingId) return;
   if (!confirm('この症例を削除しますか？')) return;
   cases = cases.filter(x => x.id !== editingId);
@@ -7674,6 +7872,7 @@ function toggleAllImport() {
 }
 
 function confirmImport() {
+  if (!requireEditablePatientCases()) return;
   const checks = document.querySelectorAll('.import-check');
   let added = 0, updated = 0;
   importParsed.forEach((c, i) => {
@@ -7785,19 +7984,31 @@ function toggleMentorshipAutoSync(checked) {
 
 function renderSyncSettingsHtml() {
   const cloudConnected = !!patientCloudMeta.connected;
-  const pendingCloudEmail = esc(patientCloudMeta.pendingEmail || '');
+  const pendingCloudEmail = certAttr(patientCloudMeta.pendingEmail || '');
   const mentorName = mentorshipIdentity?.name ? esc(mentorshipIdentity.name) + ' 先生' : 'ログイン済み';
   const mentorLastDate = appSettings.mentorshipLastRemoteDate ? esc(appSettings.mentorshipLastRemoteDate) : '';
   return `
     <div class="summary-block" style="margin-bottom:12px;border-color:rgba(26,174,200,0.35);">
       <div style="font-size:11px;font-weight:700;margin-bottom:4px;color:var(--text);">☁️ 患者データの端末間同期</div>
-      <div style="font-size:10px;color:var(--text3);line-height:1.7;margin-bottom:10px;">同じアカウントでログインしたiPhone・iPad・Mac間で更新します。患者データはご自身のSupabaseに保存され、アカウントごとに分離されます。</div>
+      <p class="cert-note">症例が最も多い端末を正本に設定します。同じ同期アカウントでログインしたほかの端末は、正本だけを閲覧できます。症例の結合はしません。</p>
       ${cloudConnected ? `
-        <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:9px;">✅ 接続済み</div>
-        <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;color:var(--text2);margin-bottom:10px;">
-          入力後に自動同期
-          <input type="checkbox" ${appSettings.cloudAutoSync ? 'checked' : ''} onchange="togglePatientCloudAutoSync(this.checked)" style="accent-color:var(--accent);width:18px;height:18px;">
-        </label>
+        <div class="patient-cloud-role">
+        ${patientCloudRole === 'primary' ? `
+          <strong>この端末が正本</strong>
+          <p class="cert-note">クラウドの正本：${patientCloudLastRemote?.count ?? '確認中'}件</p>
+          <label class="checkbox-row"><input type="checkbox" ${appSettings.cloudAutoSync ? 'checked' : ''} onchange="togglePatientCloudAutoSync(this.checked)">入力後に自動同期</label>
+          <button onclick="downloadPreviousPatientCloudSnapshot()" class="copy-btn">正本設定前のクラウド控えを保存</button>
+        ` : patientCloudRole === 'viewer' ? `
+          <strong>この端末は閲覧専用</strong>
+          <p class="cert-note">正本だけを表示しています。この端末にもともとあった症例は送信していません。</p>
+          <button onclick="downloadLocalPatientBackup()" class="copy-btn">この端末の元データを保存</button>
+        ` : `
+          <strong>正本は未設定</strong>
+          <p class="cert-note">この端末：${cases.length}件 ／ 現在のクラウド：${patientCloudLastRemote ? (patientCloudLastRemote.count ?? 0) + '件' : '未確認'}</p>
+          <p class="cert-note">端末間で症例数を比べ、最も多い端末でだけ押してください。ログインしただけでは症例は送信されません。</p>
+          <button onclick="setThisDeviceAsPatientCloudPrimary()" class="btn-primary" ${!patientCloudLastRemote || !cases.length ? 'disabled' : ''}>この端末を正本に設定</button>
+        `}
+        </div>
         <div style="display:flex;gap:7px;">
           <button onclick="manualCloudRefresh()" class="copy-btn" style="flex:1;text-align:center;padding:9px;">↻ 最新の状態に更新</button>
           <button onclick="patientCloudSignOut()" class="btn-danger" style="width:auto;margin:0;padding:9px 12px;">ログアウト</button>
@@ -8294,22 +8505,32 @@ function toggleShowField(key, el) {
   save();
 }
 
-function exportData() {
-  const data = JSON.stringify({ cases, appSettings, notifSettings }, null, 2);
+function downloadPatientBackup(snapshot, prefix = 'surgery-backup') {
+  const data = JSON.stringify(snapshot, null, 2);
   const blob = new Blob([data], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `surgery-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `${prefix}-${toISODate(new Date())}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
+function exportData() {
+  downloadPatientBackup({ cases, appSettings, notifSettings });
+}
+
+function downloadLocalPatientBackup() {
+  downloadPatientBackup({ cases: getStoredPatientCases(), appSettings, notifSettings }, 'surgery-device-local');
+}
+
 function importData(input) {
+  if (!requireEditablePatientCases()) return;
   const file = input.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = (e) => {
+    if (!requireEditablePatientCases()) return;
     try {
       const data = JSON.parse(e.target.result);
       if (data.cases) cases = data.cases;
@@ -8326,6 +8547,7 @@ function importData(input) {
 }
 
 function confirmClearAll() {
+  if (!requireEditablePatientCases()) return;
   if (!confirm('全データを削除します。この操作は取り消せません。本当によろしいですか？')) return;
   cases = [];
   save();
@@ -8334,6 +8556,7 @@ function confirmClearAll() {
 
 // ========== SEED DATA ==========
 function seedIfEmpty() {
+  if (!requireEditablePatientCases()) return;
   if (cases.length > 0) return;
   const today = new Date();
   const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -8534,6 +8757,7 @@ function showDailyBriefIfNeeded() {
 }
 
 // ========== INIT ==========
+document.body.dataset.patientCloudRole = patientCloudRole;
 applyTheme();
 render();
 showSetupIfNeeded();
@@ -8541,10 +8765,13 @@ showDailyBriefIfNeeded();
 initPatientCloud();
 initMentorshipConnection();
 window.addEventListener('focus', () => {
-  if (patientCloudMeta.connected && Date.now() - Number(patientCloudMeta.lastSyncAt || 0) > 180000) {
+  if (patientCloudMeta.connected && Date.now() - Number(patientCloudMeta.lastSyncAt || 0) > 15000) {
     syncPatientCloud({ quiet: true });
   }
 });
+window.setInterval(() => {
+  if (patientCloudMeta.connected && document.visibilityState === 'visible') syncPatientCloud({ quiet: true });
+}, 60000);
 </script>
 </body>
 </html>
