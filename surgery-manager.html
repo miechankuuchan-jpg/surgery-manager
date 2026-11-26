@@ -1641,7 +1641,7 @@ body[data-patient-cloud-role="viewer"] :is(.header .icon-btn.primary, .fab) { di
       <!-- populated by showNotifCenter() -->
     </div>
     <div style="display:flex;gap:8px;margin-top:14px;">
-      <button class="btn" onclick="dismissAllNotifs()" style="flex:1;background:rgba(26,174,200,0.12);border:1px solid rgba(26,174,200,0.3);color:var(--accent);font-size:12px;">✅ 全て既読</button>
+      <button class="copy-btn" id="markPatientNoticesRead" onclick="dismissAllNotifs()" style="flex:1;margin:0;">✅ 全て既読</button>
       <button class="btn-danger" onclick="closeNotifModal()" style="border-color:transparent;color:var(--text3);">閉じる</button>
     </div>
   </div>
@@ -2370,7 +2370,6 @@ let appSettings = JSON.parse(localStorage.getItem('app_settings') || 'null') || 
   diseaseCheckRules: JSON.parse(JSON.stringify(DISEASE_CHECK_RULES_BUILTIN)),
   regimenList: JSON.parse(JSON.stringify(REGIMEN_DEFAULTS_BUILTIN)),
   dailyMemo: '',
-  notifLastAck: null,
   reminderPresets: [
     { label: '月', dayOfWeek: 1, hour: 8,  minute: 0 },
     { label: '水', dayOfWeek: 3, hour: 8,  minute: 0 },
@@ -2537,7 +2536,7 @@ function addDiseaseCheckItemsToFreeChecks(ruleId) {
   if (!rule) return;
   rule.items.forEach(item => {
     if (!freeChecks.some(f => f.label === item)) {
-      freeChecks.push({ label: item, done: false });
+      freeChecks.push({ id: uid(), label: item, done: false });
     }
   });
   renderFreeChecklistForm();
@@ -2596,7 +2595,7 @@ function applyPrepSuggestions() {
     if (chk.checked) {
       const label = chk.getAttribute('data-label');
       if (!freeChecks.some(fc => fc.label === label)) {
-        toAdd.push({ label, done: false, remindAt: '' });
+      toAdd.push({ id: uid(), label, done: false, remindAt: '' });
       }
     }
   });
@@ -6510,7 +6509,7 @@ function addFreeCheck() {
     remindAt = dtInput ? dtInput.value : '';
   }
 
-  freeChecks.push({ label: val, done: false, remindAt });
+  freeChecks.push({ id: uid(), label: val, done: false, remindAt });
   input.value = '';
 
   if (remindAt) {
@@ -7027,176 +7026,55 @@ function showNotifSettings() {
 */
 
 function showNotifCenter() {
-  const today = new Date(); today.setHours(0,0,0,0);
-  const days = ['日','月','火','水','木','金','土'];
-  const dateLabel = `${today.getMonth()+1}月${today.getDate()}日（${days[today.getDay()]}）`;
-
+  const today = new Date();
+  const groups = getUnreadPatientNotifications(today);
   const dateEl = document.getElementById('notifCenterDate');
-  if (dateEl) dateEl.textContent = dateLabel;
+  if (dateEl) dateEl.textContent = patientNotificationDateLabel(today);
+  const items = Object.values(groups).flat();
+  displayedPatientNotices.center = notificationKeys(items);
 
-  const sections = [];
-
-  // Stats
-  const todayOps = cases.filter(c => isToday(c.opDate));
-  const urgentPending = cases.filter(c => {
-    if (isPast(c.opDate) || isToday(c.opDate)) return false;
-    const daysLeft = Math.round((new Date(c.opDate + 'T00:00:00') - today) / 86400000);
-    if (daysLeft > 3) return false;
-    const prog = getCheckProgress(c);
-    return prog.done < prog.total;
-  });
-  const overdueSummary = cases.filter(c => getDischargeSummaryWarning(c));
-  const allPending = cases.filter(c => {
-    const prog = getCheckProgress(c);
-    if (prog.done >= prog.total) return false;
-    if (!isWithinNotificationAge(c, today)) return false;
-    return true;
-  });
-  const noRounds = cases.filter(c => {
-    if (!isPast(c.opDate) || isToday(c.opDate)) return false;
-    if (c.checks && c.checks['summary_rounds']) return false;
-    if (!isWithinNotificationAge(c, today)) return false;
-    return true;
-  });
-
-  sections.push(`
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <div style="flex:1;background:rgba(26,174,200,0.1);border:1px solid rgba(26,174,200,0.25);border-radius:10px;padding:10px 6px;text-align:center;">
-        <div style="font-size:22px;font-weight:700;color:var(--accent);line-height:1;">${todayOps.length}</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:3px;">今日のオペ</div>
-      </div>
-      <div style="flex:1;background:rgba(216,64,64,0.08);border:1px solid rgba(216,64,64,0.2);border-radius:10px;padding:10px 6px;text-align:center;">
-        <div style="font-size:22px;font-weight:700;color:var(--red);line-height:1;">${urgentPending.length + overdueSummary.length}</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:3px;">要対応</div>
-      </div>
-      <div style="flex:1;background:rgba(24,196,120,0.08);border:1px solid rgba(24,196,120,0.2);border-radius:10px;padding:10px 6px;text-align:center;">
-        <div style="font-size:22px;font-weight:700;color:var(--green);line-height:1;">${allPending.length}</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:3px;">未完了総数</div>
-      </div>
-    </div>
-  `);
-
-  // Today's exam schedules
-  const todayStr2 = toISODate(new Date());
-  const todayExamItems = [];
-  cases.forEach(c => {
-    (c.examSchedules || []).filter(e => e.date === todayStr2).forEach(e => {
-      todayExamItems.push({ c, e });
-    });
-  });
-  if (todayExamItems.length > 0) {
-    const rows = todayExamItems.map(({c, e}) => {
-      const icon = EXAM_ICONS[e.type] || '🧪';
-      return `<div class="daily-brief-row">
-        <span>${icon}</span>
-        <div>
-          <div style="font-weight:700;">${c.name} — ${e.label}</div>
-          ${e.note ? `<div style="font-size:11px;color:var(--text2);">${e.note}</div>` : ''}
-        </div>
-      </div>`;
-    }).join('');
-    sections.splice(1, 0, `<div class="daily-brief-section">
-      <div class="daily-brief-section-title">🧪 本日の検査予定（${todayExamItems.length}件）</div>
-      ${rows}
-    </div>`);
-  }
-
-  // 1. Today's ops
-  if (todayOps.length > 0) {
-    const rows = todayOps.map(c => {
-      const prog = getCheckProgress(c);
-      const allDone = prog.done === prog.total;
-      return `<div class="daily-brief-row${allDone ? '' : ' alert'}">
-        <span>🔪</span>
-        <div>
-          <div style="font-weight:700;">${c.name || '患者名未設定'}</div>
-          <div style="font-size:11px;color:var(--text2);">${c.surgery || '術式未設定'} ／ チェック ${prog.done}/${prog.total}${allDone ? ' ✅' : ''}</div>
-        </div>
-      </div>`;
-    }).join('');
-    sections.push(`<div class="daily-brief-section">
-      <div class="daily-brief-section-title">🔪 本日のオペ（${todayOps.length}件）</div>
-      ${rows}
-    </div>`);
-  }
-
-  // 2. Urgent pending within 3 days
-  if (urgentPending.length > 0) {
-    const rows = urgentPending.map(c => {
-      const daysLeft = Math.round((new Date(c.opDate + 'T00:00:00') - today) / 86400000);
-      const prog = getCheckProgress(c);
-      return `<div class="daily-brief-row warn">
-        <span>⚠️</span>
-        <div>
-          <div style="font-weight:700;">${c.name} — あと${daysLeft}日</div>
-          <div style="font-size:11px;color:var(--text2);">${c.surgery || ''} ／ チェック ${prog.done}/${prog.total} 未完了</div>
-        </div>
-      </div>`;
-    }).join('');
-    sections.push(`<div class="daily-brief-section">
-      <div class="daily-brief-section-title">⚠️ 直近3日以内・チェック未完了</div>
-      ${rows}
-    </div>`);
-  }
-
-  // 3. Overdue discharge summaries
-  if (overdueSummary.length > 0) {
-    const rows = overdueSummary.map(c => {
-      const daysSince = c.dischargeDate
-        ? Math.floor((today - new Date(c.dischargeDate + 'T00:00:00')) / 86400000)
-        : null;
-      return `<div class="daily-brief-row warn">
-        <span>📋</span>
-        <div>
-          <div style="font-weight:700;">${c.name}</div>
-          <div style="font-size:11px;color:var(--text2);">退院後${daysSince !== null ? daysSince + '日' : '—'} ／ 退院サマリ未記載</div>
-        </div>
-      </div>`;
-    }).join('');
-    sections.push(`<div class="daily-brief-section">
-      <div class="daily-brief-section-title">📋 退院サマリ未記載（5日超）</div>
-      ${rows}
-    </div>`);
-  }
-
-  // 4. Summary rounds incomplete
-  if (noRounds.length > 0) {
-    const rows = noRounds.slice(0, 5).map(c => `<div class="daily-brief-row">
-      <span>🩺</span>
-      <div>
-        <div style="font-weight:700;">${c.name}</div>
-        <div style="font-size:11px;color:var(--text2);">${c.surgery || ''} ／ サマリ回診未完了</div>
-      </div>
-    </div>`).join('');
-    const more = noRounds.length > 5 ? `<div style="font-size:11px;color:var(--text3);padding:6px 12px;">他${noRounds.length - 5}件...</div>` : '';
-    sections.push(`<div class="daily-brief-section">
-      <div class="daily-brief-section-title">🩺 サマリ回診 未完了（${noRounds.length}件）</div>
-      ${rows}${more}
-    </div>`);
-  }
-
-  if (sections.length === 1) {
-    sections.push(`<div class="daily-brief-row" style="color:var(--green);">✅ 本日の未完了タスクはありません。</div>`);
-  }
-
-  // 5. Today's ward duties
-  const todayDuties = WARD_DUTIES[today.getDay()] || [];
-  if (todayDuties.length > 0) {
-    const dutyRows = todayDuties.map(d => `<div class="daily-brief-row">
-      <span>${d.icon}</span>
-      <div>
-        <div style="font-weight:700;">${d.label}</div>
-        ${d.note ? `<div style="font-size:11px;color:var(--text2);">${d.note}</div>` : ''}
-      </div>
-    </div>`).join('');
-    sections.push(`<div class="daily-brief-section">
-      <div class="daily-brief-section-title">🏥 本日の病棟業務</div>
-      ${dutyRows}
-    </div>`);
-  }
-
-  document.getElementById('notifCenterContent').innerHTML = sections.join('');
+  document.getElementById('notifCenterContent').innerHTML =
+    renderPatientNotificationSections(groups) + renderNotificationWardDuties(today);
+  document.getElementById('markPatientNoticesRead').disabled = items.length === 0;
   document.getElementById('notifModal').classList.add('open');
+}
+
+function patientNotificationDateLabel(date) {
+  const days = ['日','月','火','水','木','金','土'];
+  return (date.getMonth() + 1) + '月' + date.getDate() + '日（' + days[date.getDay()] + '）';
+}
+
+function renderPatientNotificationSections(groups) {
+  const headings = [
+    ['exam', '🧪 本日の検査予定'],
+    ['operation', '🔪 本日のオペ'],
+    ['urgent', '⚠️ 直近3日以内の未完了チェック'],
+    ['summary', '📋 退院サマリ未記載（5日以上）'],
+    ['rounds', '🩺 サマリ回診未完了'],
+    ['pending', 'その他の未完了チェック'],
+  ];
+  const sections = headings.flatMap(([group, title]) => {
+    const rows = groups[group] || [];
+    if (!rows.length) return [];
+    return ['<section class="daily-brief-section"><div class="daily-brief-section-title">' +
+      title + '（' + rows.length + '件）</div>' + rows.map(row =>
+        '<div class="daily-brief-row' + (group === 'urgent' || group === 'summary' ? ' warn' : '') + '">' +
+        '<div><div style="font-weight:700;">' + esc(row.title) + '</div>' +
+        (row.detail ? '<div style="color:var(--text2);">' + esc(row.detail) + '</div>' : '') +
+        '</div></div>'
+      ).join('') + '</section>'];
+  });
+  return sections.join('') || '<div class="daily-brief-row" style="color:var(--green);">✅ 未読の通知はありません。</div>';
+}
+
+function renderNotificationWardDuties(today) {
+  const duties = WARD_DUTIES[today.getDay()] || [];
+  if (!duties.length) return '';
+  return '<section class="daily-brief-section"><div class="daily-brief-section-title">🏥 本日の病棟業務</div>' +
+    duties.map(d => '<div class="daily-brief-row"><span>' + esc(d.icon) + '</span><div>' +
+      '<div style="font-weight:700;">' + esc(d.label) + '</div>' +
+      (d.note ? '<div style="color:var(--text2);">' + esc(d.note) + '</div>' : '') +
+      '</div></div>').join('') + '</section>';
 }
 
 // ========== 疾患別チェックリスト管理 ==========
@@ -7424,6 +7302,7 @@ function addRegimen() {
 }
 
 function closeNotifModal() {
+  displayedPatientNotices.center = [];
   document.getElementById('notifModal').classList.remove('open');
 }
 
@@ -7555,44 +7434,131 @@ function scheduleNotifications() {
 
 */
 
+const PATIENT_NOTIFICATION_READ_KEY = 'surgery_patient_notification_read_v1';
+const displayedPatientNotices = { center: [], brief: [] };
+
+function readPatientNoticeKeys() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PATIENT_NOTIFICATION_READ_KEY) || '[]');
+    return new Set(Array.isArray(stored) ? stored.filter(key => typeof key === 'string') : []);
+  } catch (_) {
+    return new Set();
+  }
+}
+
+function notificationKeys(rows) {
+  return [...new Set(rows.flatMap(row => row.keys))];
+}
+
+function acknowledgeDisplayedPatientNotices(surface) {
+  const keys = displayedPatientNotices[surface];
+  if (!keys.length) return true;
+  const read = readPatientNoticeKeys();
+  keys.forEach(key => read.add(key));
+  try {
+    localStorage.setItem(PATIENT_NOTIFICATION_READ_KEY, JSON.stringify([...read]));
+  } catch (_) {
+    alert('既読を保存できませんでした。ブラウザの空き容量や設定を確認してください。');
+    return false;
+  }
+  displayedPatientNotices[surface] = [];
+  updatePendingBadge();
+  updateHeaderStats();
+  return true;
+}
+
+// 日付の差はローカル暦日で計算（時刻・夏時間で境界がずれないようにする）。
+function patientNotificationDays(today, isoDate) {
+  if (typeof isoDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return null;
+  const date = new Date(isoDate + 'T00:00:00Z');
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== isoDate) return null;
+  return (Date.parse(toISODate(today) + 'T00:00:00Z') - date.getTime()) / 86400000;
+}
+
+function isWithinNotificationAge(c, today = new Date()) {
+  const sinceDischarge = patientNotificationDays(today, c.dischargeDate);
+  if (sinceDischarge !== null && sinceDischarge >= 30) return false;
+  const sinceOperation = patientNotificationDays(today, c.opDate);
+  return sinceOperation === null || sinceOperation < 14;
+}
+
+function legacyNotificationTaskKey(label) {
+  // 過去のIDなし項目用。既読リストには項目名や患者名を保存しない。
+  let hash = 2166136261;
+  for (const ch of String(label ?? '').normalize('NFC')) {
+    hash = Math.imul(hash ^ ch.codePointAt(0), 16777619);
+  }
+  return 'legacy-' + (hash >>> 0).toString(16);
+}
+
+function getUnreadPatientNotifications(today = new Date(), source = cases, read = readPatientNoticeKeys()) {
+  const groups = { exam: [], operation: [], urgent: [], summary: [], rounds: [], pending: [] };
+  const todayStr = toISODate(today);
+  for (const c of source) {
+    const sinceDischarge = patientNotificationDays(today, c.dischargeDate);
+    if (sinceDischarge !== null && sinceDischarge >= 30) continue;
+
+    const caseId = String(c.id);
+    const patient = c.name || '患者名未設定';
+    const noticeKey = (type, id, date = '') => JSON.stringify([type, caseId, id, date]);
+    const checkKey = key => noticeKey('check', key);
+    const add = (group, keys, title, detail = '') => {
+      const unread = keys.filter(key => !read.has(key));
+      if (unread.length) groups[group].push({ caseId, keys: unread, title, detail });
+    };
+
+    const sinceOperation = patientNotificationDays(today, c.opDate);
+    const checkAgeEligible = isWithinNotificationAge(c, today);
+    if (sinceOperation === 0) {
+      const { done, total } = getCheckProgress(c);
+      add('operation', [noticeKey('operation', '', todayStr)], patient,
+        (c.surgery || '術式未設定') + ' ／ チェック ' + done + '/' + total);
+    }
+    for (const e of c.examSchedules || []) {
+      if (e.date !== todayStr) continue;
+      const key = e.id || legacyNotificationTaskKey(e.type + ':' + e.label);
+      add('exam', [noticeKey('exam', key, e.date)], patient + ' — ' + (e.label || '検査'), e.note);
+    }
+
+    const checks = c.checks || {};
+    const overdueSummary = !checks.discharge_summary && sinceDischarge !== null && sinceDischarge >= 5;
+    const pendingRounds = !checks.summary_rounds && sinceOperation !== null && sinceOperation > 0 && checkAgeEligible;
+    if (overdueSummary) add('summary', [checkKey('discharge_summary')], patient, '退院後' + sinceDischarge + '日 ／ 退院サマリ未記載');
+    if (pendingRounds) add('rounds', [checkKey('summary_rounds')], patient, (c.surgery ? c.surgery + ' ／ ' : '') + 'サマリ回診未完了');
+    if (!checkAgeEligible) continue;
+
+    const tasks = new Map();
+    for (const item of getDisplayedChecklistItems(c)) {
+      if (checks[item.key] || (overdueSummary && item.key === 'discharge_summary') ||
+          (pendingRounds && item.key === 'summary_rounds')) continue;
+      const key = checkKey(item.key);
+      if (!read.has(key)) tasks.set(key, item.label);
+    }
+    for (const item of c.freeChecks || []) {
+      if (item.done) continue;
+      const key = noticeKey('free-check', item.id || legacyNotificationTaskKey(item.label));
+      if (!read.has(key)) tasks.set(key, item.label || '追加チェック');
+    }
+    if (!tasks.size) continue;
+    const urgent = sinceOperation !== null && sinceOperation >= -3 && sinceOperation < 0;
+    const title = urgent ? patient + ' — あと' + (-sinceOperation) + '日' : patient;
+    const detail = [...tasks.values()].join('、');
+    add(urgent ? 'urgent' : 'pending', [...tasks.keys()], title, detail);
+  }
+  return groups;
+}
+
 function updatePendingBadge() {
-  const today = new Date(); today.setHours(0,0,0,0);
-  const count = cases.filter(c => {
-    if (!isWithinNotificationAge(c, today)) return false;
-    const prog = getCheckProgress(c);
-    const hasIncompleteFree = c.freeChecks && c.freeChecks.some(f => !f.done);
-    return prog.done < prog.total || hasIncompleteFree;
-  }).length;
   const badge = document.getElementById('pendingBadge');
-  const ack = appSettings.notifLastAck;
-  const todayStr = toISODate(new Date());
-  const dismissed = ack && ack.date === todayStr && count <= ack.count;
-  badge.style.display = (count > 0 && !dismissed) ? 'block' : 'none';
+  if (!badge) return;
+  const rows = Object.values(getUnreadPatientNotifications()).flat();
+  const count = new Set(rows.map(row => row.caseId)).size;
+  badge.style.display = count ? 'block' : 'none';
   badge.textContent = count;
 }
 
 function dismissAllNotifs() {
-  const today = new Date(); today.setHours(0,0,0,0);
-  const count = cases.filter(c => {
-    if (!isWithinNotificationAge(c, today)) return false;
-    const prog = getCheckProgress(c);
-    const hasIncompleteFree = c.freeChecks && c.freeChecks.some(f => !f.done);
-    return prog.done < prog.total || hasIncompleteFree;
-  }).length;
-  appSettings.notifLastAck = { date: toISODate(new Date()), count };
-  save();
-  updatePendingBadge();
-  closeNotifModal();
-}
-
-// オペ日から14日以上経過した症例は通知対象外。
-// オペ日がない入院・ケモ症例は日数を判定できないため通知を維持する。
-function isWithinNotificationAge(c, today = new Date()) {
-  if (!c.opDate) return true;
-  const cutoff = new Date(today);
-  cutoff.setHours(0,0,0,0);
-  cutoff.setDate(cutoff.getDate() - 14);
-  return new Date(c.opDate + 'T00:00:00') > cutoff;
+  if (acknowledgeDisplayedPatientNotices('center')) closeNotifModal();
 }
 
 function updateHeaderStats() {
@@ -7606,11 +7572,9 @@ function updateHeaderStats() {
     const d = new Date(c.opDate + 'T00:00:00');
     return d > today0 && d <= weekEnd;
   }).length;
-  const pendingCount = cases.filter(c => {
-    if (isPast(c.opDate) && !isToday(c.opDate)) return false;
-    const prog = getCheckProgress(c);
-    return prog.done < prog.total;
-  }).length;
+  const notices = getUnreadPatientNotifications(today0);
+  const pendingCount = new Set([...notices.urgent, ...notices.summary, ...notices.rounds, ...notices.pending]
+    .map(row => row.caseId)).size;
 
   const chips = [];
   if (todayCount > 0) chips.push('<span class="stat-chip today-chip">本日 ' + todayCount + '件</span>');
@@ -8616,143 +8580,32 @@ function closeDailyBriefOnBg(e) {
 }
 
 function closeDailyBrief() {
+  displayedPatientNotices.brief = [];
   document.getElementById('dailyBriefOverlay').classList.add('hidden');
 }
 
+function confirmDailyBrief() {
+  if (acknowledgeDisplayedPatientNotices('brief')) closeDailyBrief();
+}
+
 function showDailyBriefIfNeeded() {
-  const todayStr = toISODate(new Date());
-  const lastShown = localStorage.getItem('daily_brief_date');
-  if (lastShown === todayStr) return; // already shown today
+  const today = new Date();
+  const todayStr = toISODate(today);
+  if (localStorage.getItem('daily_brief_date') === todayStr) return;
+
+  const { operation, urgent, summary, rounds } = getUnreadPatientNotifications(today);
+  const groups = { operation, urgent, summary, rounds: today.getDay() === 3 ? rounds : [] };
+  const items = Object.values(groups).flat();
+  if (!items.length) return;
+  displayedPatientNotices.brief = notificationKeys(items);
   localStorage.setItem('daily_brief_date', todayStr);
 
-  const today = new Date(); today.setHours(0,0,0,0);
-  const days = ['日','月','火','水','木','金','土'];
-  const dateLabel = `${today.getMonth()+1}月${today.getDate()}日（${days[today.getDay()]}）`;
-
-  const sections = [];
-
-  // 1. Today's operations
-  const todayOps = cases.filter(c => isToday(c.opDate));
-  if (todayOps.length > 0) {
-    const rows = todayOps.map(c => {
-      const prog = getCheckProgress(c);
-      const allDone = prog.done === prog.total;
-      return `<div class="daily-brief-row${allDone ? '' : ' alert'}">
-        <span>🔪</span>
-        <div>
-          <div style="font-weight:700;">${c.name || '患者名未設定'}</div>
-          <div style="font-size:11px;color:var(--text2);">${c.surgery || '術式未設定'} ／ チェック ${prog.done}/${prog.total}${allDone ? ' ✅' : ''}</div>
-        </div>
-      </div>`;
-    }).join('');
-    sections.push(`<div class="daily-brief-section">
-      <div class="daily-brief-section-title">🔪 本日のオペ（${todayOps.length}件）</div>
-      ${rows}
-    </div>`);
-  }
-
-  // 2. Upcoming ops with incomplete checklists (within 3 days)
-  const urgentPending = cases.filter(c => {
-    if (isPast(c.opDate) || isToday(c.opDate)) return false;
-    const daysLeft = Math.round((new Date(c.opDate + 'T00:00:00') - today) / 86400000);
-    if (daysLeft > 3) return false;
-    const prog = getCheckProgress(c);
-    return prog.done < prog.total;
-  });
-  if (urgentPending.length > 0) {
-    const rows = urgentPending.map(c => {
-      const daysLeft = Math.round((new Date(c.opDate + 'T00:00:00') - today) / 86400000);
-      const prog = getCheckProgress(c);
-      return `<div class="daily-brief-row warn">
-        <span>⚠️</span>
-        <div>
-          <div style="font-weight:700;">${c.name} — あと${daysLeft}日</div>
-          <div style="font-size:11px;color:var(--text2);">${c.surgery || ''} ／ チェック ${prog.done}/${prog.total} 未完了</div>
-        </div>
-      </div>`;
-    }).join('');
-    sections.push(`<div class="daily-brief-section">
-      <div class="daily-brief-section-title">⚠️ 直近3日以内・チェック未完了</div>
-      ${rows}
-    </div>`);
-  }
-
-  // 3. Overdue discharge summaries
-  const overdueSummary = cases.filter(c => getDischargeSummaryWarning(c));
-  if (overdueSummary.length > 0) {
-    const rows = overdueSummary.map(c => {
-      const daysSince = c.dischargeDate
-        ? Math.floor((today - new Date(c.dischargeDate + 'T00:00:00')) / 86400000)
-        : null;
-      return `<div class="daily-brief-row warn">
-        <span>📋</span>
-        <div>
-          <div style="font-weight:700;">${c.name}</div>
-          <div style="font-size:11px;color:var(--text2);">退院後${daysSince !== null ? daysSince + '日' : '—'} ／ 退院サマリ未記載</div>
-        </div>
-      </div>`;
-    }).join('');
-    sections.push(`<div class="daily-brief-section">
-      <div class="daily-brief-section-title">📋 退院サマリ未記載（5日超）</div>
-      ${rows}
-    </div>`);
-  }
-
-  // 4. サマリ回診 未完了 — 水曜日のみ通知（カンファ後に回診があるため）
-  const isWednesday = today.getDay() === 3; // 0=Sun,3=Wed
-  if (isWednesday) {
-    const noRounds = cases.filter(c => {
-      if (!isPast(c.opDate) || isToday(c.opDate)) return false;
-      if (c.checks && c.checks['summary_rounds']) return false;
-      if (!isWithinNotificationAge(c, today)) return false;
-      return true;
-    });
-    if (noRounds.length > 0) {
-      const rows = noRounds.slice(0, 5).map(c => `<div class="daily-brief-row">
-        <span>🩺</span>
-        <div>
-          <div style="font-weight:700;">${c.name}</div>
-          <div style="font-size:11px;color:var(--text2);">${c.surgery || ''} ／ 本日16時カンファ後に回診予定</div>
-        </div>
-      </div>`).join('');
-      const more = noRounds.length > 5 ? `<div style="font-size:11px;color:var(--text3);padding:6px 12px;">他${noRounds.length - 5}件...</div>` : '';
-      sections.push(`<div class="daily-brief-section">
-        <div class="daily-brief-section-title">🩺 本日サマリ回診 未完了（${noRounds.length}件）</div>
-        ${rows}${more}
-      </div>`);
-    }
-  }
-
-  if (sections.length === 0) {
-    sections.push(`<div class="daily-brief-row" style="color:var(--green);">✅ 本日の未完了タスクはありません。</div>`);
-  }
-
-  // Always show ward duties for today at the bottom
-  const todayDuties = WARD_DUTIES[today.getDay()] || [];
-  let dutySection = '';
-  if (todayDuties.length > 0) {
-    const dutyRows = todayDuties.map(d => `<div class="daily-brief-row">
-      <span>${d.icon}</span>
-      <div>
-        <div style="font-weight:700;">${d.label}</div>
-        ${d.note ? `<div style="font-size:11px;color:var(--text2);">${d.note}</div>` : ''}
-      </div>
-    </div>`).join('');
-    dutySection = `<div class="daily-brief-section">
-      <div class="daily-brief-section-title">🏥 本日の病棟業務</div>
-      ${dutyRows}
-    </div>`;
-  }
-
   const modal = document.getElementById('dailyBriefModal');
-  modal.innerHTML = `
-    <div class="daily-brief-handle"></div>
-    <div class="daily-brief-title">📅 ${dateLabel} のタスク</div>
-    <div class="daily-brief-subtitle">本日のやることリスト</div>
-    ${sections.join('')}
-    ${dutySection}
-    <button class="daily-brief-close-btn" onclick="closeDailyBrief()">確認しました</button>
-  `;
+  modal.innerHTML = '<div class="daily-brief-handle"></div><div class="daily-brief-title">📅 ' +
+    patientNotificationDateLabel(today) + ' のタスク</div>' +
+    '<div class="daily-brief-subtitle">未読の患者通知</div>' +
+    renderPatientNotificationSections(groups) + renderNotificationWardDuties(today) +
+    '<button class="daily-brief-close-btn" onclick="confirmDailyBrief()">確認しました（既読）</button>';
   document.getElementById('dailyBriefOverlay').classList.remove('hidden');
 }
 
@@ -8761,13 +8614,21 @@ document.body.dataset.patientCloudRole = patientCloudRole;
 applyTheme();
 render();
 showSetupIfNeeded();
-showDailyBriefIfNeeded();
-initPatientCloud();
+if (!patientCloudMeta.connected) showDailyBriefIfNeeded();
+void initPatientCloud().then(showDailyBriefIfNeeded);
 initMentorshipConnection();
 window.addEventListener('focus', () => {
+  updatePendingBadge();
+  updateHeaderStats();
   if (patientCloudMeta.connected && Date.now() - Number(patientCloudMeta.lastSyncAt || 0) > 15000) {
     syncPatientCloud({ quiet: true });
   }
+});
+window.addEventListener('storage', event => {
+  if (event.key !== PATIENT_NOTIFICATION_READ_KEY) return;
+  updatePendingBadge();
+  updateHeaderStats();
+  if (document.getElementById('notifModal')?.classList.contains('open')) showNotifCenter();
 });
 window.setInterval(() => {
   if (patientCloudMeta.connected && document.visibilityState === 'visible') syncPatientCloud({ quiet: true });
